@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ViewEntryModal } from './components/ViewEntryModal';
@@ -55,27 +55,9 @@ const SUBJECT_COLORS = [
   '#6366f1', // indigo
 ];
 
-
-const STORAGE_KEY_PREFIX = 'student-workload-tracker';
-const SUBJECTS_STORAGE_KEY_PREFIX = 'student-workload-subjects';
-const DEFAULT_COMMUTE_KEY_PREFIX = 'student-workload-default-commute';
-
-const BACKEND_BASE_URL = (import.meta.env.VITE_BACKEND_URL ?? '').replace(/\/$/, '');
-
-const resolveParticipantId = () => {
-  const url = new URL(window.location.href);
-  const queryParticipantId = url.searchParams.get('participantId')?.trim();
-  const pathParticipantId = url.pathname.split('/').filter(Boolean)[0]?.trim();
-  const participantId = queryParticipantId || pathParticipantId || `participant-${crypto.randomUUID()}`;
-
-  if (!queryParticipantId) {
-    url.searchParams.set('participantId', participantId);
-    window.history.replaceState({}, '', url.toString());
-  }
-
-  return participantId;
-};
-
+const STORAGE_KEY = 'student-workload-tracker';
+const SUBJECTS_STORAGE_KEY = 'student-workload-subjects';
+const DEFAULT_COMMUTE_KEY = 'student-workload-default-commute';
 
 export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -85,11 +67,6 @@ export default function App() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
-  const participantId = useMemo(() => resolveParticipantId(), []);
-
-  const STORAGE_KEY = `${STORAGE_KEY_PREFIX}-${participantId}`;
-  const SUBJECTS_STORAGE_KEY = `${SUBJECTS_STORAGE_KEY_PREFIX}-${participantId}`;
-  const DEFAULT_COMMUTE_KEY = `${DEFAULT_COMMUTE_KEY_PREFIX}-${participantId}`;
 
   // Load entries from localStorage
   useEffect(() => {
@@ -122,53 +99,7 @@ export default function App() {
         console.error('Failed to load default commute time:', e);
       }
     }
-  }, [DEFAULT_COMMUTE_KEY, STORAGE_KEY, SUBJECTS_STORAGE_KEY]);
-
-
-  const syncEntriesToBackend = async (updatedEntries: Map<string, DailyEntry>) => {
-    if (!BACKEND_BASE_URL) {
-      return;
-    }
-
-    try {
-      await fetch(`${BACKEND_BASE_URL}/api/entries`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Participant-Id': participantId,
-        },
-        body: JSON.stringify({
-          participantId,
-          entries: Object.fromEntries(updatedEntries),
-        }),
-      });
-    } catch (error) {
-      console.error('Failed to sync entries to backend:', error);
-    }
-  };
-
-  const syncSettingsToBackend = async (updatedSubjects: Subject[], updatedDefaultCommuteTime: number) => {
-    if (!BACKEND_BASE_URL) {
-      return;
-    }
-
-    try {
-      await fetch(`${BACKEND_BASE_URL}/api/participant-settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Participant-Id': participantId,
-        },
-        body: JSON.stringify({
-          participantId,
-          subjects: updatedSubjects,
-          defaultCommuteTime: updatedDefaultCommuteTime,
-        }),
-      });
-    } catch (error) {
-      console.error('Failed to sync participant settings to backend:', error);
-    }
-  };
+  }, []);
 
   // Save entries to localStorage
   const saveEntry = (entry: DailyEntry) => {
@@ -178,8 +109,6 @@ export default function App() {
 
     const entriesObj = Object.fromEntries(newEntries);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
-
-    void syncEntriesToBackend(newEntries);
 
     setShowEntryModal(false);
     setShowViewModal(false);
@@ -192,7 +121,6 @@ export default function App() {
 
     const entriesObj = Object.fromEntries(newEntries);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
-    void syncEntriesToBackend(newEntries);
 
     setShowViewModal(false);
   };
@@ -223,20 +151,17 @@ export default function App() {
     const updatedSubjects = [...subjects, newSubject];
     setSubjects(updatedSubjects);
     localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
-    void syncSettingsToBackend(updatedSubjects, defaultCommuteTime);
   };
 
   const handleRemoveSubject = (id: string) => {
     const updatedSubjects = subjects.filter(s => s.id !== id);
     setSubjects(updatedSubjects);
     localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
-    void syncSettingsToBackend(updatedSubjects, defaultCommuteTime);
   };
 
   const handleUpdateDefaultCommute = (time: number) => {
     setDefaultCommuteTime(time);
     localStorage.setItem(DEFAULT_COMMUTE_KEY, time.toString());
-    void syncSettingsToBackend(subjects, time);
   };
 
   // Calculate statistics
@@ -287,7 +212,6 @@ export default function App() {
             <h1 className="font-bold text-gray-900">Daily Workload Tracker</h1>
           </div>
           <p className="text-gray-600">Track your study time and stay on top of your workload</p>
-          <p className="text-xs text-gray-500 mt-1">Participant ID: <span className="font-mono">{participantId}</span></p>
         </div>
 
         {/* Main Grid */}

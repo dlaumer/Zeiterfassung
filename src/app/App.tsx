@@ -59,7 +59,11 @@ const STORAGE_KEY = 'student-workload-tracker';
 const SUBJECTS_STORAGE_KEY = 'student-workload-subjects';
 const DEFAULT_COMMUTE_KEY = 'student-workload-default-commute';
 
-export default function App() {
+interface AppProps {
+  participantId: string | null;
+}
+
+export default function App({ participantId }: AppProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
@@ -67,10 +71,16 @@ export default function App() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
+  const createStorageKey = (baseKey: string) => (
+    participantId ? `${baseKey}-${participantId}` : baseKey
+  );
+  const entriesStorageKey = createStorageKey(STORAGE_KEY);
+  const subjectsStorageKey = createStorageKey(SUBJECTS_STORAGE_KEY);
+  const defaultCommuteStorageKey = createStorageKey(DEFAULT_COMMUTE_KEY);
 
   // Load entries from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(entriesStorageKey);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -81,7 +91,7 @@ export default function App() {
     }
 
     // Load subjects
-    const storedSubjects = localStorage.getItem(SUBJECTS_STORAGE_KEY);
+    const storedSubjects = localStorage.getItem(subjectsStorageKey);
     if (storedSubjects) {
       try {
         setSubjects(JSON.parse(storedSubjects));
@@ -91,7 +101,7 @@ export default function App() {
     }
 
     // Load default commute time
-    const storedCommute = localStorage.getItem(DEFAULT_COMMUTE_KEY);
+    const storedCommute = localStorage.getItem(defaultCommuteStorageKey);
     if (storedCommute) {
       try {
         setDefaultCommuteTime(parseFloat(storedCommute));
@@ -99,7 +109,7 @@ export default function App() {
         console.error('Failed to load default commute time:', e);
       }
     }
-  }, []);
+  }, [defaultCommuteStorageKey, entriesStorageKey, subjectsStorageKey]);
 
   // Save entries to localStorage
   const saveEntry = (entry: DailyEntry) => {
@@ -108,7 +118,7 @@ export default function App() {
     setEntries(newEntries);
 
     const entriesObj = Object.fromEntries(newEntries);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
+    localStorage.setItem(entriesStorageKey, JSON.stringify(entriesObj));
 
     setShowEntryModal(false);
     setShowViewModal(false);
@@ -120,7 +130,7 @@ export default function App() {
     setEntries(newEntries);
 
     const entriesObj = Object.fromEntries(newEntries);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
+    localStorage.setItem(entriesStorageKey, JSON.stringify(entriesObj));
 
     setShowViewModal(false);
   };
@@ -150,18 +160,18 @@ export default function App() {
     };
     const updatedSubjects = [...subjects, newSubject];
     setSubjects(updatedSubjects);
-    localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
+    localStorage.setItem(subjectsStorageKey, JSON.stringify(updatedSubjects));
   };
 
   const handleRemoveSubject = (id: string) => {
     const updatedSubjects = subjects.filter(s => s.id !== id);
     setSubjects(updatedSubjects);
-    localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
+    localStorage.setItem(subjectsStorageKey, JSON.stringify(updatedSubjects));
   };
 
   const handleUpdateDefaultCommute = (time: number) => {
     setDefaultCommuteTime(time);
-    localStorage.setItem(DEFAULT_COMMUTE_KEY, time.toString());
+    localStorage.setItem(defaultCommuteStorageKey, time.toString());
   };
 
   // Calculate statistics

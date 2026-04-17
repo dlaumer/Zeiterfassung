@@ -52,7 +52,7 @@ interface AppContentProps {
 }
 
 function AppContent({ participantId }: AppContentProps) {
-  const pb = new PocketBase('http://127.0.0.1:8090');
+  const pb = new PocketBase('http://78.47.244.186');
 
   const { t, language, setLanguage } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());

@@ -4,9 +4,15 @@ import { useI18n } from '../i18n/i18n';
 
 export interface Subject {
   id: string;
-  name: string;
+  key: string;
+  labelEn: string;
+  labelDe: string;
+  credits: number;
   color: string;
 }
+
+export const getSubjectDisplayName = (subject: Subject, language: 'en' | 'de') =>
+  language === 'de' ? subject.labelDe : subject.labelEn;
 
 interface CourseManagementProps {
   subjects: Subject[];
@@ -21,7 +27,7 @@ export function CourseManagement({
   onRemoveSubject,
   availableSubjects
 }: CourseManagementProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -32,7 +38,7 @@ export function CourseManagement({
   };
 
   const availableToAdd = availableSubjects.filter(
-    subject => !subjects.find(s => s.name === subject)
+    subject => !subjects.find(s => s.labelEn === subject)
   );
 
   const filteredSubjects = availableToAdd.filter(subject =>
@@ -79,7 +85,9 @@ export function CourseManagement({
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: subject.color }}
                 />
-                <span className="text-sm font-medium text-gray-700">{subject.name}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {getSubjectDisplayName(subject, language)}
+                </span>
               </div>
               <button
                 onClick={() => onRemoveSubject(subject.id)}

@@ -66,7 +66,6 @@ interface AppContentProps {
 }
 
 function AppContent({ participantId }: AppContentProps) {
-  void participantId;
   const pb = new PocketBase('http://127.0.0.1:8090');
 
   const { t, language, setLanguage } = useI18n();
@@ -93,8 +92,8 @@ function AppContent({ participantId }: AppContentProps) {
         return {
           id: subject.id,
           key: subject.key,
-          label_en: subject.label_en,
-          label_de: subject.label_de,
+          labelEn: subject.label_en,
+          labelDe: subject.label_de,
           credits: subject.credits,
           color: enrollment.color,
         };
@@ -102,13 +101,17 @@ function AppContent({ participantId }: AppContentProps) {
 
       return subjects;
     }
-    loadSubjectsForParticipant(participantId).then(
-      (subjects) => {
-        console.log("Loaded subjects for participant:", subjects);
-        //setSubjects(subjects);
-      }
-    ).catch(console.error).finally();
-  }, []);
+    if (!participantId) {
+      return;
+    }
+
+    loadSubjectsForParticipant(participantId)
+      .then((subjects) => {
+        console.log('Loaded subjects for participant:', subjects);
+        setSubjects(subjects);
+      })
+      .catch(console.error);
+  }, [participantId]);
 
   const saveEntry = (entry: DailyEntry) => {
     const newEntries = new Map(entries);
@@ -153,7 +156,10 @@ function AppContent({ participantId }: AppContentProps) {
   const handleAddSubject = (subjectName: string) => {
     const newSubject: Subject = {
       id: Date.now().toString(),
-      name: subjectName,
+      key: subjectName.toLowerCase().replace(/\s+/g, '-'),
+      labelEn: subjectName,
+      labelDe: subjectName,
+      credits: 0,
       color: SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length]
     };
     const updatedSubjects = [...subjects, newSubject];

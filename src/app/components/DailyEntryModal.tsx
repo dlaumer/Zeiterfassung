@@ -4,12 +4,7 @@ import { useState, useEffect } from 'react';
 import { SubjectTimeInput } from './SubjectTimeInput';
 import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
-
-interface Subject {
-  id: string;
-  name: string;
-  color: string;
-}
+import { Subject, getSubjectDisplayName } from './CourseManagement';
 
 interface SubjectTime {
   subjectId: string;
@@ -45,7 +40,7 @@ interface DailyEntryModalProps {
 }
 
 export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0 }: DailyEntryModalProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
   const [reliability, setReliability] = useState(3);
@@ -224,7 +219,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 return (
                   <SubjectTimeInput
                     key={subject.id}
-                    subjectName={subject.name}
+                    subjectName={getSubjectDisplayName(subject, language)}
                     subjectColor={subject.color}
                     classTime={subjectTime?.classTime || 0}
                     selfStudyTime={subjectTime?.selfStudyTime || 0}

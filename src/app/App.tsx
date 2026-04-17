@@ -60,7 +60,12 @@ const STORAGE_KEY = 'student-workload-tracker';
 const SUBJECTS_STORAGE_KEY = 'student-workload-subjects';
 const DEFAULT_COMMUTE_KEY = 'student-workload-default-commute';
 
-function AppContent() {
+interface AppContentProps {
+  participantId: string | null;
+}
+
+function AppContent({ participantId }: AppContentProps) {
+  void participantId;
   const { t, language, setLanguage } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -259,10 +264,17 @@ function AppContent() {
   );
 }
 
-export default function App() {
+interface AppProps {
+  participantId: string | null;
+}
+
+export default function App({ participantId }: AppProps) {
+  // Keep this value available in the main app for future backend calls.
+  void participantId;
+
   return (
     <I18nProvider>
-      <AppContent />
+      <AppContent participantId={participantId} />
     </I18nProvider>
   );
 }

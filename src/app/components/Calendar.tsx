@@ -52,7 +52,6 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
     if (!entry || entry.skipped || !entry.subjectTimes) return [];
 
     const loggedSubjectIds = entry.subjectTimes
-      .filter((st: any) => st.classTime > 0 || st.selfStudyTime > 0)
       .map((st: any) => st.subjectId);
 
     const colors = loggedSubjectIds

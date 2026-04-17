@@ -222,5 +222,25 @@
   "app.participantMissing": {
     "en": "Warning: participant does not exist.",
     "de": "Warnung: Teilnehmer existiert nicht."
+  },
+  "history.title": {
+    "en": "Past submissions",
+    "de": "Bisherige Einreichungen"
+  },
+  "history.none": {
+    "en": "No past submissions found.",
+    "de": "Keine bisherigen Einreichungen gefunden."
+  },
+  "history.week": {
+    "en": "Weekly submission",
+    "de": "Wöchentliche Einreichung"
+  },
+  "history.day": {
+    "en": "Daily submission",
+    "de": "Tägliche Einreichung"
+  },
+  "history.noSubjects": {
+    "en": "No subjects in this submission.",
+    "de": "Keine Fächer in dieser Einreichung."
   }
 }

@@ -31,6 +31,25 @@ interface DailyEntry {
   skipped: boolean;
 }
 
+interface WorkloadStatusSubject {
+  id: string;
+  key: string;
+  labelEn: string;
+  labelDe: string;
+  classTime: number;
+  selfStudyTime: number;
+}
+
+interface WorkloadStatusHistoryEntry {
+  periodType: 'day' | 'week' | string;
+  periodDate: string;
+  subjects: WorkloadStatusSubject[];
+}
+
+interface WorkloadStatusResponse {
+  submissionHistory: WorkloadStatusHistoryEntry[];
+}
+
 const SUBJECT_COLORS = [
   '#ef4444',
   '#f59e0b',
@@ -67,6 +86,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
   const [participantName, setParticipantName] = useState<string>('');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
+  const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -163,6 +183,65 @@ function AppContent({ participantId }: AppContentProps) {
         setSubjects(subjects);
       })
       .catch(console.error);
+  }, [participantId, participantStatus]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSubmissionHistory(id: string) {
+      const response = await pb.send<WorkloadStatusResponse>('/api/workload-status', {
+        query: { participantId: id, lookbackDays: 365 },
+      });
+
+      if (!isMounted) {
+        return;
+      }
+
+      const history = response.submissionHistory ?? [];
+      setSubmissionHistory(history);
+
+      const backendEntries = new Map<string, DailyEntry>();
+
+      history
+        .filter((item) => item.periodType === 'day' && item.periodDate)
+        .forEach((item) => {
+          backendEntries.set(item.periodDate, {
+            date: item.periodDate,
+            courses: [],
+            subjectTimes: item.subjects.map((subject) => ({
+              subjectId: subject.id,
+              classTime: 0,
+              selfStudyTime: 0,
+            })),
+            reliability: 0,
+            adminEffort: 0,
+            commuteTime: 0,
+            comment: '',
+            skipped: false,
+          });
+        });
+
+      setEntries(backendEntries);
+    }
+
+    if (!participantId || participantStatus !== 'valid') {
+      setSubmissionHistory([]);
+      setEntries(new Map());
+      return;
+    }
+
+    loadSubmissionHistory(participantId).catch((error) => {
+      console.error('Workload status lookup failed:', error);
+      if (!isMounted) {
+        return;
+      }
+      setSubmissionHistory([]);
+      setEntries(new Map());
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [participantId, participantStatus]);
 
   const saveEntry = (entry: DailyEntry) => {
@@ -320,12 +399,43 @@ function AppContent({ participantId }: AppContentProps) {
           </div>
 
           <div className="lg:col-span-1">
-            <CourseManagement
-              subjects={subjects}
-              onAddSubject={handleAddSubject}
-              onRemoveSubject={handleRemoveSubject}
-              availableSubjects={availableSubjects}
-            />
+            <div className="space-y-6">
+              <CourseManagement
+                subjects={subjects}
+                onAddSubject={handleAddSubject}
+                onRemoveSubject={handleRemoveSubject}
+                availableSubjects={availableSubjects}
+              />
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 className="font-semibold text-gray-900 mb-4">{t('history.title')}</h3>
+                {submissionHistory.length === 0 ? (
+                  <p className="text-sm text-gray-500">{t('history.none')}</p>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+                    {submissionHistory.map((entry) => (
+                      <div key={`${entry.periodType}-${entry.periodDate}`} className="border border-gray-100 rounded-xl p-3">
+                        <p className="text-sm font-medium text-gray-800">{entry.periodDate}</p>
+                        <p className="text-xs text-gray-500 mb-2">{entry.periodType === 'week' ? t('history.week') : t('history.day')}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {entry.subjects.length === 0 ? (
+                            <span className="text-xs text-gray-400">{t('history.noSubjects')}</span>
+                          ) : (
+                            entry.subjects.map((subject) => (
+                              <span
+                                key={subject.id}
+                                className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs text-indigo-700"
+                              >
+                                {language === 'de' ? subject.labelDe : subject.labelEn}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

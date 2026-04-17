@@ -1,5 +1,6 @@
 import { Plus, X, BookOpen, Search } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n } from '../i18n/i18n';
 
 export interface Subject {
   id: string;
@@ -20,6 +21,7 @@ export function CourseManagement({
   onRemoveSubject,
   availableSubjects
 }: CourseManagementProps) {
+  const { t } = useI18n();
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -42,14 +44,14 @@ export function CourseManagement({
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900">Course Management</h3>
+        <h3 className="font-semibold text-gray-900">{t('courseManagement.title')}</h3>
         {canAddMore && (
           <button
             onClick={() => setShowAddSubject(true)}
             className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add
+            {t('common.add')}
           </button>
         )}
       </div>
@@ -57,12 +59,12 @@ export function CourseManagement({
       {subjects.length === 0 ? (
         <div className="text-center py-8">
           <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50 text-gray-400" />
-          <p className="text-sm text-gray-400 mb-3">No subjects added yet</p>
+          <p className="text-sm text-gray-400 mb-3">{t('courseManagement.none')}</p>
           <button
             onClick={() => setShowAddSubject(true)}
             className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors text-sm font-medium"
           >
-            Add Your First Subject
+            {t('courseManagement.first')}
           </button>
         </div>
       ) : (
@@ -92,28 +94,26 @@ export function CourseManagement({
 
       {!canAddMore && (
         <p className="text-xs text-gray-500 mt-3 text-center">
-          Maximum of 12 subjects reached
+          {t('courseManagement.maxReached')}
         </p>
       )}
 
       {showAddSubject && availableToAdd.length > 0 && (
         <div className="mt-4 bg-gray-50 rounded-xl p-4 space-y-3">
-          <p className="text-sm text-gray-600 mb-2">Select a subject to add:</p>
+          <p className="text-sm text-gray-600 mb-2">{t('courseManagement.selectToAdd')}</p>
 
-          {/* Search Input */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search subjects..."
+              placeholder={t('courseManagement.search')}
               className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
               autoFocus
             />
           </div>
 
-          {/* Dropdown List */}
           <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg bg-white">
             {filteredSubjects.length > 0 ? (
               filteredSubjects.map(subject => (
@@ -127,7 +127,7 @@ export function CourseManagement({
               ))
             ) : (
               <div className="px-3 py-4 text-center text-sm text-gray-500">
-                No subjects found
+                {t('courseManagement.noFound')}
               </div>
             )}
           </div>
@@ -139,19 +139,19 @@ export function CourseManagement({
             }}
             className="text-sm text-gray-500 hover:text-gray-700 w-full text-center"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       )}
 
       {showAddSubject && availableToAdd.length === 0 && (
         <div className="mt-4 bg-gray-50 rounded-xl p-4 text-center">
-          <p className="text-sm text-gray-500">All available subjects have been added</p>
+          <p className="text-sm text-gray-500">{t('courseManagement.allAdded')}</p>
           <button
             onClick={() => setShowAddSubject(false)}
             className="text-sm text-indigo-600 hover:text-indigo-700 mt-2"
           >
-            Close
+            {t('common.close')}
           </button>
         </div>
       )}

@@ -1,9 +1,9 @@
-import { X, Plus, Star, Car, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Star, Car, FileText, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
-import { CourseTimeInput } from './CourseTimeInput';
 import { SubjectTimeInput } from './SubjectTimeInput';
 import { Slider } from '@radix-ui/react-slider';
+import { useI18n } from '../i18n/i18n';
 
 interface Subject {
   id: string;
@@ -44,60 +44,25 @@ interface DailyEntryModalProps {
   defaultCommuteTime?: number;
 }
 
-export function DailyEntryModal({ date, onClose, onSave, existingEntry, availableCourses, subjects, defaultCommuteTime = 0 }: DailyEntryModalProps) {
+export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0 }: DailyEntryModalProps) {
+  const { t } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
   const [reliability, setReliability] = useState(3);
   const [adminEffort, setAdminEffort] = useState(0);
   const [commuteTime, setCommuteTime] = useState(0);
   const [comment, setComment] = useState('');
-  const [showAddCourse, setShowAddCourse] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const reEntryMode = existingEntry ? 'add' : null;
 
   useEffect(() => {
-    initializeNewEntry();
-  }, [existingEntry]);
-
-  useEffect(() => {
-    // Initialize subject times when subjects change
-    const newSubjectTimes = subjects.map(subject => {
-      const existing = subjectTimes.find(st => st.subjectId === subject.id);
-      return existing || {
-        subjectId: subject.id,
-        classTime: 0,
-        selfStudyTime: 0
-      };
-    });
-    setSubjectTimes(newSubjectTimes);
-  }, [subjects]);
-
-  const initializeNewEntry = () => {
     setCourses([]);
     setSubjectTimes(subjects.map(s => ({ subjectId: s.id, classTime: 0, selfStudyTime: 0 })));
     setReliability(3);
     setAdminEffort(0);
     setCommuteTime(defaultCommuteTime);
     setComment('');
-  };
-
-  const handleAddCourse = (courseName: string) => {
-    const newCourse: Course = {
-      id: Date.now().toString(),
-      name: courseName,
-      hours: 0
-    };
-    setCourses([...courses, newCourse]);
-    setShowAddCourse(false);
-  };
-
-  const handleUpdateCourse = (id: string, hours: number) => {
-    setCourses(courses.map(c => c.id === id ? { ...c, hours } : c));
-  };
-
-  const handleRemoveCourse = (id: string) => {
-    setCourses(courses.filter(c => c.id !== id));
-  };
+  }, [existingEntry, subjects, defaultCommuteTime]);
 
   const handleSubjectClassTimeChange = (subjectId: string, time: number) => {
     setSubjectTimes(prev => {
@@ -106,9 +71,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
         return prev.map(st =>
           st.subjectId === subjectId ? { ...st, classTime: time } : st
         );
-      } else {
-        return [...prev, { subjectId, classTime: time, selfStudyTime: 0 }];
       }
+      return [...prev, { subjectId, classTime: time, selfStudyTime: 0 }];
     });
   };
 
@@ -119,9 +83,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
         return prev.map(st =>
           st.subjectId === subjectId ? { ...st, selfStudyTime: time } : st
         );
-      } else {
-        return [...prev, { subjectId, classTime: 0, selfStudyTime: time }];
       }
+      return [...prev, { subjectId, classTime: 0, selfStudyTime: time }];
     });
   };
 
@@ -133,7 +96,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
       reliability: 0,
       adminEffort: 0,
       commuteTime: 0,
-      comment: 'Day skipped',
+      comment: t('dailyEntry.skippedTag'),
       skipped: true
     };
     onSave(entry);
@@ -143,8 +106,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
   const handleSubmit = () => {
     const entry: DailyEntry = {
       date: format(date, 'yyyy-MM-dd'),
-      courses: courses,
-      subjectTimes: subjectTimes,
+      courses,
+      subjectTimes,
       reliability,
       adminEffort,
       commuteTime,
@@ -164,7 +127,6 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
       });
       entry.courses = mergedCourses;
 
-      // Merge subject times
       const mergedSubjectTimes = [...(existingEntry.subjectTimes || [])];
       subjectTimes.forEach(newST => {
         const existingSTIndex = mergedSubjectTimes.findIndex(st => st.subjectId === newST.subjectId);
@@ -189,15 +151,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h3 className="font-semibold text-gray-900 mb-2">Entry Saved!</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">{t('dailyEntry.saved')}</h3>
           <p className="text-gray-600 mb-6">
-            Your workload for {format(date, 'MMMM d, yyyy')} has been recorded.
+            {t('dailyEntry.savedDescription', { date: format(date, 'MMMM d, yyyy') })}
           </p>
           <button
             onClick={onClose}
             className="px-6 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium"
           >
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>
@@ -207,17 +169,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto pt-8">
       <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl my-8">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-gray-900">
-              {reEntryMode === 'add' ? 'Add Additional Hours' : 'Daily Workload Entry'}
+              {reEntryMode === 'add' ? t('dailyEntry.addHours') : t('dailyEntry.title')}
             </h3>
             <p className="text-sm text-gray-500">{format(date, 'EEEE, MMMM d, yyyy')}</p>
             {reEntryMode === 'add' && (
-              <p className="text-xs text-amber-700 mt-1">
-                Adding new data to existing entry
-              </p>
+              <p className="text-xs text-amber-700 mt-1">{t('dailyEntry.addingExisting')}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -225,7 +184,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
               onClick={handleSkipDay}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
             >
-              Skip
+              {t('dailyEntry.skip')}
             </button>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <X className="w-5 h-5 text-gray-600" />
@@ -233,43 +192,33 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
           </div>
         </div>
 
-        {/* Helper Text */}
         <div className="bg-blue-50 rounded-lg p-3 mb-6">
           <p className="text-xs text-blue-800">
-            💡 <strong>Tip:</strong> You can manually edit time values by clicking on them. If you need more than the slider maximum, just type the value directly.
+            💡 <strong>{t('dailyEntry.tip')}</strong> {t('dailyEntry.tipDescription')}
           </p>
         </div>
 
-        {/* Subjects */}
         <div className="space-y-4 mb-6">
-          <h4 className="font-medium text-gray-800">Subjects</h4>
+          <h4 className="font-medium text-gray-800">{t('dailyEntry.subjects')}</h4>
 
           {subjects.length === 0 ? (
             <div className="text-center py-8 bg-amber-50 rounded-xl">
-              <p className="text-sm text-amber-700 mb-2">No subjects added yet</p>
-              <p className="text-xs text-amber-600">
-                Please add subjects in the Course Management panel first
-              </p>
+              <p className="text-sm text-amber-700 mb-2">{t('courseManagement.none')}</p>
+              <p className="text-xs text-amber-600">{t('dailyEntry.noSubjectsHelp')}</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {subjects.map(subject => {
                 const subjectTime = subjectTimes.find(st => st.subjectId === subject.id);
 
-                // Check if this subject had data in the existing entry
                 let statusTag = null;
                 let isFaded = false;
                 if (reEntryMode === 'add' && existingEntry) {
                   const existingSubjectTime = existingEntry.subjectTimes?.find(st => st.subjectId === subject.id);
                   const hadData = existingSubjectTime && (existingSubjectTime.classTime > 0 || existingSubjectTime.selfStudyTime > 0);
 
-                  if (hadData) {
-                    statusTag = 'Filled before';
-                    isFaded = true;
-                  } else {
-                    statusTag = 'Skipped';
-                    isFaded = true;
-                  }
+                  statusTag = hadData ? t('dailyEntry.filledBefore') : t('dailyEntry.skippedTag');
+                  isFaded = true;
                 }
 
                 return (
@@ -291,12 +240,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
           )}
         </div>
 
-        {/* Additional Inputs */}
         <div className="space-y-6 mb-6">
-          {/* Reliability */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Data Reliability</label>
+              <label className="text-sm font-medium text-gray-700">{t('dailyEntry.reliability')}</label>
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map(rating => (
                   <button
@@ -317,10 +264,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
             </div>
           </div>
 
-          {/* Admin Effort */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">General Admin Effort</label>
+              <label className="text-sm font-medium text-gray-700">{t('dailyEntry.adminEffort')}</label>
               <span className="text-sm font-semibold text-gray-900">{adminEffort.toFixed(1)}h</span>
             </div>
             <Slider
@@ -338,20 +284,16 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
               </div>
               <div
                 className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{
-                  position: 'absolute',
-                  left: `calc(${(adminEffort / 5) * 100}% - 10px)`
-                }}
+                style={{ position: 'absolute', left: `calc(${(adminEffort / 5) * 100}% - 10px)` }}
               />
             </Slider>
           </div>
 
-          {/* Commute Time */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <Car className="w-4 h-4 text-gray-500" />
-                Commute Time
+                {t('dailyEntry.commute')}
               </label>
               <span className="text-sm font-semibold text-gray-900">{commuteTime.toFixed(1)}h</span>
             </div>
@@ -370,37 +312,32 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
               </div>
               <div
                 className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{
-                  position: 'absolute',
-                  left: `calc(${(commuteTime / 5) * 100}% - 10px)`
-                }}
+                style={{ position: 'absolute', left: `calc(${(commuteTime / 5) * 100}% - 10px)` }}
               />
             </Slider>
           </div>
 
-          {/* Comment */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
-              Comment (optional)
+              {t('dailyEntry.comment')}
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              placeholder="Add any notes about your day..."
+              placeholder={t('dailyEntry.commentPlaceholder')}
             />
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium"
           >
-            Submit Entry
+            {t('dailyEntry.submit')}
           </button>
         </div>
       </div>

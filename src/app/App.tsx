@@ -6,6 +6,7 @@ import { CourseManagement, Subject } from './components/CourseManagement';
 import { BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
+import PocketBase from 'pocketbase';
 
 interface SubjectTime {
   subjectId: string;
@@ -66,6 +67,8 @@ interface AppContentProps {
 
 function AppContent({ participantId }: AppContentProps) {
   void participantId;
+  const pb = new PocketBase('http://127.0.0.1:8090');
+
   const { t, language, setLanguage } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -76,33 +79,35 @@ function AppContent({ participantId }: AppContentProps) {
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setEntries(new Map(Object.entries(parsed)));
-      } catch (e) {
-        console.error('Failed to load entries:', e);
-      }
-    }
+    async function loadSubjectsForParticipant(participantId: string) {
+      const enrollments = await pb
+        .collection("participant_subjects")
+        .getFullList({
+          filter: pb.filter("participant = {:participantId}", { participantId }),
+          expand: "subject",
+        });
 
-    const storedSubjects = localStorage.getItem(SUBJECTS_STORAGE_KEY);
-    if (storedSubjects) {
-      try {
-        setSubjects(JSON.parse(storedSubjects));
-      } catch (e) {
-        console.error('Failed to load subjects:', e);
-      }
-    }
+      const subjects = enrollments.map((enrollment) => {
+        const subject = enrollment.expand?.subject;
 
-    const storedCommute = localStorage.getItem(DEFAULT_COMMUTE_KEY);
-    if (storedCommute) {
-      try {
-        setDefaultCommuteTime(parseFloat(storedCommute));
-      } catch (e) {
-        console.error('Failed to load default commute time:', e);
-      }
+        return {
+          id: subject.id,
+          key: subject.key,
+          label_en: subject.label_en,
+          label_de: subject.label_de,
+          credits: subject.credits,
+          color: enrollment.color,
+        };
+      });
+
+      return subjects;
     }
+    loadSubjectsForParticipant(participantId).then(
+      (subjects) => {
+        console.log("Loaded subjects for participant:", subjects);
+        //setSubjects(subjects);
+      }
+    ).catch(console.error).finally();
   }, []);
 
   const saveEntry = (entry: DailyEntry) => {
@@ -179,17 +184,15 @@ function AppContent({ participantId }: AppContentProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setLanguage('en')}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                  language === 'en' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${language === 'en' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
+                  }`}
               >
                 {t('language.en')}
               </button>
               <button
                 onClick={() => setLanguage('de')}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                  language === 'de' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${language === 'de' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
+                  }`}
               >
                 {t('language.de')}
               </button>
@@ -219,17 +222,6 @@ function AppContent({ participantId }: AppContentProps) {
             />
           </div>
         </div>
-
-        {entries.size === 0 && (
-          <div className="mt-8 bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
-            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-indigo-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">{t('app.empty.title')}</h3>
-            <p className="text-gray-600 mb-4">{t('app.empty.description')}</p>
-            <p className="text-sm text-gray-500">{t('app.empty.hint')}</p>
-          </div>
-        )}
       </div>
 
       {showEntryModal && selectedDate && (

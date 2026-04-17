@@ -106,6 +106,48 @@ routerAdd("GET", "/api/workload-status", (e) => {
         return null
     }
 
+    function chooseBaseSubmission(group) {
+        const corrections = group.filter((s) => s.get("submissionMode") === "correction")
+        if (corrections.length > 0) {
+            return corrections.sort(compareLatestFirst)[0]
+        }
+
+        const initials = group.filter((s) => s.get("submissionMode") === "initial")
+        if (initials.length > 0) {
+            return initials.sort(compareLatestFirst)[0]
+        }
+
+        const nonAppendums = group.filter((s) => s.get("submissionMode") !== "appendum")
+        if (nonAppendums.length > 0) {
+            return nonAppendums.sort(compareLatestFirst)[0]
+        }
+
+        return null
+    }
+
+    function compareLatestFirst(a, b) {
+        const aDate = getSubmissionSortDate(a)
+        const bDate = getSubmissionSortDate(b)
+
+        return bDate.getTime() - aDate.getTime()
+    }
+
+    function getSubmissionSortDate(submission) {
+        const submittedAt = submission.get("submittedAt")
+        const updated = submission.get("updated")
+        const created = submission.get("created")
+
+        return new Date(submittedAt || updated || created || 0)
+    }
+
+    function getPeriodKey(submission) {
+        const periodType = submission.get("periodType") || ""
+        const periodStart = submission.get("periodStart") || ""
+        const datePart = String(periodStart).slice(0, 10)
+
+        return `${periodType}_${datePart}`
+    }
+
     function sameDay(a, b) {
         return (
             a.getFullYear() === b.getFullYear() &&
@@ -175,8 +217,6 @@ routerAdd("GET", "/api/workload-status", (e) => {
     const rangeStart = addDays(todayStart, -lookbackDays)
     const rangeStartStr = formatDateTime(rangeStart)
 
-    // Only current valid records matter here.
-    // If you use replaced/corrected chains, exclude replaced records.
     const submissions = $app.findRecordsByFilter(
         "submissions",
         [
@@ -200,6 +240,149 @@ routerAdd("GET", "/api/workload-status", (e) => {
         submissionMode: r.get("submissionMode"),
         submittedAt: r.get("submittedAt"),
     }))
+
+    const submissionIds = submissions.map((s) => s.id)
+    let submissionItems = []
+
+    if (submissionIds.length > 0) {
+        const idFilter = submissionIds
+            .map((id) => `submission = "${id}"`)
+            .join(" || ")
+
+        submissionItems = $app.findRecordsByFilter(
+            "submission_items",
+            idFilter,
+            "",
+            5000,
+            0
+        )
+    }
+
+    const subjects = $app.findRecordsByFilter(
+        "subjects",
+        "",
+        "key",
+        1000,
+        0
+    )
+
+    const subjectById = {}
+    for (const subject of subjects) {
+        subjectById[subject.id] = {
+            id: subject.id,
+            key: subject.get("key") || "",
+            labelEn: subject.get("label_en") || "",
+            labelDe: subject.get("label_de") || "",
+        }
+    }
+
+    const itemsBySubmission = {}
+    for (const item of submissionItems) {
+        const submissionId = item.get("submission")
+        const subjectId = item.get("workloadType")
+        const itemType = item.get("type") || ""
+
+        if (!subjectById[subjectId]) continue
+
+        if (!itemsBySubmission[submissionId]) {
+            itemsBySubmission[submissionId] = {}
+        }
+
+        if (!itemsBySubmission[submissionId][subjectId]) {
+            itemsBySubmission[submissionId][subjectId] = {
+                hasClassEntry: false,
+                hasStudyEntry: false,
+            }
+        }
+
+        if (itemType === "class") {
+            itemsBySubmission[submissionId][subjectId].hasClassEntry = true
+        }
+
+        if (itemType === "study") {
+            itemsBySubmission[submissionId][subjectId].hasStudyEntry = true
+        }
+    }
+
+    const submissionsByPeriod = {}
+    for (const submission of submissions) {
+        const periodKey = getPeriodKey(submission)
+
+        if (!submissionsByPeriod[periodKey]) {
+            submissionsByPeriod[periodKey] = []
+        }
+
+        submissionsByPeriod[periodKey].push(submission)
+    }
+
+    const submissionHistory = []
+    const periodKeys = Object.keys(submissionsByPeriod)
+
+    for (const periodKey of periodKeys) {
+        const group = submissionsByPeriod[periodKey]
+        const baseSubmission = chooseBaseSubmission(group)
+        const appendumSubmissions = group.filter((s) => s.get("submissionMode") === "appendum")
+
+        const effectiveSubmissions = []
+
+        if (baseSubmission) {
+            effectiveSubmissions.push(baseSubmission)
+        }
+
+        for (const appendum of appendumSubmissions) {
+            effectiveSubmissions.push(appendum)
+        }
+
+        if (effectiveSubmissions.length === 0) {
+            continue
+        }
+
+        const representative = baseSubmission || appendumSubmissions.sort(compareLatestFirst)[0]
+        const subjectMap = {}
+
+        for (const submission of effectiveSubmissions) {
+            const bySubject = itemsBySubmission[submission.id] || {}
+
+            for (const subjectId of Object.keys(bySubject)) {
+                const existing = subjectMap[subjectId] || {
+                    hasClassEntry: false,
+                    hasStudyEntry: false,
+                }
+
+                const fromSubmission = bySubject[subjectId]
+                existing.hasClassEntry = existing.hasClassEntry || !!fromSubmission.hasClassEntry
+                existing.hasStudyEntry = existing.hasStudyEntry || !!fromSubmission.hasStudyEntry
+                subjectMap[subjectId] = existing
+            }
+        }
+
+        const subjectsForPeriod = Object.keys(subjectMap)
+            .filter((subjectId) => !!subjectById[subjectId])
+            .map((subjectId) => ({
+                id: subjectById[subjectId].id,
+                key: subjectById[subjectId].key,
+                labelEn: subjectById[subjectId].labelEn,
+                labelDe: subjectById[subjectId].labelDe,
+                classTime: 0,
+                selfStudyTime: 0,
+                hasClassEntry: !!subjectMap[subjectId].hasClassEntry,
+                hasStudyEntry: !!subjectMap[subjectId].hasStudyEntry,
+            }))
+            .sort((a, b) => String(a.key).localeCompare(String(b.key)))
+
+        submissionHistory.push({
+            periodType: representative.get("periodType") || "",
+            periodStart: representative.get("periodStart") || "",
+            periodEnd: representative.get("periodEnd") || "",
+            periodDate: String(representative.get("periodStart") || "").slice(0, 10),
+            submissionIds: effectiveSubmissions.map((s) => s.id),
+            baseSubmissionId: baseSubmission ? baseSubmission.id : "",
+            appendumSubmissionIds: appendumSubmissions.map((s) => s.id),
+            subjects: subjectsForPeriod,
+        })
+    }
+
+    submissionHistory.sort((a, b) => String(b.periodStart).localeCompare(String(a.periodStart)))
 
     let expectedPeriods = []
     let missingPeriods = []
@@ -248,6 +431,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
         currentPeriod: currentPeriod,
 
         submittedPeriods: submittedPeriods,
+
+        submissionHistory: submissionHistory,
 
         missingPeriods: missingPeriods.map((p) => ({
             periodType: p.type,

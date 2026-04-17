@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/i18n';
 
 export interface Subject {
   id: string;
+  participantSubjectId?: string;
   key: string;
   labelEn: string;
   labelDe: string;
@@ -16,9 +17,9 @@ export const getSubjectDisplayName = (subject: Subject, language: 'en' | 'de') =
 
 interface CourseManagementProps {
   subjects: Subject[];
-  onAddSubject: (subjectName: string) => void;
+  onAddSubject: (subject: Subject) => void;
   onRemoveSubject: (id: string) => void;
-  availableSubjects: string[];
+  availableSubjects: Subject[];
 }
 
 export function CourseManagement({
@@ -31,18 +32,18 @@ export function CourseManagement({
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleAddSubject = (subjectName: string) => {
-    onAddSubject(subjectName);
+  const handleAddSubject = (subject: Subject) => {
+    onAddSubject(subject);
     setShowAddSubject(false);
     setSearchQuery('');
   };
 
   const availableToAdd = availableSubjects.filter(
-    subject => !subjects.find(s => s.labelEn === subject)
+    availableSubject => !subjects.find(subject => subject.id === availableSubject.id)
   );
 
   const filteredSubjects = availableToAdd.filter(subject =>
-    subject.toLowerCase().includes(searchQuery.toLowerCase())
+    getSubjectDisplayName(subject, language).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const canAddMore = subjects.length < 12;
@@ -126,11 +127,11 @@ export function CourseManagement({
             {filteredSubjects.length > 0 ? (
               filteredSubjects.map(subject => (
                 <button
-                  key={subject}
+                  key={subject.id}
                   onClick={() => handleAddSubject(subject)}
                   className="w-full px-3 py-2 text-left hover:bg-indigo-50 transition-colors text-sm border-b border-gray-100 last:border-b-0"
                 >
-                  {subject}
+                  {getSubjectDisplayName(subject, language)}
                 </button>
               ))
             ) : (

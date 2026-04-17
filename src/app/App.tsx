@@ -59,6 +59,20 @@ interface WorkloadStatusResponse {
   submissionHistory: WorkloadStatusHistoryEntry[];
 }
 
+function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
+  const comments = historyEntry.comments ?? [];
+  const newestAppendum = comments
+    .map((comment) => String(comment ?? '').trim())
+    .filter(Boolean)
+    .at(-1);
+
+  if (newestAppendum) {
+    return newestAppendum;
+  }
+
+  return String(historyEntry.comment ?? '').trim();
+}
+
 const SUBJECT_COLORS = [
   '#ef4444',
   '#f59e0b',
@@ -227,7 +241,7 @@ function AppContent({ participantId }: AppContentProps) {
             reliability: Number(item.dataRating ?? 0),
             adminEffort: Number(item.generalAdminTime ?? 0) / 60,
             commuteTime: Number(item.commuteTime ?? 0) / 60,
-            comment: String(item.comment ?? item.comments?.[0] ?? ''),
+            comment: getNewestComment(item),
             skipped: false,
           });
         });

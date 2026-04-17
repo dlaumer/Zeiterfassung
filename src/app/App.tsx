@@ -54,7 +54,7 @@ interface AppContentProps {
 type ParticipantStatus = 'loading' | 'valid' | 'invalid';
 
 function AppContent({ participantId }: AppContentProps) {
-  const pb = new PocketBase('http://78.47.244.186');
+  const pb = new PocketBase('http://127.0.0.1:8090/');
 
   const { t, language, setLanguage } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -171,7 +171,7 @@ function AppContent({ participantId }: AppContentProps) {
     setEntries(newEntries);
 
     const entriesObj = Object.fromEntries(newEntries);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
+    //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
 
     setShowEntryModal(false);
     setShowViewModal(false);
@@ -183,7 +183,7 @@ function AppContent({ participantId }: AppContentProps) {
     setEntries(newEntries);
 
     const entriesObj = Object.fromEntries(newEntries);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
+    //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
 
     setShowViewModal(false);
   };

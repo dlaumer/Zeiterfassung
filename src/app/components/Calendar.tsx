@@ -108,13 +108,12 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
               className={`
                 aspect-square rounded-xl p-2 text-sm font-medium transition-all relative
                 ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
-                ${isSelected ? 'bg-indigo-500 text-white hover:bg-indigo-600' : ''}
-                ${hasEntryDay && !isSelected && !isToday ? 'bg-gray-200 text-gray-700' : ''}
+                ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
               `}
             >
               <div className="relative flex items-center justify-center h-full">
-                {isToday && !isSelected ? (
+                {isToday ? (
                   <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">
                     {format(day, 'd')}
                   </div>
@@ -122,7 +121,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                   format(day, 'd')
                 )}
               </div>
-              {subjectColors.length > 0 && !isSelected && (
+              {subjectColors.length > 0 && (
                 <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
                   {subjectColors.slice(0, 4).map((color, index) => (
                     <div

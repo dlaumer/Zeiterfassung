@@ -10,6 +10,8 @@ interface SubjectTime {
   subjectId: string;
   classTime: number;
   selfStudyTime: number;
+  hasClassEntry?: boolean;
+  hasStudyEntry?: boolean;
 }
 
 interface Course {
@@ -53,9 +55,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   useEffect(() => {
     setCourses([]);
     setSubjectTimes(subjects.map(s => ({ subjectId: s.id, classTime: 0, selfStudyTime: 0 })));
-    setReliability(3);
-    setAdminEffort(0);
-    setCommuteTime(defaultCommuteTime);
+    setReliability(existingEntry?.reliability ?? 3);
+    setAdminEffort(existingEntry?.adminEffort ?? 0);
+    setCommuteTime(existingEntry?.commuteTime ?? defaultCommuteTime);
     setComment('');
   }, [existingEntry, subjects, defaultCommuteTime]);
 
@@ -210,7 +212,12 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 let isFaded = false;
                 if (reEntryMode === 'add' && existingEntry) {
                   const existingSubjectTime = existingEntry.subjectTimes?.find(st => st.subjectId === subject.id);
-                  const hadData = existingSubjectTime && (existingSubjectTime.classTime > 0 || existingSubjectTime.selfStudyTime > 0);
+                  const hadData = !!existingSubjectTime && (
+                    existingSubjectTime.hasClassEntry ||
+                    existingSubjectTime.hasStudyEntry ||
+                    existingSubjectTime.classTime > 0 ||
+                    existingSubjectTime.selfStudyTime > 0
+                  );
 
                   statusTag = hadData ? t('dailyEntry.filledBefore') : t('dailyEntry.skippedTag');
                   isFaded = true;
@@ -238,7 +245,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
         <div className="space-y-6 mb-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">{t('dailyEntry.reliability')}</label>
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                {t('dailyEntry.reliability')}
+                {reEntryMode === 'add' && existingEntry && existingEntry.reliability > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                    {t('dailyEntry.filledBefore')}
+                  </span>
+                )}
+              </label>
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map(rating => (
                   <button
@@ -261,7 +275,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">{t('dailyEntry.adminEffort')}</label>
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                {t('dailyEntry.adminEffort')}
+                {reEntryMode === 'add' && existingEntry && existingEntry.adminEffort > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                    {t('dailyEntry.filledBefore')}
+                  </span>
+                )}
+              </label>
               <span className="text-sm font-semibold text-gray-900">{adminEffort.toFixed(1)}h</span>
             </div>
             <Slider
@@ -289,6 +310,11 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <Car className="w-4 h-4 text-gray-500" />
                 {t('dailyEntry.commute')}
+                {reEntryMode === 'add' && existingEntry && existingEntry.commuteTime > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                    {t('dailyEntry.filledBefore')}
+                  </span>
+                )}
               </label>
               <span className="text-sm font-semibold text-gray-900">{commuteTime.toFixed(1)}h</span>
             </div>

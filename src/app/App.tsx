@@ -12,6 +12,8 @@ interface SubjectTime {
   subjectId: string;
   classTime: number;
   selfStudyTime: number;
+  hasClassEntry?: boolean;
+  hasStudyEntry?: boolean;
 }
 
 interface Course {
@@ -38,11 +40,16 @@ interface WorkloadStatusSubject {
   labelDe: string;
   classTime: number;
   selfStudyTime: number;
+  hasClassEntry?: boolean;
+  hasStudyEntry?: boolean;
 }
 
 interface WorkloadStatusHistoryEntry {
   periodType: 'day' | 'week' | string;
   periodDate: string;
+  commuteTime?: number;
+  generalAdminTime?: number;
+  dataRating?: number;
   subjects: WorkloadStatusSubject[];
 }
 
@@ -212,10 +219,12 @@ function AppContent({ participantId }: AppContentProps) {
               subjectId: subject.id,
               classTime: 0,
               selfStudyTime: 0,
+              hasClassEntry: !!subject.hasClassEntry,
+              hasStudyEntry: !!subject.hasStudyEntry,
             })),
-            reliability: 0,
-            adminEffort: 0,
-            commuteTime: 0,
+            reliability: Number(item.dataRating ?? 0),
+            adminEffort: Number(item.generalAdminTime ?? 0),
+            commuteTime: Number(item.commuteTime ?? 0),
             comment: '',
             skipped: false,
           });

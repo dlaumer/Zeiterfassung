@@ -51,6 +51,8 @@ interface AppContentProps {
   participantId: string | null;
 }
 
+type ParticipantStatus = 'loading' | 'valid' | 'invalid';
+
 function AppContent({ participantId }: AppContentProps) {
   const pb = new PocketBase('http://78.47.244.186');
 
@@ -63,6 +65,49 @@ function AppContent({ participantId }: AppContentProps) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
+  const [participantName, setParticipantName] = useState<string>('');
+  const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function validateParticipant(id: string | null) {
+      if (!id) {
+        if (isMounted) {
+          setParticipantStatus('invalid');
+          setParticipantName('');
+        }
+        return;
+      }
+
+      try {
+        const participant = await pb.collection('participants').getOne(id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setParticipantName(participant.name ?? '');
+        setParticipantStatus('valid');
+      } catch (error) {
+        console.error('Participant lookup failed:', error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setParticipantStatus('invalid');
+        setParticipantName('');
+      }
+    }
+
+    setParticipantStatus('loading');
+    validateParticipant(participantId);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [participantId]);
 
   useEffect(() => {
     async function loadAvailableSubjects() {
@@ -108,7 +153,7 @@ function AppContent({ participantId }: AppContentProps) {
 
       return subjects;
     }
-    if (!participantId) {
+    if (!participantId || participantStatus !== 'valid') {
       return;
     }
 
@@ -118,7 +163,7 @@ function AppContent({ participantId }: AppContentProps) {
         setSubjects(subjects);
       })
       .catch(console.error);
-  }, [participantId]);
+  }, [participantId, participantStatus]);
 
   const saveEntry = (entry: DailyEntry) => {
     const newEntries = new Map(entries);
@@ -212,6 +257,22 @@ function AppContent({ participantId }: AppContentProps) {
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
 
+  if (participantStatus === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 md:p-8" />
+    );
+  }
+
+  if (participantStatus === 'invalid') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 md:p-8">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-red-700 font-semibold text-lg">{t('app.participantMissing')}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -221,7 +282,9 @@ function AppContent({ participantId }: AppContentProps) {
               <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
-              <h1 className="font-bold text-gray-900">{t('app.title')}</h1>
+              <h1 className="font-bold text-gray-900">
+                {participantName ? `${t('app.title')} — ${participantName}` : t('app.title')}
+              </h1>
             </div>
 
             <div className="flex items-center gap-2">

@@ -370,11 +370,18 @@ routerAdd("GET", "/api/workload-status", (e) => {
             }))
             .sort((a, b) => String(a.key).localeCompare(String(b.key)))
 
+        const representativeCommuteTime = Number(representative.get("commuteTime") || 0)
+        const representativeGeneralAdminTime = Number(representative.get("generalAdminTime") || 0)
+        const representativeDataRating = Number(representative.get("dataRating") || 0)
+
         submissionHistory.push({
             periodType: representative.get("periodType") || "",
             periodStart: representative.get("periodStart") || "",
             periodEnd: representative.get("periodEnd") || "",
             periodDate: String(representative.get("periodStart") || "").slice(0, 10),
+            commuteTime: representativeCommuteTime,
+            generalAdminTime: representativeGeneralAdminTime,
+            dataRating: representativeDataRating,
             submissionIds: effectiveSubmissions.map((s) => s.id),
             baseSubmissionId: baseSubmission ? baseSubmission.id : "",
             appendumSubmissionIds: appendumSubmissions.map((s) => s.id),

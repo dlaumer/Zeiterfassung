@@ -140,7 +140,7 @@
     "de": "Bitte füge zuerst Fächer im Verwaltungsbereich hinzu"
   },
   "dailyEntry.filledBefore": {
-    "en": "Filled before",
+    "en": "Already filled",
     "de": "Bereits erfasst"
   },
   "dailyEntry.skippedTag": {

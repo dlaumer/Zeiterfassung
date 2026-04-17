@@ -92,6 +92,13 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }
           <p className="text-sm text-blue-800">{t('viewEntry.existsInfo')}</p>
         </div>
 
+        {entry.comment && (
+          <div className="bg-gray-50 rounded-xl p-4 mb-6">
+            <p className="text-xs font-medium text-gray-500 mb-1">{t('dailyEntry.comment')}</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{entry.comment}</p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3">
           <button
             onClick={onAddWorkload}

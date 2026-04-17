@@ -140,6 +140,19 @@ routerAdd("GET", "/api/workload-status", (e) => {
         return new Date(submittedAt || updated || created || 0)
     }
 
+    function pickLatestFieldValue(submissions, fieldName, fallbackValue) {
+        const newestFirst = [...submissions].sort(compareLatestFirst)
+
+        for (const submission of newestFirst) {
+            const rawValue = submission.get(fieldName)
+            if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
+                return rawValue
+            }
+        }
+
+        return fallbackValue
+    }
+
     function getPeriodKey(submission) {
         const periodType = submission.get("periodType") || ""
         const periodStart = submission.get("periodStart") || ""
@@ -370,9 +383,15 @@ routerAdd("GET", "/api/workload-status", (e) => {
             }))
             .sort((a, b) => String(a.key).localeCompare(String(b.key)))
 
-        const representativeCommuteTime = Number(representative.get("commuteTime") || 0)
-        const representativeGeneralAdminTime = Number(representative.get("generalAdminTime") || 0)
-        const representativeDataRating = Number(representative.get("dataRating") || 0)
+        const representativeCommuteTime = Number(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0) || 0)
+        const representativeGeneralAdminTime = Number(pickLatestFieldValue(effectiveSubmissions, "generalAdminTime", 0) || 0)
+        const representativeDataRating = Number(pickLatestFieldValue(effectiveSubmissions, "dataRating", 0) || 0)
+        const representativeComment = String(pickLatestFieldValue(effectiveSubmissions, "comment", "") || "")
+
+        const comments = effectiveSubmissions
+            .sort(compareLatestFirst)
+            .map((submission) => String(submission.get("comment") || "").trim())
+            .filter((value) => value.length > 0)
 
         submissionHistory.push({
             periodType: representative.get("periodType") || "",
@@ -382,6 +401,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
             commuteTime: representativeCommuteTime,
             generalAdminTime: representativeGeneralAdminTime,
             dataRating: representativeDataRating,
+            comment: representativeComment,
+            comments: comments,
             submissionIds: effectiveSubmissions.map((s) => s.id),
             baseSubmissionId: baseSubmission ? baseSubmission.id : "",
             appendumSubmissionIds: appendumSubmissions.map((s) => s.id),

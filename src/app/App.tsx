@@ -50,6 +50,8 @@ interface WorkloadStatusHistoryEntry {
   commuteTime?: number;
   generalAdminTime?: number;
   dataRating?: number;
+  comment?: string;
+  comments?: string[];
   subjects: WorkloadStatusSubject[];
 }
 
@@ -225,7 +227,7 @@ function AppContent({ participantId }: AppContentProps) {
             reliability: Number(item.dataRating ?? 0),
             adminEffort: Number(item.generalAdminTime ?? 0),
             commuteTime: Number(item.commuteTime ?? 0),
-            comment: '',
+            comment: String(item.comment ?? item.comments?.[0] ?? ''),
             skipped: false,
           });
         });
@@ -439,6 +441,15 @@ function AppContent({ participantId }: AppContentProps) {
                             ))
                           )}
                         </div>
+                        {(entry.comments?.length ?? 0) > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {entry.comments?.map((comment, index) => (
+                              <p key={`${entry.periodDate}-comment-${index}`} className="text-xs text-gray-600">
+                                {comment}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

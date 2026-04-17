@@ -223,8 +223,8 @@ function AppContent({ participantId }: AppContentProps) {
               hasStudyEntry: !!subject.hasStudyEntry,
             })),
             reliability: Number(item.dataRating ?? 0),
-            adminEffort: Number(item.generalAdminTime ?? 0),
-            commuteTime: Number(item.commuteTime ?? 0),
+            adminEffort: Number(item.generalAdminTime ?? 0) / 60,
+            commuteTime: Number(item.commuteTime ?? 0) / 60,
             comment: '',
             skipped: false,
           });

@@ -58,7 +58,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     setReliability(existingEntry?.reliability ?? 3);
     setAdminEffort(existingEntry?.adminEffort ?? 0);
     setCommuteTime(existingEntry?.commuteTime ?? defaultCommuteTime);
-    setComment('');
+    setComment(existingEntry?.comment ?? '');
   }, [existingEntry, subjects, defaultCommuteTime]);
 
   const handleSubjectClassTimeChange = (subjectId: string, time: number) => {

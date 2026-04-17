@@ -59,11 +59,7 @@ const STORAGE_KEY = 'student-workload-tracker';
 const SUBJECTS_STORAGE_KEY = 'student-workload-subjects';
 const DEFAULT_COMMUTE_KEY = 'student-workload-default-commute';
 
-interface AppProps {
-  participantId: string | null;
-}
-
-export default function App({ participantId }: AppProps) {
+export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
@@ -71,16 +67,10 @@ export default function App({ participantId }: AppProps) {
   const [showViewModal, setShowViewModal] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
-  const createStorageKey = (baseKey: string) => (
-    participantId ? `${baseKey}-${participantId}` : baseKey
-  );
-  const entriesStorageKey = createStorageKey(STORAGE_KEY);
-  const subjectsStorageKey = createStorageKey(SUBJECTS_STORAGE_KEY);
-  const defaultCommuteStorageKey = createStorageKey(DEFAULT_COMMUTE_KEY);
 
   // Load entries from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(entriesStorageKey);
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -91,7 +81,7 @@ export default function App({ participantId }: AppProps) {
     }
 
     // Load subjects
-    const storedSubjects = localStorage.getItem(subjectsStorageKey);
+    const storedSubjects = localStorage.getItem(SUBJECTS_STORAGE_KEY);
     if (storedSubjects) {
       try {
         setSubjects(JSON.parse(storedSubjects));
@@ -101,7 +91,7 @@ export default function App({ participantId }: AppProps) {
     }
 
     // Load default commute time
-    const storedCommute = localStorage.getItem(defaultCommuteStorageKey);
+    const storedCommute = localStorage.getItem(DEFAULT_COMMUTE_KEY);
     if (storedCommute) {
       try {
         setDefaultCommuteTime(parseFloat(storedCommute));
@@ -109,7 +99,7 @@ export default function App({ participantId }: AppProps) {
         console.error('Failed to load default commute time:', e);
       }
     }
-  }, [defaultCommuteStorageKey, entriesStorageKey, subjectsStorageKey]);
+  }, []);
 
   // Save entries to localStorage
   const saveEntry = (entry: DailyEntry) => {
@@ -118,7 +108,7 @@ export default function App({ participantId }: AppProps) {
     setEntries(newEntries);
 
     const entriesObj = Object.fromEntries(newEntries);
-    localStorage.setItem(entriesStorageKey, JSON.stringify(entriesObj));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
 
     setShowEntryModal(false);
     setShowViewModal(false);
@@ -130,7 +120,7 @@ export default function App({ participantId }: AppProps) {
     setEntries(newEntries);
 
     const entriesObj = Object.fromEntries(newEntries);
-    localStorage.setItem(entriesStorageKey, JSON.stringify(entriesObj));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
 
     setShowViewModal(false);
   };
@@ -160,18 +150,39 @@ export default function App({ participantId }: AppProps) {
     };
     const updatedSubjects = [...subjects, newSubject];
     setSubjects(updatedSubjects);
-    localStorage.setItem(subjectsStorageKey, JSON.stringify(updatedSubjects));
+    localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
   };
 
   const handleRemoveSubject = (id: string) => {
+    // Check if any entries have data for this subject
+    let hasData = false;
+    entries.forEach(entry => {
+      if (entry.subjectTimes) {
+        const subjectTime = entry.subjectTimes.find(st => st.subjectId === id);
+        if (subjectTime && (subjectTime.classTime > 0 || subjectTime.selfStudyTime > 0)) {
+          hasData = true;
+        }
+      }
+    });
+
+    if (hasData) {
+      const confirmed = window.confirm(
+        'This subject has existing data in your entries. Removing it may cause data loss. Are you sure you want to remove this subject?'
+      );
+      if (!confirmed) return;
+    } else {
+      const confirmed = window.confirm('Are you sure you want to remove this subject?');
+      if (!confirmed) return;
+    }
+
     const updatedSubjects = subjects.filter(s => s.id !== id);
     setSubjects(updatedSubjects);
-    localStorage.setItem(subjectsStorageKey, JSON.stringify(updatedSubjects));
+    localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
   };
 
   const handleUpdateDefaultCommute = (time: number) => {
     setDefaultCommuteTime(time);
-    localStorage.setItem(defaultCommuteStorageKey, time.toString());
+    localStorage.setItem(DEFAULT_COMMUTE_KEY, time.toString());
   };
 
   // Calculate statistics
@@ -239,49 +250,13 @@ export default function App({ participantId }: AppProps) {
           </div>
 
           {/* Course Management */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1">
             <CourseManagement
               subjects={subjects}
               onAddSubject={handleAddSubject}
               onRemoveSubject={handleRemoveSubject}
               availableSubjects={AVAILABLE_COURSES}
             />
-
-            {/* Default Commute Time */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="font-semibold text-gray-900 mb-4">Default Commute Time</h3>
-              <p className="text-sm text-gray-600 mb-4">Set your typical daily commute time (editable per day)</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">Commute Time</span>
-                  <span className="text-sm font-semibold text-gray-900">{defaultCommuteTime.toFixed(1)}h</span>
-                </div>
-                <div className="relative flex items-center select-none touch-none w-full h-5">
-                  <div className="relative flex-1 h-2 bg-gray-200 rounded-full">
-                    <div
-                      className="absolute h-full bg-indigo-500 rounded-full transition-all"
-                      style={{ width: `${(defaultCommuteTime / 5) * 100}%` }}
-                    />
-                  </div>
-                  <input
-                    type="range"
-                    value={defaultCommuteTime}
-                    onChange={(e) => handleUpdateDefaultCommute(parseFloat(e.target.value))}
-                    min="0"
-                    max="5"
-                    step="0.25"
-                    className="absolute w-full h-5 opacity-0 cursor-pointer"
-                  />
-                  <div
-                    className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg pointer-events-none"
-                    style={{
-                      position: 'absolute',
-                      left: `calc(${(defaultCommuteTime / 5) * 100}% - 10px)`
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 

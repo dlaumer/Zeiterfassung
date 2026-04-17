@@ -208,7 +208,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto pt-8">
       <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl my-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-gray-900">
               {reEntryMode === 'add' ? 'Add Additional Hours' : 'Daily Workload Entry'}
@@ -220,9 +220,24 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
               </p>
             )}
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSkipDay}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+            >
+              Skip
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+        </div>
+
+        {/* Helper Text */}
+        <div className="bg-blue-50 rounded-lg p-3 mb-6">
+          <p className="text-xs text-blue-800">
+            💡 <strong>Tip:</strong> You can manually edit time values by clicking on them. If you need more than the slider maximum, just type the value directly.
+          </p>
         </div>
 
         {/* Subjects */}
@@ -268,6 +283,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
                     onSelfStudyTimeChange={(time) => handleSubjectSelfStudyTimeChange(subject.id, time)}
                     statusTag={statusTag}
                     isFaded={isFaded}
+                    isAdditionalHours={reEntryMode === 'add'}
                   />
                 );
               })}
@@ -332,19 +348,34 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
 
           {/* Commute Time */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Car className="w-4 h-4 text-gray-500" />
-              Commute Time (hours)
-            </label>
-            <input
-              type="number"
-              value={commuteTime}
-              onChange={(e) => setCommuteTime(parseFloat(e.target.value) || 0)}
-              min="0"
-              max="10"
-              step="0.25"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Car className="w-4 h-4 text-gray-500" />
+                Commute Time
+              </label>
+              <span className="text-sm font-semibold text-gray-900">{commuteTime.toFixed(1)}h</span>
+            </div>
+            <Slider
+              value={[commuteTime]}
+              onValueChange={(value) => setCommuteTime(value[0])}
+              max={5}
+              step={0.25}
+              className="relative flex items-center select-none touch-none w-full h-5"
+            >
+              <div className="relative flex-1 h-2 bg-gray-200 rounded-full">
+                <div
+                  className="absolute h-full bg-indigo-500 rounded-full transition-all"
+                  style={{ width: `${(commuteTime / 5) * 100}%` }}
+                />
+              </div>
+              <div
+                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+                style={{
+                  position: 'absolute',
+                  left: `calc(${(commuteTime / 5) * 100}% - 10px)`
+                }}
+              />
+            </Slider>
           </div>
 
           {/* Comment */}
@@ -365,12 +396,6 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, availabl
 
         {/* Actions */}
         <div className="flex gap-3">
-          <button
-            onClick={handleSkipDay}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
-          >
-            Skip Day
-          </button>
           <button
             onClick={handleSubmit}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium"

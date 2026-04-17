@@ -1,4 +1,4 @@
-import { Plus, X, BookOpen } from 'lucide-react';
+import { Plus, X, BookOpen, Search } from 'lucide-react';
 import { useState } from 'react';
 
 export interface Subject {
@@ -21,17 +21,23 @@ export function CourseManagement({
   availableSubjects
 }: CourseManagementProps) {
   const [showAddSubject, setShowAddSubject] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddSubject = (subjectName: string) => {
     onAddSubject(subjectName);
     setShowAddSubject(false);
+    setSearchQuery('');
   };
 
   const availableToAdd = availableSubjects.filter(
     subject => !subjects.find(s => s.name === subject)
   );
 
-  const canAddMore = subjects.length < 10;
+  const filteredSubjects = availableToAdd.filter(subject =>
+    subject.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const canAddMore = subjects.length < 12;
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -86,26 +92,51 @@ export function CourseManagement({
 
       {!canAddMore && (
         <p className="text-xs text-gray-500 mt-3 text-center">
-          Maximum of 10 subjects reached
+          Maximum of 12 subjects reached
         </p>
       )}
 
       {showAddSubject && availableToAdd.length > 0 && (
         <div className="mt-4 bg-gray-50 rounded-xl p-4 space-y-3">
-          <p className="text-sm text-gray-600">Select a subject to add:</p>
-          <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-            {availableToAdd.map(subject => (
-              <button
-                key={subject}
-                onClick={() => handleAddSubject(subject)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors text-sm text-left"
-              >
-                {subject}
-              </button>
-            ))}
+          <p className="text-sm text-gray-600 mb-2">Select a subject to add:</p>
+
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search subjects..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              autoFocus
+            />
           </div>
+
+          {/* Dropdown List */}
+          <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+            {filteredSubjects.length > 0 ? (
+              filteredSubjects.map(subject => (
+                <button
+                  key={subject}
+                  onClick={() => handleAddSubject(subject)}
+                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 transition-colors text-sm border-b border-gray-100 last:border-b-0"
+                >
+                  {subject}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-4 text-center text-sm text-gray-500">
+                No subjects found
+              </div>
+            )}
+          </div>
+
           <button
-            onClick={() => setShowAddSubject(false)}
+            onClick={() => {
+              setShowAddSubject(false);
+              setSearchQuery('');
+            }}
             className="text-sm text-gray-500 hover:text-gray-700 w-full text-center"
           >
             Cancel

@@ -1,12 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
-
-interface Subject {
-  id: string;
-  name: string;
-  color: string;
-}
+import { Subject } from './CourseManagement';
 
 interface CalendarProps {
   currentDate: Date;

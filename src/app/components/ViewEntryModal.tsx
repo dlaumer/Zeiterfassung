@@ -1,12 +1,7 @@
 import { X, Trash2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
-
-interface Subject {
-  id: string;
-  name: string;
-  color: string;
-}
+import { Subject } from './CourseManagement';
 
 interface SubjectTime {
   subjectId: string;

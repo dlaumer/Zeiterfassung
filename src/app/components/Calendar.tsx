@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
+import { useI18n } from '../i18n/i18n';
 
 interface Subject {
   id: string;
@@ -17,13 +18,22 @@ interface CalendarProps {
 }
 
 export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, subjects }: CalendarProps) {
+  const { t } = useI18n();
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weekDays = [
+    t('calendar.week.mon'),
+    t('calendar.week.tue'),
+    t('calendar.week.wed'),
+    t('calendar.week.thu'),
+    t('calendar.week.fri'),
+    t('calendar.week.sat'),
+    t('calendar.week.sun')
+  ];
 
   const today = new Date();
 
@@ -59,7 +69,6 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-semibold text-gray-900">
           {format(currentDate, 'MMMM yyyy')}
@@ -80,7 +89,6 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         </div>
       </div>
 
-      {/* Week days */}
       <div className="grid grid-cols-7 gap-2 mb-2">
         {weekDays.map(day => (
           <div key={day} className="text-center text-sm text-gray-500 font-medium py-2">
@@ -89,7 +97,6 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         ))}
       </div>
 
-      {/* Calendar days */}
       <div className="grid grid-cols-7 gap-2">
         {days.map(day => {
           const isCurrentMonth = isSameMonth(day, currentDate);

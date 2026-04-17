@@ -24,8 +24,6 @@ interface DailyEntry {
   date: string;
   courses: Course[];
   subjectTimes: SubjectTime[];
-  subjectIds?: string[];
-  subjects?: string[];
   reliability: number;
   adminEffort: number;
   commuteTime: number;
@@ -165,76 +163,6 @@ function AppContent({ participantId }: AppContentProps) {
         setSubjects(subjects);
       })
       .catch(console.error);
-  }, [participantId, participantStatus]);
-
-  useEffect(() => {
-    if (!participantId || participantStatus !== 'valid') {
-      setEntries(new Map());
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadWorkloadStatus() {
-      const response = await fetch(`/api/workload-status?participantId=${encodeURIComponent(participantId)}`);
-      if (!response.ok) {
-        throw new Error(`Unable to fetch workload status (${response.status})`);
-      }
-
-      const payload = await response.json();
-      const statusItems = Array.isArray(payload?.status) ? payload.status : [];
-
-      const hydratedEntries = new Map<string, DailyEntry>();
-
-      statusItems.forEach((item: any) => {
-        if (!item?.date) {
-          return;
-        }
-
-        const subjectIds: string[] = Array.isArray(item.subjectIds)
-          ? item.subjectIds.filter((subjectId: unknown): subjectId is string => typeof subjectId === 'string')
-          : [];
-        const subjects: string[] = Array.isArray(item.subjects)
-          ? item.subjects.filter((subject: unknown): subject is string => typeof subject === 'string')
-          : [];
-
-        hydratedEntries.set(item.date, {
-          date: item.date,
-          courses: subjects.map((subject, index) => ({
-            id: `${item.date}-${subjectIds[index] ?? index}`,
-            name: subject,
-            hours: 0,
-          })),
-          subjectTimes: subjectIds.map((subjectId) => ({
-            subjectId,
-            classTime: 0,
-            selfStudyTime: 0,
-          })),
-          subjectIds,
-          subjects,
-          reliability: 0,
-          adminEffort: 0,
-          commuteTime: 0,
-          comment: '',
-          skipped: false,
-        });
-      });
-
-      if (isMounted) {
-        setEntries(hydratedEntries);
-      }
-    }
-
-    loadWorkloadStatus().catch((error) => {
-      console.error('Failed to load workload status:', error);
-      if (isMounted) {
-        setEntries(new Map());
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
   }, [participantId, participantStatus]);
 
   const saveEntry = (entry: DailyEntry) => {

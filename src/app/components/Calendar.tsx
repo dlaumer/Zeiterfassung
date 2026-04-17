@@ -55,7 +55,13 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
       .filter((st: any) => st.classTime > 0 || st.selfStudyTime > 0)
       .map((st: any) => st.subjectId);
 
-    const colors = loggedSubjectIds
+    const subjectIds = loggedSubjectIds.length > 0
+      ? loggedSubjectIds
+      : Array.isArray(entry.subjectIds)
+        ? entry.subjectIds
+        : [];
+
+    const colors = subjectIds
       .map((id: string) => subjects.find(s => s.id === id)?.color)
       .filter((color: string | undefined): color is string => !!color);
 

@@ -406,35 +406,7 @@ function AppContent({ participantId }: AppContentProps) {
                 onRemoveSubject={handleRemoveSubject}
                 availableSubjects={availableSubjects}
               />
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h3 className="font-semibold text-gray-900 mb-4">{t('history.title')}</h3>
-                {submissionHistory.length === 0 ? (
-                  <p className="text-sm text-gray-500">{t('history.none')}</p>
-                ) : (
-                  <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
-                    {submissionHistory.map((entry) => (
-                      <div key={`${entry.periodType}-${entry.periodDate}`} className="border border-gray-100 rounded-xl p-3">
-                        <p className="text-sm font-medium text-gray-800">{entry.periodDate}</p>
-                        <p className="text-xs text-gray-500 mb-2">{entry.periodType === 'week' ? t('history.week') : t('history.day')}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {entry.subjects.length === 0 ? (
-                            <span className="text-xs text-gray-400">{t('history.noSubjects')}</span>
-                          ) : (
-                            entry.subjects.map((subject) => (
-                              <span
-                                key={subject.id}
-                                className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs text-indigo-700"
-                              >
-                                {language === 'de' ? subject.labelDe : subject.labelEn}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              
             </div>
           </div>
         </div>

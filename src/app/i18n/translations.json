@@ -1,57 +1,226 @@
 {
-  "language.en": { "en": "English", "de": "Englisch" },
-  "language.de": { "en": "German", "de": "Deutsch" },
-  "app.title": { "en": "Daily Workload Tracker", "de": "Täglicher Lernaufwand-Tracker" },
-  "app.subtitle": { "en": "Track your study time and stay on top of your workload", "de": "Erfasse deine Lernzeit und behalte deinen Aufwand im Blick" },
-  "app.empty.title": { "en": "Welcome to Your Workload Tracker!", "de": "Willkommen bei deinem Lernaufwand-Tracker!" },
-  "app.empty.description": { "en": "Start by clicking on any day in the calendar to log your study time.", "de": "Starte, indem du auf einen Tag im Kalender klickst und deine Lernzeit einträgst." },
-  "app.empty.hint": { "en": "Track courses, admin work, commute time, and more to understand your daily workload better.", "de": "Erfasse Fächer, Verwaltungsaufwand, Pendelzeit und mehr, um deinen täglichen Aufwand besser zu verstehen." },
-  "calendar.week.mon": { "en": "Mon", "de": "Mo" },
-  "calendar.week.tue": { "en": "Tue", "de": "Di" },
-  "calendar.week.wed": { "en": "Wed", "de": "Mi" },
-  "calendar.week.thu": { "en": "Thu", "de": "Do" },
-  "calendar.week.fri": { "en": "Fri", "de": "Fr" },
-  "calendar.week.sat": { "en": "Sat", "de": "Sa" },
-  "calendar.week.sun": { "en": "Sun", "de": "So" },
-  "courseManagement.title": { "en": "Course Management", "de": "Fächerverwaltung" },
-  "common.add": { "en": "Add", "de": "Hinzufügen" },
-  "courseManagement.none": { "en": "No subjects added yet", "de": "Noch keine Fächer hinzugefügt" },
-  "courseManagement.first": { "en": "Add Your First Subject", "de": "Erstes Fach hinzufügen" },
-  "courseManagement.maxReached": { "en": "Maximum of 12 subjects reached", "de": "Maximum von 12 Fächern erreicht" },
-  "courseManagement.selectToAdd": { "en": "Select a subject to add:", "de": "Wähle ein Fach zum Hinzufügen:" },
-  "courseManagement.search": { "en": "Search subjects...", "de": "Fächer suchen..." },
-  "courseManagement.noFound": { "en": "No subjects found", "de": "Keine Fächer gefunden" },
-  "common.cancel": { "en": "Cancel", "de": "Abbrechen" },
-  "courseManagement.allAdded": { "en": "All available subjects have been added", "de": "Alle verfügbaren Fächer wurden hinzugefügt" },
-  "common.close": { "en": "Close", "de": "Schließen" },
-  "dailyEntry.saved": { "en": "Entry Saved!", "de": "Eintrag gespeichert!" },
-  "dailyEntry.savedDescription": { "en": "Your workload for {{date}} has been recorded.", "de": "Dein Lernaufwand für {{date}} wurde gespeichert." },
-  "dailyEntry.addHours": { "en": "Add Additional Hours", "de": "Zusätzliche Stunden hinzufügen" },
-  "dailyEntry.title": { "en": "Daily Workload Entry", "de": "Täglicher Aufwandseintrag" },
-  "dailyEntry.addingExisting": { "en": "Adding new data to existing entry", "de": "Neue Daten werden zum bestehenden Eintrag hinzugefügt" },
-  "dailyEntry.skip": { "en": "Skip", "de": "Überspringen" },
-  "dailyEntry.tip": { "en": "Tip:", "de": "Tipp:" },
-  "dailyEntry.tipDescription": { "en": "You can manually edit time values by clicking on them. If you need more than the slider maximum, just type the value directly.", "de": "Du kannst Zeitwerte manuell bearbeiten, indem du darauf klickst. Falls du mehr als das Slider-Maximum brauchst, gib den Wert direkt ein." },
-  "dailyEntry.subjects": { "en": "Subjects", "de": "Fächer" },
-  "dailyEntry.noSubjectsHelp": { "en": "Please add subjects in the Course Management panel first", "de": "Bitte füge zuerst Fächer im Verwaltungsbereich hinzu" },
-  "dailyEntry.filledBefore": { "en": "Filled before", "de": "Bereits erfasst" },
-  "dailyEntry.skippedTag": { "en": "Skipped", "de": "Übersprungen" },
-  "dailyEntry.reliability": { "en": "Data Reliability", "de": "Datenzuverlässigkeit" },
-  "dailyEntry.adminEffort": { "en": "General Admin Effort", "de": "Allgemeiner Verwaltungsaufwand" },
-  "dailyEntry.commute": { "en": "Commute Time", "de": "Pendelzeit" },
-  "dailyEntry.comment": { "en": "Comment (optional)", "de": "Kommentar (optional)" },
-  "dailyEntry.commentPlaceholder": { "en": "Add any notes about your day...", "de": "Notizen zu deinem Tag hinzufügen..." },
-  "dailyEntry.submit": { "en": "Submit Entry", "de": "Eintrag speichern" },
-  "viewEntry.daySkipped": { "en": "Day Skipped", "de": "Tag übersprungen" },
-  "viewEntry.skippedInfo": { "en": "This day was marked as skipped. No workload was recorded.", "de": "Dieser Tag wurde als übersprungen markiert. Es wurde kein Aufwand erfasst." },
-  "viewEntry.deleteDay": { "en": "Delete Day Data", "de": "Tagesdaten löschen" },
-  "viewEntry.addWorkload": { "en": "Add Workload", "de": "Aufwand hinzufügen" },
-  "viewEntry.existsTitle": { "en": "Data Already Entered", "de": "Daten bereits eingetragen" },
-  "viewEntry.existsInfo": { "en": "This day already has workload data recorded. You can add additional hours to the existing entry or delete all data for this day.", "de": "Für diesen Tag sind bereits Daten vorhanden. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für den Tag löschen." },
-  "subject.classTime": { "en": "Class Time", "de": "Unterrichtszeit" },
-  "subject.selfStudy": { "en": "Self Study Time", "de": "Selbstlernzeit" },
-  "subject.lessonHint": { "en": "45 min ≠ 1 lesson, 1 h = 1 lesson", "de": "45 Min. ≠ 1 Unterrichtsstunde, 1 h = 1 Lektion" },
-  "subject.removeTitle": { "en": "Remove Subject?", "de": "Fach entfernen?" },
-  "subject.removeInfo": { "en": "You have entered data for this subject. Removing it will clear the entered values. Are you sure?", "de": "Für dieses Fach wurden Daten eingetragen. Beim Entfernen gehen die Werte verloren. Bist du sicher?" },
-  "common.remove": { "en": "Remove", "de": "Entfernen" }
+  "language.en": {
+    "en": "English",
+    "de": "Englisch"
+  },
+  "language.de": {
+    "en": "German",
+    "de": "Deutsch"
+  },
+  "app.title": {
+    "en": "Daily Workload Tracker",
+    "de": "Täglicher Lernaufwand-Tracker"
+  },
+  "app.subtitle": {
+    "en": "Track your study time and stay on top of your workload",
+    "de": "Erfasse deine Lernzeit und behalte deinen Aufwand im Blick"
+  },
+  "app.empty.title": {
+    "en": "Welcome to Your Workload Tracker!",
+    "de": "Willkommen bei deinem Lernaufwand-Tracker!"
+  },
+  "app.empty.description": {
+    "en": "Start by clicking on any day in the calendar to log your study time.",
+    "de": "Starte, indem du auf einen Tag im Kalender klickst und deine Lernzeit einträgst."
+  },
+  "app.empty.hint": {
+    "en": "Track courses, admin work, commute time, and more to understand your daily workload better.",
+    "de": "Erfasse Fächer, Verwaltungsaufwand, Pendelzeit und mehr, um deinen täglichen Aufwand besser zu verstehen."
+  },
+  "calendar.week.mon": {
+    "en": "Mon",
+    "de": "Mo"
+  },
+  "calendar.week.tue": {
+    "en": "Tue",
+    "de": "Di"
+  },
+  "calendar.week.wed": {
+    "en": "Wed",
+    "de": "Mi"
+  },
+  "calendar.week.thu": {
+    "en": "Thu",
+    "de": "Do"
+  },
+  "calendar.week.fri": {
+    "en": "Fri",
+    "de": "Fr"
+  },
+  "calendar.week.sat": {
+    "en": "Sat",
+    "de": "Sa"
+  },
+  "calendar.week.sun": {
+    "en": "Sun",
+    "de": "So"
+  },
+  "courseManagement.title": {
+    "en": "Course Management",
+    "de": "Fächerverwaltung"
+  },
+  "common.add": {
+    "en": "Add",
+    "de": "Hinzufügen"
+  },
+  "courseManagement.none": {
+    "en": "No subjects added yet",
+    "de": "Noch keine Fächer hinzugefügt"
+  },
+  "courseManagement.first": {
+    "en": "Add Your First Subject",
+    "de": "Erstes Fach hinzufügen"
+  },
+  "courseManagement.maxReached": {
+    "en": "Maximum of 12 subjects reached",
+    "de": "Maximum von 12 Fächern erreicht"
+  },
+  "courseManagement.selectToAdd": {
+    "en": "Select a subject to add:",
+    "de": "Wähle ein Fach zum Hinzufügen:"
+  },
+  "courseManagement.search": {
+    "en": "Search subjects...",
+    "de": "Fächer suchen..."
+  },
+  "courseManagement.noFound": {
+    "en": "No subjects found",
+    "de": "Keine Fächer gefunden"
+  },
+  "common.cancel": {
+    "en": "Cancel",
+    "de": "Abbrechen"
+  },
+  "courseManagement.allAdded": {
+    "en": "All available subjects have been added",
+    "de": "Alle verfügbaren Fächer wurden hinzugefügt"
+  },
+  "common.close": {
+    "en": "Close",
+    "de": "Schließen"
+  },
+  "dailyEntry.saved": {
+    "en": "Entry Saved!",
+    "de": "Eintrag gespeichert!"
+  },
+  "dailyEntry.savedDescription": {
+    "en": "Your workload for {{date}} has been recorded.",
+    "de": "Dein Lernaufwand für {{date}} wurde gespeichert."
+  },
+  "dailyEntry.addHours": {
+    "en": "Add Additional Hours",
+    "de": "Zusätzliche Stunden hinzufügen"
+  },
+  "dailyEntry.title": {
+    "en": "Daily Workload Entry",
+    "de": "Täglicher Aufwandseintrag"
+  },
+  "dailyEntry.addingExisting": {
+    "en": "Adding new data to existing entry",
+    "de": "Neue Daten werden zum bestehenden Eintrag hinzugefügt"
+  },
+  "dailyEntry.skip": {
+    "en": "Skip",
+    "de": "Überspringen"
+  },
+  "dailyEntry.tip": {
+    "en": "Tip:",
+    "de": "Tipp:"
+  },
+  "dailyEntry.tipDescription": {
+    "en": "You can manually edit time values by clicking on them. If you need more than the slider maximum, just type the value directly.",
+    "de": "Du kannst Zeitwerte manuell bearbeiten, indem du darauf klickst. Falls du mehr als das Slider-Maximum brauchst, gib den Wert direkt ein."
+  },
+  "dailyEntry.subjects": {
+    "en": "Subjects",
+    "de": "Fächer"
+  },
+  "dailyEntry.noSubjectsHelp": {
+    "en": "Please add subjects in the Course Management panel first",
+    "de": "Bitte füge zuerst Fächer im Verwaltungsbereich hinzu"
+  },
+  "dailyEntry.filledBefore": {
+    "en": "Filled before",
+    "de": "Bereits erfasst"
+  },
+  "dailyEntry.skippedTag": {
+    "en": "Skipped",
+    "de": "Übersprungen"
+  },
+  "dailyEntry.reliability": {
+    "en": "Data Reliability",
+    "de": "Datenzuverlässigkeit"
+  },
+  "dailyEntry.adminEffort": {
+    "en": "General Admin Effort",
+    "de": "Allgemeiner Verwaltungsaufwand"
+  },
+  "dailyEntry.commute": {
+    "en": "Commute Time",
+    "de": "Pendelzeit"
+  },
+  "dailyEntry.comment": {
+    "en": "Comment (optional)",
+    "de": "Kommentar (optional)"
+  },
+  "dailyEntry.commentPlaceholder": {
+    "en": "Add any notes about your day...",
+    "de": "Notizen zu deinem Tag hinzufügen..."
+  },
+  "dailyEntry.submit": {
+    "en": "Submit Entry",
+    "de": "Eintrag speichern"
+  },
+  "viewEntry.daySkipped": {
+    "en": "Day Skipped",
+    "de": "Tag übersprungen"
+  },
+  "viewEntry.skippedInfo": {
+    "en": "This day was marked as skipped. No workload was recorded.",
+    "de": "Dieser Tag wurde als übersprungen markiert. Es wurde kein Aufwand erfasst."
+  },
+  "viewEntry.deleteDay": {
+    "en": "Delete Day Data",
+    "de": "Tagesdaten löschen"
+  },
+  "viewEntry.addWorkload": {
+    "en": "Add Workload",
+    "de": "Aufwand hinzufügen"
+  },
+  "viewEntry.existsTitle": {
+    "en": "Data Already Entered",
+    "de": "Daten bereits eingetragen"
+  },
+  "viewEntry.existsInfo": {
+    "en": "This day already has workload data recorded. You can add additional hours to the existing entry or delete all data for this day.",
+    "de": "Für diesen Tag sind bereits Daten vorhanden. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für den Tag löschen."
+  },
+  "subject.classTime": {
+    "en": "Class Time",
+    "de": "Unterrichtszeit"
+  },
+  "subject.selfStudy": {
+    "en": "Self Study Time",
+    "de": "Selbstlernzeit"
+  },
+  "subject.lessonHint": {
+    "en": "45 min ≠ 1 lesson, 1 h = 1 lesson",
+    "de": "45 Min. ≠ 1 Unterrichtsstunde, 1 h = 1 Lektion"
+  },
+  "subject.removeTitle": {
+    "en": "Remove Subject?",
+    "de": "Fach entfernen?"
+  },
+  "subject.removeInfo": {
+    "en": "You have entered data for this subject. Removing it will clear the entered values. Are you sure?",
+    "de": "Für dieses Fach wurden Daten eingetragen. Beim Entfernen gehen die Werte verloren. Bist du sicher?"
+  },
+  "common.remove": {
+    "en": "Remove",
+    "de": "Entfernen"
+  },
+  "app.participantMissing": {
+    "en": "Warning: participant does not exist.",
+    "de": "Warnung: Teilnehmer existiert nicht."
+  }
 }

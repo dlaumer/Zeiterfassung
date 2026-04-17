@@ -31,19 +31,6 @@ interface DailyEntry {
   skipped: boolean;
 }
 
-const AVAILABLE_COURSES = [
-  'Mathematics',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'Computer Science',
-  'Literature',
-  'History',
-  'Economics',
-  'Philosophy',
-  'Engineering'
-];
-
 const SUBJECT_COLORS = [
   '#ef4444',
   '#f59e0b',
@@ -58,7 +45,6 @@ const SUBJECT_COLORS = [
 ];
 
 const STORAGE_KEY = 'student-workload-tracker';
-const SUBJECTS_STORAGE_KEY = 'student-workload-subjects';
 const DEFAULT_COMMUTE_KEY = 'student-workload-default-commute';
 
 interface AppContentProps {
@@ -75,7 +61,27 @@ function AppContent({ participantId }: AppContentProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
+
+  useEffect(() => {
+    async function loadAvailableSubjects() {
+      const allSubjects = await pb.collection('subjects').getFullList();
+
+      return allSubjects.map((subject) => ({
+        id: subject.id,
+        key: subject.key,
+        labelEn: subject.label_en,
+        labelDe: subject.label_de,
+        credits: subject.credits,
+        color: subject.color ?? SUBJECT_COLORS[0],
+      }));
+    }
+
+    loadAvailableSubjects()
+      .then(setAvailableSubjects)
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     async function loadSubjectsForParticipant(participantId: string) {
@@ -96,6 +102,7 @@ function AppContent({ participantId }: AppContentProps) {
           labelDe: subject.label_de,
           credits: subject.credits,
           color: enrollment.color,
+          participantSubjectId: enrollment.id,
         };
       });
 
@@ -153,24 +160,54 @@ function AppContent({ participantId }: AppContentProps) {
     setShowEntryModal(true);
   };
 
-  const handleAddSubject = (subjectName: string) => {
-    const newSubject: Subject = {
-      id: Date.now().toString(),
-      key: subjectName.toLowerCase().replace(/\s+/g, '-'),
-      labelEn: subjectName,
-      labelDe: subjectName,
-      credits: 0,
-      color: SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length]
+  const handleAddSubject = async (subject: Subject) => {
+    if (!participantId) {
+      return;
+    }
+
+    const color = SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length];
+    const data = {
+      participant: participantId,
+      subject: subject.id,
+      color,
     };
-    const updatedSubjects = [...subjects, newSubject];
-    setSubjects(updatedSubjects);
-    localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
+
+    const record = await pb.collection('participant_subjects').create(data);
+
+    setSubjects((prev) => [
+      ...prev,
+      {
+        ...subject,
+        color: record.color ?? color,
+        participantSubjectId: record.id,
+      },
+    ]);
   };
 
-  const handleRemoveSubject = (id: string) => {
-    const updatedSubjects = subjects.filter((s) => s.id !== id);
-    setSubjects(updatedSubjects);
-    localStorage.setItem(SUBJECTS_STORAGE_KEY, JSON.stringify(updatedSubjects));
+  const handleRemoveSubject = async (id: string) => {
+    if (!participantId) {
+      return;
+    }
+
+    const selectedSubject = subjects.find((subject) => subject.id === id);
+    if (!selectedSubject) {
+      return;
+    }
+
+    if (selectedSubject.participantSubjectId) {
+      await pb.collection('participant_subjects').delete(selectedSubject.participantSubjectId);
+    } else {
+      const records = await pb.collection('participant_subjects').getFullList({
+        filter: pb.filter('participant = {:participantId} && subject = {:subjectId}', {
+          participantId,
+          subjectId: id,
+        }),
+      });
+
+      await Promise.all(records.map((record) => pb.collection('participant_subjects').delete(record.id)));
+    }
+
+    setSubjects((prev) => prev.filter((subject) => subject.id !== id));
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
@@ -224,7 +261,7 @@ function AppContent({ participantId }: AppContentProps) {
               subjects={subjects}
               onAddSubject={handleAddSubject}
               onRemoveSubject={handleRemoveSubject}
-              availableSubjects={AVAILABLE_COURSES}
+              availableSubjects={availableSubjects}
             />
           </div>
         </div>
@@ -239,7 +276,7 @@ function AppContent({ participantId }: AppContentProps) {
           }}
           onSave={saveEntry}
           existingEntry={existingEntry}
-          availableCourses={AVAILABLE_COURSES}
+          availableCourses={availableSubjects.map((subject) => subject.labelEn)}
           subjects={subjects}
           defaultCommuteTime={defaultCommuteTime}
         />
@@ -267,9 +304,6 @@ interface AppProps {
 }
 
 export default function App({ participantId }: AppProps) {
-  // Keep this value available in the main app for future backend calls.
-  void participantId;
-
   return (
     <I18nProvider>
       <AppContent participantId={participantId} />

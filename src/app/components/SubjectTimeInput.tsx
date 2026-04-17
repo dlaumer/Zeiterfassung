@@ -2,6 +2,7 @@ import { Slider } from '@radix-ui/react-slider';
 import { EditableTimeDisplay } from './EditableTimeDisplay';
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n } from '../i18n/i18n';
 
 interface SubjectTimeInputProps {
   subjectName: string;
@@ -28,10 +29,10 @@ export function SubjectTimeInput({
   onRemove,
   isAdditionalHours = false
 }: SubjectTimeInputProps) {
+  const { t } = useI18n();
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const handleRemoveClick = () => {
-    // Check if any value has been entered
     if (classTime > 0 || selfStudyTime > 0) {
       setShowRemoveConfirm(true);
     } else if (onRemove) {
@@ -49,7 +50,6 @@ export function SubjectTimeInput({
   return (
     <>
       <div className={`bg-gray-50 rounded-xl p-4 space-y-4 transition-opacity relative ${isFaded ? 'opacity-60' : ''}`}>
-        {/* Subject Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
@@ -61,7 +61,7 @@ export function SubjectTimeInput({
           <div className="flex items-center gap-2">
             {statusTag && (
               <span className={`text-xs px-2 py-1 rounded-full ${
-                statusTag === 'Filled before'
+                statusTag === t('dailyEntry.filledBefore')
                   ? 'bg-blue-100 text-blue-700'
                   : 'bg-gray-200 text-gray-600'
               }`}>
@@ -79,10 +79,9 @@ export function SubjectTimeInput({
           </div>
         </div>
 
-      {/* Class Time Slider */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-600">Class Time</label>
+          <label className="text-sm text-gray-600">{t('subject.classTime')}</label>
           {isAdditionalHours && classTime > 0 ? (
             <span className="text-sm font-semibold text-green-600">+{classTime.toFixed(1)}h</span>
           ) : (
@@ -118,13 +117,12 @@ export function SubjectTimeInput({
             }}
           />
         </Slider>
-        <p className="text-xs text-gray-500 italic">45 min ≠ 1 lesson, 1 h = 1 lesson</p>
+        <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>
       </div>
 
-      {/* Self Study Time Slider */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-600">Self Study Time</label>
+          <label className="text-sm text-gray-600">{t('subject.selfStudy')}</label>
           {isAdditionalHours && selfStudyTime > 0 ? (
             <span className="text-sm font-semibold text-green-600">+{selfStudyTime.toFixed(1)}h</span>
           ) : (
@@ -161,30 +159,27 @@ export function SubjectTimeInput({
             }}
           />
         </Slider>
-        <p className="text-xs text-gray-500 italic">45 min ≠ 1 lesson, 1 h = 1 lesson</p>
+        <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>
       </div>
     </div>
 
-    {/* Confirmation Modal */}
     {showRemoveConfirm && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-          <h3 className="font-semibold text-gray-900 mb-3">Remove Subject?</h3>
-          <p className="text-sm text-gray-600 mb-6">
-            You have entered data for this subject. Removing it will clear the entered values. Are you sure?
-          </p>
+          <h3 className="font-semibold text-gray-900 mb-3">{t('subject.removeTitle')}</h3>
+          <p className="text-sm text-gray-600 mb-6">{t('subject.removeInfo')}</p>
           <div className="flex gap-3">
             <button
               onClick={() => setShowRemoveConfirm(false)}
               className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={confirmRemove}
               className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
-              Remove
+              {t('common.remove')}
             </button>
           </div>
         </div>

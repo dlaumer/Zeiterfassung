@@ -64,7 +64,7 @@ function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
   const newestAppendum = comments
     .map((comment) => String(comment ?? '').trim())
     .filter(Boolean)
-    .at(-1);
+    .at(0);
 
   if (newestAppendum) {
     return newestAppendum;

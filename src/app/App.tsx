@@ -389,15 +389,34 @@ function AppContent({ participantId }: AppContentProps) {
       return;
     }
 
-    setSubjectPendingRemoval(selectedSubject);
+    const subjectHasData = Array.from(entries.values()).some((entry) =>
+      entry.subjectTimes.some(
+        (subjectTime) =>
+          subjectTime.subjectId === id &&
+          (
+            subjectTime.hasClassEntry ||
+            subjectTime.hasStudyEntry ||
+            subjectTime.classTime > 0 ||
+            subjectTime.selfStudyTime > 0
+          ),
+      ),
+    );
+
+    if (subjectHasData) {
+      setSubjectPendingRemoval(selectedSubject);
+      return;
+    }
+
+    confirmRemoveSubject(selectedSubject).catch((error) => {
+      console.error('Failed to remove subject:', error);
+    });
   };
 
-  const confirmRemoveSubject = async () => {
+  const confirmRemoveSubject = async (selectedSubject: Subject | null = subjectPendingRemoval) => {
     if (!participantId) {
       return;
     }
 
-    const selectedSubject = subjectPendingRemoval;
     if (!selectedSubject) {
       return;
     }

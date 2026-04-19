@@ -33,6 +33,20 @@ interface DailyEntry {
   skipped: boolean;
 }
 
+interface SaveDailyEntryPayload {
+  participantId: string;
+  date: string;
+  reliability: number;
+  adminEffortMinutes: number;
+  commuteMinutes: number;
+  comment: string;
+  subjectTimes: {
+    subjectId: string;
+    classMinutes: number;
+    studyMinutes: number;
+  }[];
+}
+
 interface WorkloadStatusSubject {
   id: string;
   key: string;
@@ -266,7 +280,32 @@ function AppContent({ participantId }: AppContentProps) {
     };
   }, [participantId, participantStatus]);
 
-  const saveEntry = (entry: DailyEntry) => {
+  const saveEntry = async (entry: DailyEntry) => {
+    if (!participantId) {
+      throw new Error('Missing participantId');
+    }
+
+    const payload: SaveDailyEntryPayload = {
+      participantId,
+      date: entry.date,
+      reliability: entry.skipped ? 0 : entry.reliability,
+      adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
+      commuteMinutes: entry.skipped ? 0 : Math.round(entry.commuteTime * 60),
+      comment: entry.comment ?? '',
+      subjectTimes: entry.skipped
+        ? []
+        : entry.subjectTimes.map((subjectTime) => ({
+          subjectId: subjectTime.subjectId,
+          classMinutes: Math.round((subjectTime.classTime ?? 0) * 60),
+          studyMinutes: Math.round((subjectTime.selfStudyTime ?? 0) * 60),
+        })),
+    };
+
+    await pb.send('/api/submissions/daily', {
+      method: 'POST',
+      body: payload,
+    });
+
     const newEntries = new Map(entries);
     newEntries.set(entry.date, entry);
     setEntries(newEntries);

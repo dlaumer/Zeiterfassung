@@ -426,9 +426,9 @@ function AppContent({ participantId }: AppContentProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-4 md:mb-8">
+    <div className="h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
+      <div className="max-w-7xl h-full mx-auto flex flex-col min-h-0">
+        <div className="mb-2 md:mb-4 shrink-0">
           <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4 mb-2">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
@@ -458,27 +458,27 @@ function AppContent({ participantId }: AppContentProps) {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Calendar
-              currentDate={currentDate}
-              onDateChange={setCurrentDate}
-              selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              entriesMap={entries}
-              subjects={subjects}
-            />
+        <div className="flex-1 min-h-0 grid grid-rows-[minmax(0,1.3fr)_minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-3 lg:grid-rows-1">
+          <div className="min-h-0 lg:col-span-2 lg:pr-2">
+            <div className="h-full w-full max-w-5xl mx-auto">
+              <Calendar
+                currentDate={currentDate}
+                onDateChange={setCurrentDate}
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                entriesMap={entries}
+                subjects={subjects}
+              />
+            </div>
           </div>
 
-          <div className="lg:col-span-1">
-            <div className="space-y-6">
-              <CourseManagement
-                subjects={subjects}
-                onAddSubject={handleAddSubject}
-                onRemoveSubject={handleRemoveSubject}
-                availableSubjects={availableSubjects}
-              />           
-            </div>
+          <div className="min-h-0 lg:col-span-1">
+            <CourseManagement
+              subjects={subjects}
+              onAddSubject={handleAddSubject}
+              onRemoveSubject={handleRemoveSubject}
+              availableSubjects={availableSubjects}
+            />
           </div>
         </div>
       </div>

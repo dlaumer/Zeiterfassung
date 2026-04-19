@@ -555,7 +555,7 @@ function AppContent({ participantId }: AppContentProps) {
         cancelLabel={t('common.cancel')}
         variant="danger"
         onCancel={() => setSubjectPendingRemoval(null)}
-        onConfirm={confirmRemoveSubject}
+        onConfirm={() => confirmRemoveSubject(subjectPendingRemoval)}
       />
     </div>
   );

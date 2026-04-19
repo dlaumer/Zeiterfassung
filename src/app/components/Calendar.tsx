@@ -126,13 +126,13 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                   </div>
                 )}
 
-                <div className="h-3.5 md:h-5 w-full flex items-end justify-center overflow-hidden">
+                <div className="h-3.5 md:h-5 w-full flex justify-center overflow-hidden">
                   {subjectColors.length > 0 && (
                     <div className="max-w-[90%] flex flex-wrap justify-center gap-0.5 md:gap-1 leading-none">
                       {subjectColors.map((color, index) => (
                         <div
                           key={index}
-                          className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full shrink-0"
+                          className="w-1 h-1 md:w-2 md:h-2 rounded-full shrink-0"
                           style={{ backgroundColor: color }}
                         />
                       ))}

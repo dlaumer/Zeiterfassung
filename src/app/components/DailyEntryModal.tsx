@@ -111,6 +111,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     }
   };
 
+  const handleCloseRequest = () => {
+    const shouldClose = window.confirm(t('dailyEntry.closeConfirm'));
+    if (!shouldClose) {
+      return;
+    }
+
+    onClose();
+  };
+
   const handleSubmit = async () => {
     setSaveError(null);
     setIsSaving(true);
@@ -203,7 +212,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             >
               {t('dailyEntry.skip')}
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={handleCloseRequest} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>

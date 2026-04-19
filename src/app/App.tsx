@@ -391,6 +391,11 @@ function AppContent({ participantId }: AppContentProps) {
       return;
     }
 
+    const shouldRemove = window.confirm(t('subject.removeConfirm'));
+    if (!shouldRemove) {
+      return;
+    }
+
     if (selectedSubject.participantSubjectId) {
       await pb.collection('participant_subjects').delete(selectedSubject.participantSubjectId);
     } else {

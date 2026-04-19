@@ -49,8 +49,8 @@ export function CourseManagement({
   const canAddMore = subjects.length < 12;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full min-h-0 bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="font-semibold text-gray-900">{t('courseManagement.title')}</h3>
         {canAddMore && (
           <button
@@ -75,7 +75,7 @@ export function CourseManagement({
           </button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
           {subjects.map(subject => (
             <div
               key={subject.id}
@@ -108,7 +108,7 @@ export function CourseManagement({
       )}
 
       {showAddSubject && availableToAdd.length > 0 && (
-        <div className="mt-4 bg-gray-50 rounded-xl p-4 space-y-3">
+        <div className="mt-4 bg-gray-50 rounded-xl p-4 space-y-3 shrink-0">
           <p className="text-sm text-gray-600 mb-2">{t('courseManagement.selectToAdd')}</p>
 
           <div className="relative">
@@ -154,7 +154,7 @@ export function CourseManagement({
       )}
 
       {showAddSubject && availableToAdd.length === 0 && (
-        <div className="mt-4 bg-gray-50 rounded-xl p-4 text-center">
+        <div className="mt-4 bg-gray-50 rounded-xl p-4 text-center shrink-0">
           <p className="text-sm text-gray-500">{t('courseManagement.allAdded')}</p>
           <button
             onClick={() => setShowAddSubject(false)}

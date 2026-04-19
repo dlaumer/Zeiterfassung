@@ -66,8 +66,8 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   };
 
   return (
-    <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
+    <div className="h-full bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 flex flex-col min-h-0">
+      <div className="flex items-center justify-between mb-2 md:mb-3 shrink-0">
         <h2 className="font-semibold text-gray-900 text-lg md:text-xl">
           {format(currentDate, 'MMMM yyyy')}
         </h2>
@@ -87,7 +87,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1.5 md:mb-2">
+      <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
         {weekDays.map(day => (
           <div key={day} className="text-center text-[11px] md:text-sm text-gray-500 font-medium py-1.5 md:py-2">
             {day}
@@ -95,7 +95,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1 md:gap-2">
+      <div className="grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr flex-1 min-h-0">
         {days.map(day => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isToday = isSameDay(day, today);
@@ -109,7 +109,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
               onClick={() => onDateSelect(day)}
               disabled={!isCurrentMonth}
               className={`
-                aspect-square rounded-lg md:rounded-xl px-1 py-1.5 text-xs md:text-sm font-medium transition-all relative
+                h-full min-h-0 rounded-lg md:rounded-xl px-1 py-1 text-xs md:text-sm font-medium transition-all relative
                 ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
                 ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}

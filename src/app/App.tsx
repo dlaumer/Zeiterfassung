@@ -456,7 +456,6 @@ function AppContent({ participantId }: AppContentProps) {
               </button>
             </div>
           </div>
-          <p className="text-gray-600">{t('app.subtitle')}</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

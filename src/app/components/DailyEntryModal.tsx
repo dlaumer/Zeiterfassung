@@ -5,6 +5,7 @@ import { SubjectTimeInput } from './SubjectTimeInput';
 import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
 import { Subject, getSubjectDisplayName } from './CourseManagement';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 interface SubjectTime {
   subjectId: string;
@@ -52,6 +53,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
   const reEntryMode = existingEntry ? 'add' : null;
 
   useEffect(() => {
@@ -112,12 +114,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   };
 
   const handleCloseRequest = () => {
-    const shouldClose = window.confirm(t('dailyEntry.closeConfirm'));
-    if (!shouldClose) {
-      return;
-    }
-
-    onClose();
+    setShowCloseWarning(true);
   };
 
   const handleSubmit = async () => {
@@ -193,8 +190,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto pt-8">
-      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl my-8">
+    <>
+      <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto pt-8">
+        <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl my-8">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-gray-900">
@@ -394,7 +392,20 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             {isSaving ? `${t('dailyEntry.submit')}...` : t('dailyEntry.submit')}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+      <ConfirmDialog
+        open={showCloseWarning}
+        title={t('dailyEntry.closeTitle')}
+        description={t('dailyEntry.closeConfirm')}
+        confirmLabel={t('common.discard')}
+        cancelLabel={t('common.continueEditing')}
+        onCancel={() => setShowCloseWarning(false)}
+        onConfirm={() => {
+          setShowCloseWarning(false);
+          onClose();
+        }}
+      />
+    </>
   );
 }

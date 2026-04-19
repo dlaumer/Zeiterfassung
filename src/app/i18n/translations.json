@@ -99,6 +99,14 @@
     "en": "Close",
     "de": "Schließen"
   },
+  "common.discard": {
+    "en": "Discard",
+    "de": "Verwerfen"
+  },
+  "common.continueEditing": {
+    "en": "Keep Editing",
+    "de": "Weiter bearbeiten"
+  },
   "dailyEntry.saved": {
     "en": "Entry Saved!",
     "de": "Eintrag gespeichert!"
@@ -224,8 +232,12 @@
     "de": "Bist du sicher, dass du dieses Fach entfernen möchtest?"
   },
   "dailyEntry.closeConfirm": {
-    "en": "Are you sure you want to close this daily entry?",
-    "de": "Bist du sicher, dass du diesen Tageseintrag schließen möchtest?"
+    "en": "If you close now, any unsaved changes in this entry will be lost.",
+    "de": "Wenn du jetzt schließt, gehen alle ungespeicherten Änderungen in diesem Eintrag verloren."
+  },
+  "dailyEntry.closeTitle": {
+    "en": "Discard unsaved entry?",
+    "de": "Ungespeicherten Eintrag verwerfen?"
   },
   "common.remove": {
     "en": "Remove",

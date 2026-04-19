@@ -7,6 +7,7 @@ import { BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import PocketBase from 'pocketbase';
+import { ConfirmDialog } from './components/ui/ConfirmDialog';
 
 interface SubjectTime {
   subjectId: string;
@@ -121,6 +122,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [participantName, setParticipantName] = useState<string>('');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
+  const [subjectPendingRemoval, setSubjectPendingRemoval] = useState<Subject | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -381,18 +383,22 @@ function AppContent({ participantId }: AppContentProps) {
     ]);
   };
 
-  const handleRemoveSubject = async (id: string) => {
-    if (!participantId) {
-      return;
-    }
-
+  const handleRemoveSubject = (id: string) => {
     const selectedSubject = subjects.find((subject) => subject.id === id);
     if (!selectedSubject) {
       return;
     }
 
-    const shouldRemove = window.confirm(t('subject.removeConfirm'));
-    if (!shouldRemove) {
+    setSubjectPendingRemoval(selectedSubject);
+  };
+
+  const confirmRemoveSubject = async () => {
+    if (!participantId) {
+      return;
+    }
+
+    const selectedSubject = subjectPendingRemoval;
+    if (!selectedSubject) {
       return;
     }
 
@@ -402,14 +408,15 @@ function AppContent({ participantId }: AppContentProps) {
       const records = await pb.collection('participant_subjects').getFullList({
         filter: pb.filter('participant = {:participantId} && subject = {:subjectId}', {
           participantId,
-          subjectId: id,
+          subjectId: selectedSubject.id,
         }),
       });
 
       await Promise.all(records.map((record) => pb.collection('participant_subjects').delete(record.id)));
     }
 
-    setSubjects((prev) => prev.filter((subject) => subject.id !== id));
+    setSubjects((prev) => prev.filter((subject) => subject.id !== selectedSubject.id));
+    setSubjectPendingRemoval(null);
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
@@ -520,6 +527,17 @@ function AppContent({ participantId }: AppContentProps) {
           subjects={subjects}
         />
       )}
+
+      <ConfirmDialog
+        open={!!subjectPendingRemoval}
+        title={t('subject.removeTitle')}
+        description={t('subject.removeConfirm')}
+        confirmLabel={t('common.remove')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onCancel={() => setSubjectPendingRemoval(null)}
+        onConfirm={confirmRemoveSubject}
+      />
     </div>
   );
 }

@@ -48,6 +48,54 @@ export function CourseManagement({
 
   const canAddMore = subjects.length < 12;
 
+  const renderAddSubjectPanel = (className?: string) => (
+    <div className={`bg-gray-50 rounded-xl p-4 space-y-3 ${className ?? ''}`}>
+      <p className="text-sm text-gray-600 mb-2">{t('courseManagement.selectToAdd')}</p>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t('courseManagement.search')}
+          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+          autoFocus
+        />
+      </div>
+
+      <div className="border border-gray-200 rounded-lg bg-white flex flex-col min-h-0 max-h-[50vh] md:max-h-60">
+        <div className="overflow-y-auto min-h-0">
+          {filteredSubjects.length > 0 ? (
+            filteredSubjects.map(subject => (
+              <button
+                key={subject.id}
+                onClick={() => handleAddSubject(subject)}
+                className="w-full px-3 py-2 text-left hover:bg-indigo-50 transition-colors text-sm border-b border-gray-100 last:border-b-0"
+              >
+                {getSubjectDisplayName(subject, language)}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-4 text-center text-sm text-gray-500">
+              {t('courseManagement.noFound')}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <button
+        onClick={() => {
+          setShowAddSubject(false);
+          setSearchQuery('');
+        }}
+        className="text-sm text-gray-500 hover:text-gray-700 w-full text-center sticky bottom-0 bg-gray-50 py-1"
+      >
+        {t('common.cancel')}
+      </button>
+    </div>
+  );
+
   return (
     <div className="h-full min-h-0 bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col">
       <div className="flex items-center justify-between mb-4 shrink-0">
@@ -62,6 +110,8 @@ export function CourseManagement({
           </button>
         )}
       </div>
+
+      {showAddSubject && availableToAdd.length > 0 && renderAddSubjectPanel('mb-4 shrink-0 hidden md:block')}
 
       {subjects.length === 0 ? (
         <div className="text-center py-8">
@@ -92,7 +142,7 @@ export function CourseManagement({
               </div>
               <button
                 onClick={() => onRemoveSubject(subject.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
               >
                 <X className="w-4 h-4 text-gray-500" />
               </button>
@@ -107,51 +157,7 @@ export function CourseManagement({
         </p>
       )}
 
-      {showAddSubject && availableToAdd.length > 0 && (
-        <div className="mt-4 bg-gray-50 rounded-xl p-4 space-y-3 shrink-0">
-          <p className="text-sm text-gray-600 mb-2">{t('courseManagement.selectToAdd')}</p>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('courseManagement.search')}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-              autoFocus
-            />
-          </div>
-
-          <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg bg-white">
-            {filteredSubjects.length > 0 ? (
-              filteredSubjects.map(subject => (
-                <button
-                  key={subject.id}
-                  onClick={() => handleAddSubject(subject)}
-                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 transition-colors text-sm border-b border-gray-100 last:border-b-0"
-                >
-                  {getSubjectDisplayName(subject, language)}
-                </button>
-              ))
-            ) : (
-              <div className="px-3 py-4 text-center text-sm text-gray-500">
-                {t('courseManagement.noFound')}
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => {
-              setShowAddSubject(false);
-              setSearchQuery('');
-            }}
-            className="text-sm text-gray-500 hover:text-gray-700 w-full text-center"
-          >
-            {t('common.cancel')}
-          </button>
-        </div>
-      )}
+      {showAddSubject && availableToAdd.length > 0 && renderAddSubjectPanel('mt-4 shrink-0 md:hidden')}
 
       {showAddSubject && availableToAdd.length === 0 && (
         <div className="mt-4 bg-gray-50 rounded-xl p-4 text-center shrink-0">

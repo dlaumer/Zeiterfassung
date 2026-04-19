@@ -171,6 +171,10 @@
     "en": "Submit Entry",
     "de": "Eintrag speichern"
   },
+  "dailyEntry.saveFailed": {
+    "en": "Saving failed. Please try again.",
+    "de": "Speichern fehlgeschlagen. Bitte erneut versuchen."
+  },
   "viewEntry.daySkipped": {
     "en": "Day Skipped",
     "de": "Tag übersprungen"

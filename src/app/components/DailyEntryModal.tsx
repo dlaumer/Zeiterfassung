@@ -34,7 +34,7 @@ interface DailyEntry {
 interface DailyEntryModalProps {
   date: Date;
   onClose: () => void;
-  onSave: (entry: DailyEntry) => void;
+  onSave: (entry: DailyEntry) => Promise<void>;
   existingEntry: DailyEntry | null;
   availableCourses: string[];
   subjects: Subject[];
@@ -50,6 +50,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [commuteTime, setCommuteTime] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const reEntryMode = existingEntry ? 'add' : null;
 
   useEffect(() => {
@@ -85,7 +87,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     });
   };
 
-  const handleSkipDay = () => {
+  const handleSkipDay = async () => {
+    setSaveError(null);
+    setIsSaving(true);
     const entry: DailyEntry = {
       date: format(date, 'yyyy-MM-dd'),
       courses: [],
@@ -96,11 +100,20 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       comment: t('dailyEntry.skippedTag'),
       skipped: true
     };
-    onSave(entry);
-    setIsSubmitted(true);
+    try {
+      await onSave(entry);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSaveError(t('dailyEntry.saveFailed'));
+      console.error('Failed to save skipped day:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setSaveError(null);
+    setIsSaving(true);
     const entry: DailyEntry = {
       date: format(date, 'yyyy-MM-dd'),
       courses,
@@ -137,8 +150,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       entry.subjectTimes = mergedSubjectTimes;
     }
 
-    onSave(entry);
-    setIsSubmitted(true);
+    try {
+      await onSave(entry);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSaveError(t('dailyEntry.saveFailed'));
+      console.error('Failed to save daily entry:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isSubmitted) {
@@ -354,11 +374,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
         </div>
 
         <div className="flex gap-3">
+          {saveError && (
+            <p className="text-sm text-red-600">{saveError}</p>
+          )}
           <button
             onClick={handleSubmit}
+            disabled={isSaving}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium"
           >
-            {t('dailyEntry.submit')}
+            {isSaving ? `${t('dailyEntry.submit')}...` : t('dailyEntry.submit')}
           </button>
         </div>
       </div>

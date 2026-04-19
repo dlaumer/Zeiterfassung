@@ -458,8 +458,8 @@ function AppContent({ participantId }: AppContentProps) {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 grid grid-rows-[minmax(0,1.3fr)_minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-3 lg:grid-rows-1">
-          <div className="min-h-0 lg:col-span-2 lg:pr-2">
+        <div className="flex-1 min-h-0 grid grid-rows-[minmax(0,1.3fr)_minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)] lg:grid-rows-1">
+          <div className="min-h-0 lg:pr-2">
             <div className="h-full w-full max-w-5xl mx-auto">
               <Calendar
                 currentDate={currentDate}
@@ -472,7 +472,7 @@ function AppContent({ participantId }: AppContentProps) {
             </div>
           </div>
 
-          <div className="min-h-0 lg:col-span-1">
+          <div className="min-h-0">
             <CourseManagement
               subjects={subjects}
               onAddSubject={handleAddSubject}

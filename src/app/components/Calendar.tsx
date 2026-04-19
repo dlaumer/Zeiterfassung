@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, addDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
 import { Subject } from './CourseManagement';
 
@@ -18,10 +18,8 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const allCalendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  const days = allCalendarDays.length === 42
-    ? allCalendarDays
-    : eachDayOfInterval({ start: calendarStart, end: addDays(calendarStart, 41) });
+
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const weekDays = [
     t('calendar.week.mon'),
     t('calendar.week.tue'),
@@ -97,58 +95,54 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         ))}
       </div>
 
-      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
-        <div className="w-full max-w-full max-h-full aspect-[7/6]">
-          <div className="grid grid-cols-7 grid-rows-6 gap-1 md:gap-2 h-full w-full">
-            {days.map(day => {
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isToday = isSameDay(day, today);
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
-              const hasEntryDay = hasEntry(day);
-              const subjectColors = getSubjectColorsForDate(day);
+      <div className="grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr flex-1 min-h-0">
+        {days.map(day => {
+          const isCurrentMonth = isSameMonth(day, currentDate);
+          const isToday = isSameDay(day, today);
+          const isSelected = selectedDate && isSameDay(day, selectedDate);
+          const hasEntryDay = hasEntry(day);
+          const subjectColors = getSubjectColorsForDate(day);
 
-              return (
-                <button
-                  key={day.toString()}
-                  onClick={() => onDateSelect(day)}
-                  disabled={!isCurrentMonth}
-                  className={`
-                    aspect-square min-h-0 rounded-lg md:rounded-xl px-1 py-1 text-xs md:text-sm font-medium transition-all relative
-                    ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
-                    ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
-                    ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
-                  `}
-                >
-                  <div className="h-full flex flex-col items-center justify-between">
-                    {isToday ? (
-                      <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">
-                        {format(day, 'd')}
-                      </div>
-                    ) : (
-                      <div className="h-6 md:h-8 flex items-center justify-center">
-                        {format(day, 'd')}
-                      </div>
-                    )}
-
-                    <div className="h-3.5 md:h-5 w-full flex justify-center overflow-hidden">
-                      {subjectColors.length > 0 && (
-                        <div className="max-w-[90%] flex flex-wrap justify-center gap-0.5 md:gap-1 leading-none">
-                          {subjectColors.map((color, index) => (
-                            <div
-                              key={index}
-                              className="w-1 h-1 md:w-2 md:h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
+          return (
+            <button
+              key={day.toString()}
+              onClick={() => onDateSelect(day)}
+              disabled={!isCurrentMonth}
+              className={`
+                h-full min-h-0 rounded-lg md:rounded-xl px-1 py-1 text-xs md:text-sm font-medium transition-all relative
+                ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
+                ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
+                ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
+              `}
+            >
+              <div className="h-full flex flex-col items-center justify-between">
+                {isToday ? (
+                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">
+                    {format(day, 'd')}
                   </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                ) : (
+                  <div className="h-6 md:h-8 flex items-center justify-center">
+                    {format(day, 'd')}
+                  </div>
+                )}
+
+                <div className="h-3.5 md:h-5 w-full flex justify-center overflow-hidden">
+                  {subjectColors.length > 0 && (
+                    <div className="max-w-[90%] flex flex-wrap justify-center gap-0.5 md:gap-1 leading-none">
+                      {subjectColors.map((color, index) => (
+                        <div
+                          key={index}
+                          className="w-1 h-1 md:w-2 md:h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

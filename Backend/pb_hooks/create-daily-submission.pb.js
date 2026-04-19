@@ -84,7 +84,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                     "periodStart >= {:dayStart}",
                     "periodStart <= {:dayEnd}",
                 ].join(" && "),
-                "-created",
+                "-submittedAt",
                 50,
                 0,
                 {

@@ -82,7 +82,7 @@ export function SubjectTimeInput({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm text-gray-600">{t('subject.classTime')}</label>
-          {isAdditionalHours && classTime > 0 ? (
+          {isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && classTime > 0 ? (
             <span className="text-sm font-semibold text-green-600">+{classTime.toFixed(1)}h</span>
           ) : (
             <EditableTimeDisplay
@@ -123,7 +123,7 @@ export function SubjectTimeInput({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm text-gray-600">{t('subject.selfStudy')}</label>
-          {isAdditionalHours && selfStudyTime > 0 ? (
+          {isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && selfStudyTime > 0 ? (
             <span className="text-sm font-semibold text-green-600">+{selfStudyTime.toFixed(1)}h</span>
           ) : (
             <EditableTimeDisplay

@@ -426,30 +426,30 @@ function AppContent({ participantId }: AppContentProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between gap-4 mb-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-white" />
+        <div className="mb-4 md:mb-8">
+          <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4 mb-2">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
+                <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-white" />
               </div>
-              <h1 className="font-bold text-gray-900">
+              <h1 className="font-bold text-lg md:text-3xl text-gray-900 leading-tight">
                 {participantName ? `${t('app.title')} — ${participantName}` : t('app.title')}
               </h1>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2">
               <button
                 onClick={() => setLanguage('en')}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${language === 'en' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
+                className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm border transition-colors ${language === 'en' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
                   }`}
               >
                 {t('language.en')}
               </button>
               <button
                 onClick={() => setLanguage('de')}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${language === 'de' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
+                className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm border transition-colors ${language === 'de' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
                   }`}
               >
                 {t('language.de')}

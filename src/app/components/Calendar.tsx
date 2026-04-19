@@ -66,36 +66,36 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="font-semibold text-gray-900">
+    <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h2 className="font-semibold text-gray-900 text-lg md:text-xl">
           {format(currentDate, 'MMMM yyyy')}
         </h2>
-        <div className="flex gap-2">
+        <div className="flex gap-1 md:gap-2">
           <button
             onClick={handlePrevMonth}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+            <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </button>
           <button
             onClick={handleNextMonth}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+            <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 mb-2">
+      <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1.5 md:mb-2">
         {weekDays.map(day => (
-          <div key={day} className="text-center text-sm text-gray-500 font-medium py-2">
+          <div key={day} className="text-center text-[11px] md:text-sm text-gray-500 font-medium py-1.5 md:py-2">
             {day}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 md:gap-2">
         {days.map(day => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isToday = isSameDay(day, today);
@@ -109,32 +109,37 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
               onClick={() => onDateSelect(day)}
               disabled={!isCurrentMonth}
               className={`
-                aspect-square rounded-xl p-2 text-sm font-medium transition-all relative
+                aspect-square rounded-lg md:rounded-xl px-1 py-1.5 text-xs md:text-sm font-medium transition-all relative
                 ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
                 ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
               `}
             >
-              <div className="relative flex items-center justify-center h-full">
+              <div className="h-full flex flex-col items-center justify-between">
                 {isToday ? (
-                  <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">
+                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">
                     {format(day, 'd')}
                   </div>
                 ) : (
-                  format(day, 'd')
+                  <div className="h-6 md:h-8 flex items-center justify-center">
+                    {format(day, 'd')}
+                  </div>
                 )}
-              </div>
-              {subjectColors.length > 0 && (
-                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
-                  {subjectColors.map((color, index) => (
-                    <div
-                      key={index}
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
+
+                <div className="h-3.5 md:h-5 w-full flex items-end justify-center overflow-hidden">
+                  {subjectColors.length > 0 && (
+                    <div className="max-w-[90%] flex flex-wrap justify-center gap-0.5 md:gap-1 leading-none">
+                      {subjectColors.map((color, index) => (
+                        <div
+                          key={index}
+                          className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </button>
           );
         })}

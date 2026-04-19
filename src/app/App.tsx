@@ -434,8 +434,8 @@ function AppContent({ participantId }: AppContentProps) {
               <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
                 <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-white" />
               </div>
-              <h1 className="font-bold text-lg md:text-3xl text-gray-900 leading-tight">
-                {participantName ? `${t('app.title')} — ${participantName}` : t('app.title')}
+              <h1 className="font-bold text-lg md:text-xl text-gray-900 leading-tight">
+                {participantName ? `${t('app.title')} - ${participantName}` : t('app.title')}
               </h1>
             </div>
 

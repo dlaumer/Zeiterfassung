@@ -86,9 +86,6 @@ const SUBJECT_COLORS = [
   '#6366f1',
 ];
 
-const STORAGE_KEY = 'student-workload-tracker';
-const DEFAULT_COMMUTE_KEY = 'student-workload-default-commute';
-
 interface AppContentProps {
   participantId: string | null;
 }

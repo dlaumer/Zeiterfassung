@@ -180,3 +180,120 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         createdItems: createdItemCount,
     })
 })
+
+routerAdd("DELETE", "/api/submissions/daily", (e) => {
+    function pad2(n) {
+        return n < 10 ? "0" + n : "" + n
+    }
+
+    function formatDateTime(date) {
+        return (
+            date.getFullYear() +
+            "-" +
+            pad2(date.getMonth() + 1) +
+            "-" +
+            pad2(date.getDate()) +
+            " " +
+            pad2(date.getHours()) +
+            ":" +
+            pad2(date.getMinutes()) +
+            ":" +
+            pad2(date.getSeconds())
+        )
+    }
+
+    function startOfDay(date) {
+        const d = new Date(date)
+        d.setHours(0, 0, 0, 0)
+        return d
+    }
+
+    function endOfDay(date) {
+        const d = new Date(date)
+        d.setHours(23, 59, 59, 999)
+        return d
+    }
+
+    const body = e.requestInfo().body || {}
+
+    const participantId = String(body.participantId || "").trim()
+    const date = String(body.date || "").trim()
+
+    if (!participantId) {
+        return e.json(400, { error: "Missing participantId" })
+    }
+
+    if (!date) {
+        return e.json(400, { error: "Missing date" })
+    }
+
+    const targetDate = new Date(date + "T00:00:00")
+    if (isNaN(targetDate.getTime())) {
+        return e.json(400, { error: "Invalid date" })
+    }
+
+    let deletedSubmissions = 0
+    let deletedItems = 0
+
+    try {
+        $app.runInTransaction((txApp) => {
+            const participant = txApp.findRecordById("participants", participantId)
+            if (!participant) {
+                throw new Error("Participant not found")
+            }
+
+            const dayStart = startOfDay(targetDate)
+            const dayEnd = endOfDay(targetDate)
+            const dayStartStr = formatDateTime(dayStart)
+            const dayEndStr = formatDateTime(dayEnd)
+
+            const daySubmissions = txApp.findRecordsByFilter(
+                "submissions",
+                [
+                    "participant = {:participantId}",
+                    'periodType = "day"',
+                    "periodStart >= {:dayStart}",
+                    "periodStart <= {:dayEnd}",
+                ].join(" && "),
+                "",
+                500,
+                0,
+                {
+                    participantId,
+                    dayStart: dayStartStr,
+                    dayEnd: dayEndStr,
+                }
+            )
+
+            for (const submission of daySubmissions) {
+                const relatedItems = txApp.findRecordsByFilter(
+                    "submission_items",
+                    'submission = {:submissionId}',
+                    "",
+                    5000,
+                    0,
+                    { submissionId: submission.id }
+                )
+
+                for (const item of relatedItems) {
+                    txApp.delete(item)
+                    deletedItems++
+                }
+
+                txApp.delete(submission)
+                deletedSubmissions++
+            }
+        })
+    } catch (error) {
+        return e.json(400, {
+            error: "Failed to delete daily submissions",
+            details: String(error),
+        })
+    }
+
+    return e.json(200, {
+        ok: true,
+        deletedSubmissions,
+        deletedSubmissionItems: deletedItems,
+    })
+})

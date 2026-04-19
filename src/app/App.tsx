@@ -317,7 +317,19 @@ function AppContent({ participantId }: AppContentProps) {
     setShowViewModal(false);
   };
 
-  const deleteEntry = (date: string) => {
+  const deleteEntry = async (date: string) => {
+    if (!participantId) {
+      throw new Error('Missing participantId');
+    }
+
+    await pb.send('/api/submissions/daily', {
+      method: 'DELETE',
+      body: {
+        participantId,
+        date,
+      },
+    });
+
     const newEntries = new Map(entries);
     newEntries.delete(date);
     setEntries(newEntries);
@@ -495,7 +507,11 @@ function AppContent({ participantId }: AppContentProps) {
             setShowViewModal(false);
             setSelectedDate(null);
           }}
-          onDelete={() => deleteEntry(format(selectedDate, 'yyyy-MM-dd'))}
+          onDelete={() => {
+            deleteEntry(format(selectedDate, 'yyyy-MM-dd')).catch((error) => {
+              console.error('Failed to delete day entry:', error);
+            });
+          }}
           onAddWorkload={handleAddWorkload}
           subjects={subjects}
         />

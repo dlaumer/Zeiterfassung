@@ -63,9 +63,8 @@ export function CourseManagement({
           autoFocus
         />
       </div>
-
-      <div className="border border-gray-200 rounded-lg bg-white flex flex-col min-h-0 max-h-[50vh] md:max-h-60">
-        <div className="overflow-y-auto min-h-0">
+      <div className="border border-gray-200 rounded-lg bg-white flex flex-col min-h-0 max-h-[10vh] md:max-h-60">
+        <div className="overflow-y-auto min-h-0 flex-1">
           {filteredSubjects.length > 0 ? (
             filteredSubjects.map(subject => (
               <button

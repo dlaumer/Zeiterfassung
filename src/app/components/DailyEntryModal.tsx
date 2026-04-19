@@ -113,8 +113,28 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     }
   };
 
+  const hasEnteredSubjectTime = subjectTimes.some(
+    ({ classTime, selfStudyTime }) => classTime > 0 || selfStudyTime > 0
+  );
+  const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 3);
+  const hasChangedAdminEffort = adminEffort !== (existingEntry?.adminEffort ?? 0);
+  const hasChangedCommuteTime = commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
+  const hasComment = comment.trim().length > 0;
+
+  const shouldShowCloseWarning =
+    hasEnteredSubjectTime ||
+    hasChangedReliability ||
+    hasChangedAdminEffort ||
+    hasChangedCommuteTime ||
+    hasComment;
+
   const handleCloseRequest = () => {
-    setShowCloseWarning(true);
+    if (shouldShowCloseWarning) {
+      setShowCloseWarning(true);
+      return;
+    }
+
+    onClose();
   };
 
   const handleSubmit = async () => {

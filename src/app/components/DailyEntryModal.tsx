@@ -46,7 +46,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
-  const [reliability, setReliability] = useState(3);
+  const [reliability, setReliability] = useState(0);
   const [adminEffort, setAdminEffort] = useState(0);
   const [commuteTime, setCommuteTime] = useState(0);
   const [comment, setComment] = useState('');

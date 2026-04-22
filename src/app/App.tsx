@@ -3,7 +3,7 @@ import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ViewEntryModal } from './components/ViewEntryModal';
 import { CourseManagement, Subject } from './components/CourseManagement';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import PocketBase from 'pocketbase';
@@ -89,16 +89,66 @@ function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
 }
 
 const SUBJECT_COLORS = [
-  '#ef4444',
-  '#f59e0b',
-  '#10b981',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#f97316',
-  '#14b8a6',
-  '#6366f1',
+  '#e6194b',
+  '#3cb44b',
+  '#ffe119',
+  '#4363d8',
+  '#f58231',
+  '#911eb4',
+  '#46f0f0',
+  '#f032e6',
+  '#bcf60c',
+  '#fabebe',
+  '#008080',
+  '#e6beff',
+  '#9a6324',
+  '#fffac8',
+  '#800000',
+  '#aaffc3',
+  '#808000',
+  '#ffd8b1',
+  '#000075',
+  '#808080',
+];
+
+const normalizeColor = (color?: string) => color?.trim().toLowerCase() ?? '';
+
+const getNextSubjectColor = (usedColors: string[]) => {
+  const usedColorSet = new Set(usedColors.map(normalizeColor));
+
+  return SUBJECT_COLORS.find((color) => !usedColorSet.has(normalizeColor(color))) ?? SUBJECT_COLORS[0];
+};
+
+const ensureUniqueSubjectColors = <T extends { color?: string }>(subjects: T[]) => {
+  const usedColors: string[] = [];
+
+  return subjects.map((subject) => {
+    const currentColor = subject.color ?? '';
+    const hasUniqueColor = currentColor && !usedColors.some((color) => normalizeColor(color) === normalizeColor(currentColor));
+    const color = hasUniqueColor ? currentColor : getNextSubjectColor(usedColors);
+
+    usedColors.push(color);
+
+    return {
+      ...subject,
+      color
+    };
+  });
+};
+
+const LANGUAGE_OPTIONS = [
+  {
+    value: 'en' as const,
+    abbreviation: 'EN',
+    flagSrc: 'https://flagcdn.com/gb.svg',
+    flagAlt: 'United Kingdom flag'
+  },
+  {
+    value: 'de' as const,
+    abbreviation: 'DE',
+    flagSrc: 'https://flagcdn.com/de.svg',
+    flagAlt: 'German flag'
+  }
 ];
 
 interface AppContentProps {
@@ -123,6 +173,8 @@ function AppContent({ participantId }: AppContentProps) {
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
   const [subjectPendingRemoval, setSubjectPendingRemoval] = useState<Subject | null>(null);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const selectedLanguageOption = LANGUAGE_OPTIONS.find((option) => option.value === language) ?? LANGUAGE_OPTIONS[0];
 
   useEffect(() => {
     let isMounted = true;
@@ -207,7 +259,19 @@ function AppContent({ participantId }: AppContentProps) {
         };
       });
 
-      return subjects;
+      const subjectsWithUniqueColors = ensureUniqueSubjectColors(subjects);
+
+      await Promise.all(
+        subjectsWithUniqueColors
+          .filter((subject, index) => normalizeColor(subject.color) !== normalizeColor(subjects[index].color))
+          .map((subject) =>
+            pb.collection('participant_subjects').update(subject.participantSubjectId, {
+              color: subject.color,
+            })
+          )
+      );
+
+      return subjectsWithUniqueColors;
     }
     if (!participantId || participantStatus !== 'valid') {
       return;
@@ -364,7 +428,7 @@ function AppContent({ participantId }: AppContentProps) {
       return;
     }
 
-    const color = SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length];
+    const color = getNextSubjectColor(subjects.map((subject) => subject.color));
     const data = {
       participant: participantId,
       subject: subject.id,
@@ -457,10 +521,62 @@ function AppContent({ participantId }: AppContentProps) {
   }
 
   return (
-    <div className="h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
+    <div className="relative h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
+      <div className="absolute right-2 top-2 z-20 md:right-4 md:top-4">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowLanguageMenu((isOpen) => !isOpen)}
+            aria-haspopup="listbox"
+            aria-expanded={showLanguageMenu}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 md:text-sm"
+          >
+            <img
+              src={selectedLanguageOption.flagSrc}
+              alt={selectedLanguageOption.flagAlt}
+              className="h-3.5 w-5 rounded-sm object-cover"
+            />
+            <span>{selectedLanguageOption.abbreviation}</span>
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          </button>
+
+          {showLanguageMenu && (
+            <div
+              role="listbox"
+              aria-label="Language"
+              className="absolute right-0 mt-1 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={language === option.value}
+                  onClick={() => {
+                    setLanguage(option.value);
+                    setShowLanguageMenu(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold transition-colors md:text-sm ${
+                    language === option.value
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <img
+                    src={option.flagSrc}
+                    alt={option.flagAlt}
+                    className="h-3.5 w-5 rounded-sm object-cover"
+                  />
+                  {option.abbreviation}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       <div className="max-w-7xl h-full mx-auto flex flex-col min-h-0">
         <div className="mb-2 md:mb-4 shrink-0">
-          <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4 mb-2">
+          <div className="flex items-start gap-3 pr-24 md:gap-4 mb-2">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
                 <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-white" />
@@ -470,22 +586,6 @@ function AppContent({ participantId }: AppContentProps) {
               </h1>
             </div>
 
-            <div className="flex items-center gap-1.5 md:gap-2">
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm border transition-colors ${language === 'en' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
-                  }`}
-              >
-                {t('language.en')}
-              </button>
-              <button
-                onClick={() => setLanguage('de')}
-                className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm border transition-colors ${language === 'de' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-300'
-                  }`}
-              >
-                {t('language.de')}
-              </button>
-            </div>
           </div>
         </div>
 

@@ -132,12 +132,16 @@
     "de": "Überspringen"
   },
   "dailyEntry.tip": {
-    "en": "Tip:",
-    "de": "Tipp:"
+    "en": "Tips:",
+    "de": "Tipps:"
   },
-  "dailyEntry.tipDescription": {
-    "en": "You can manually edit time values by clicking on them. If you need more than the slider maximum, just type the value directly.",
-    "de": "Du kannst Zeitwerte manuell bearbeiten, indem du darauf klickst. Falls du mehr als das Slider-Maximum brauchst, gib den Wert direkt ein."
+  "dailyEntry.tipDescription1": {
+    "en": "You can manually edit time values by clicking on them.",
+    "de": "Du kannst Zeitwerte manuell bearbeiten, indem du darauf klickst."
+  },
+  "dailyEntry.tipDescription2": {
+    "en": "If you need more than the slider maximum, just type the value directly.",
+    "de": "Falls du mehr als das Slider-Maximum brauchst, gib den Wert direkt ein."
   },
   "dailyEntry.subjects": {
     "en": "Subjects",
@@ -216,8 +220,8 @@
     "de": "Selbstlernzeit"
   },
   "subject.lessonHint": {
-    "en": "45 min ≠ 1 lesson, 1 h = 1 lesson",
-    "de": "45 Min. ≠ 1 Unterrichtsstunde, 1 h = 1 Lektion"
+    "en": "1 lesson ≙ 1h",
+    "de": "1 Lektion ≙ 1h"
   },
   "subject.removeTitle": {
     "en": "Remove Subject?",

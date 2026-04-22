@@ -53,7 +53,7 @@ export function SubjectTimeInput({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className="w-3 h-3 rounded-full"
+              className="w-3 h-3 shrink-0 rounded-full"
               style={{ backgroundColor: subjectColor }}
             />
             <span className="font-medium text-gray-800">{subjectName}</span>
@@ -82,15 +82,13 @@ export function SubjectTimeInput({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm text-gray-600">{t('subject.classTime')}</label>
-          {isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && classTime > 0 ? (
-            <span className="text-sm font-semibold text-green-600">+{classTime.toFixed(1)}h</span>
-          ) : (
-            <EditableTimeDisplay
-              value={classTime}
-              onChange={onClassTimeChange}
-              max={24}
-            />
-          )}
+          <EditableTimeDisplay
+            value={classTime}
+            onChange={onClassTimeChange}
+            max={24}
+            prefix={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && classTime > 0 ? '+' : ''}
+            displayClassName={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && classTime > 0 ? 'text-green-600' : ''}
+          />
         </div>
         <Slider
           value={[Math.min(classTime, 8)]}
@@ -123,15 +121,13 @@ export function SubjectTimeInput({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm text-gray-600">{t('subject.selfStudy')}</label>
-          {isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && selfStudyTime > 0 ? (
-            <span className="text-sm font-semibold text-green-600">+{selfStudyTime.toFixed(1)}h</span>
-          ) : (
-            <EditableTimeDisplay
-              value={selfStudyTime}
-              onChange={onSelfStudyTimeChange}
-              max={24}
-            />
-          )}
+          <EditableTimeDisplay
+            value={selfStudyTime}
+            onChange={onSelfStudyTimeChange}
+            max={24}
+            prefix={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && selfStudyTime > 0 ? '+' : ''}
+            displayClassName={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && selfStudyTime > 0 ? 'text-green-600' : ''}
+          />
         </div>
         <Slider
           value={[Math.min(selfStudyTime, 8)]}

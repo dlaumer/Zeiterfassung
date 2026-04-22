@@ -1,4 +1,4 @@
-import { X, Star, Car, FileText, CheckCircle } from 'lucide-react';
+import { X, Star, Bike, TrainFront, FileText, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { SubjectTimeInput } from './SubjectTimeInput';
@@ -6,6 +6,7 @@ import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
 import { Subject, getSubjectDisplayName } from './CourseManagement';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { EditableTimeDisplay } from './EditableTimeDisplay';
 
 interface SubjectTime {
   subjectId: string;
@@ -42,6 +43,8 @@ interface DailyEntryModalProps {
   defaultCommuteTime?: number;
 }
 
+const DEFAULT_TIME_SLIDER_MAX = 5;
+
 export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0 }: DailyEntryModalProps) {
   const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -49,6 +52,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [reliability, setReliability] = useState(0);
   const [adminEffort, setAdminEffort] = useState(0);
   const [commuteTime, setCommuteTime] = useState(0);
+  const [adminEffortSliderMax, setAdminEffortSliderMax] = useState(DEFAULT_TIME_SLIDER_MAX);
+  const [commuteTimeSliderMax, setCommuteTimeSliderMax] = useState(DEFAULT_TIME_SLIDER_MAX);
   const [comment, setComment] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,9 +64,13 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   useEffect(() => {
     setCourses([]);
     setSubjectTimes(subjects.map(s => ({ subjectId: s.id, classTime: 0, selfStudyTime: 0 })));
-    setReliability(existingEntry?.reliability ?? 3);
-    setAdminEffort(existingEntry?.adminEffort ?? 0);
-    setCommuteTime(existingEntry?.commuteTime ?? defaultCommuteTime);
+    setReliability(existingEntry?.reliability ?? 0);
+    const nextAdminEffort = existingEntry?.adminEffort ?? 0;
+    const nextCommuteTime = existingEntry?.commuteTime ?? defaultCommuteTime;
+    setAdminEffort(nextAdminEffort);
+    setCommuteTime(nextCommuteTime);
+    setAdminEffortSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextAdminEffort));
+    setCommuteTimeSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextCommuteTime));
     setComment(existingEntry?.comment ?? '');
   }, [existingEntry, subjects, defaultCommuteTime]);
 
@@ -87,6 +96,16 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       }
       return [...prev, { subjectId, classTime: 0, selfStudyTime: time }];
     });
+  };
+
+  const handleAdminEffortManualChange = (time: number) => {
+    setAdminEffort(time);
+    setAdminEffortSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, time));
+  };
+
+  const handleCommuteTimeManualChange = (time: number) => {
+    setCommuteTime(time);
+    setCommuteTimeSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, time));
   };
 
   const handleSkipDay = async () => {
@@ -116,7 +135,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const hasEnteredSubjectTime = subjectTimes.some(
     ({ classTime, selfStudyTime }) => classTime > 0 || selfStudyTime > 0
   );
-  const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 3);
+  const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 0);
   const hasChangedAdminEffort = adminEffort !== (existingEntry?.adminEffort ?? 0);
   const hasChangedCommuteTime = commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
   const hasComment = comment.trim().length > 0;
@@ -238,7 +257,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
 
         <div className="bg-blue-50 rounded-lg p-3 mb-6">
           <p className="text-xs text-blue-800">
-            💡 <strong>{t('dailyEntry.tip')}</strong> {t('dailyEntry.tipDescription')}
+            💡 <strong>{t('dailyEntry.tip')}</strong>
+            <p>{t('dailyEntry.tipDescription1')}</p> 
+            <p>{t('dailyEntry.tipDescription2')}</p>
           </p>
         </div>
 
@@ -251,7 +272,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
               <p className="text-xs text-amber-600">{t('dailyEntry.noSubjectsHelp')}</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3">
               {subjects.map(subject => {
                 const subjectTime = subjectTimes.find(st => st.subjectId === subject.id);
 
@@ -330,24 +351,29 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                   </span>
                 )}
               </label>
-              <span className="text-sm font-semibold text-gray-900">{adminEffort.toFixed(1)}h</span>
+              <EditableTimeDisplay
+                value={adminEffort}
+                onChange={handleAdminEffortManualChange}
+                max={DEFAULT_TIME_SLIDER_MAX}
+                clampToMax={false}
+              />
             </div>
             <Slider
               value={[adminEffort]}
               onValueChange={(value) => setAdminEffort(value[0])}
-              max={5}
+              max={adminEffortSliderMax}
               step={0.25}
               className="relative flex items-center select-none touch-none w-full h-5"
             >
               <div className="relative flex-1 h-2 bg-gray-200 rounded-full">
                 <div
                   className="absolute h-full bg-indigo-500 rounded-full transition-all"
-                  style={{ width: `${(adminEffort / 5) * 100}%` }}
+                  style={{ width: `${(adminEffort / adminEffortSliderMax) * 100}%` }}
                 />
               </div>
               <div
                 className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{ position: 'absolute', left: `calc(${(adminEffort / 5) * 100}% - 10px)` }}
+                style={{ position: 'absolute', left: `calc(${(adminEffort / adminEffortSliderMax) * 100}% - 10px)` }}
               />
             </Slider>
           </div>
@@ -355,7 +381,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Car className="w-4 h-4 text-gray-500" />
+                <span className="flex items-center gap-1 text-gray-500">
+                  <Bike className="w-4 h-4" />
+                  <TrainFront className="w-4 h-4" />
+                </span>
                 {t('dailyEntry.commute')}
                 {reEntryMode === 'add' && existingEntry && existingEntry.commuteTime > 0 && (
                   <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
@@ -363,24 +392,29 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                   </span>
                 )}
               </label>
-              <span className="text-sm font-semibold text-gray-900">{commuteTime.toFixed(1)}h</span>
+              <EditableTimeDisplay
+                value={commuteTime}
+                onChange={handleCommuteTimeManualChange}
+                max={DEFAULT_TIME_SLIDER_MAX}
+                clampToMax={false}
+              />
             </div>
             <Slider
               value={[commuteTime]}
               onValueChange={(value) => setCommuteTime(value[0])}
-              max={5}
+              max={commuteTimeSliderMax}
               step={0.25}
               className="relative flex items-center select-none touch-none w-full h-5"
             >
               <div className="relative flex-1 h-2 bg-gray-200 rounded-full">
                 <div
                   className="absolute h-full bg-indigo-500 rounded-full transition-all"
-                  style={{ width: `${(commuteTime / 5) * 100}%` }}
+                  style={{ width: `${(commuteTime / commuteTimeSliderMax) * 100}%` }}
                 />
               </div>
               <div
                 className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{ position: 'absolute', left: `calc(${(commuteTime / 5) * 100}% - 10px)` }}
+                style={{ position: 'absolute', left: `calc(${(commuteTime / commuteTimeSliderMax) * 100}% - 10px)` }}
               />
             </Slider>
           </div>

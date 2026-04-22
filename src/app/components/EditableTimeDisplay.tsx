@@ -4,35 +4,80 @@ interface EditableTimeDisplayProps {
   value: number;
   onChange: (value: number) => void;
   max?: number;
+  clampToMax?: boolean;
+  prefix?: string;
+  displayClassName?: string;
 }
 
-export function EditableTimeDisplay({ value, onChange, max = 24 }: EditableTimeDisplayProps) {
+const splitTime = (hoursValue: number) => {
+  const totalMinutes = Math.max(0, Math.round(hoursValue * 60));
+
+  return {
+    hours: Math.floor(totalMinutes / 60),
+    minutes: totalMinutes % 60
+  };
+};
+
+export const formatTime = (hoursValue: number) => {
+  const { hours, minutes } = splitTime(hoursValue);
+
+  return `${hours}h ${minutes}min`;
+};
+
+export function EditableTimeDisplay({
+  value,
+  onChange,
+  max = 24,
+  clampToMax = true,
+  prefix = '',
+  displayClassName = ''
+}: EditableTimeDisplayProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value.toFixed(1));
+  const [editHours, setEditHours] = useState('0');
+  const [editMinutes, setEditMinutes] = useState('0');
   const inputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const setEditFields = (hoursValue: number) => {
+    const { hours, minutes } = splitTime(hoursValue);
+    setEditHours(String(hours));
+    setEditMinutes(String(minutes));
+  };
 
   useEffect(() => {
     if (!isEditing) {
-      setEditValue(value.toFixed(1));
+      setEditFields(value);
     }
   }, [value, isEditing]);
 
   const handleClick = () => {
     setIsEditing(true);
-    setEditValue(value.toFixed(1));
+    setEditFields(value);
   };
 
-  const handleBlur = () => {
-    const numValue = parseFloat(editValue);
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= max) {
-      onChange(numValue);
+  const commitEdit = () => {
+    const hours = parseInt(editHours, 10);
+    const minutes = parseInt(editMinutes, 10);
+
+    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && minutes >= 0 && minutes < 60) {
+      const maxMinutes = Math.round(max * 60);
+      const enteredMinutes = hours * 60 + minutes;
+      const totalMinutes = clampToMax ? Math.min(enteredMinutes, maxMinutes) : enteredMinutes;
+      onChange(totalMinutes / 60);
     }
+
     setIsEditing(false);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!editorRef.current?.contains(e.relatedTarget as Node | null)) {
+      commitEdit();
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleBlur();
+      commitEdit();
     } else if (e.key === 'Escape') {
       setIsEditing(false);
     }
@@ -47,27 +92,45 @@ export function EditableTimeDisplay({ value, onChange, max = 24 }: EditableTimeD
 
   if (isEditing) {
     return (
-      <input
-        ref={inputRef}
-        type="number"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
+      <div
+        ref={editorRef}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        min="0"
-        max={max}
-        step="0.1"
-        className="w-16 text-sm font-semibold text-gray-900 text-right border border-indigo-300 rounded px-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
+        className="flex items-center gap-1 text-sm font-semibold text-gray-900"
+      >
+        <input
+          ref={inputRef}
+          type="number"
+          value={editHours}
+          onChange={(e) => setEditHours(e.target.value)}
+          min="0"
+          max={clampToMax ? Math.floor(max) : undefined}
+          step="1"
+          aria-label="Hours"
+          className="w-12 text-right border border-indigo-300 rounded px-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <span>h</span>
+        <input
+          type="number"
+          value={editMinutes}
+          onChange={(e) => setEditMinutes(e.target.value)}
+          min="0"
+          max="59"
+          step="1"
+          aria-label="Minutes"
+          className="w-12 text-right border border-indigo-300 rounded px-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <span>min</span>
+      </div>
     );
   }
 
   return (
     <span
       onClick={handleClick}
-      className="text-sm font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 hover:underline"
+      className={`text-sm font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 hover:underline ${displayClassName}`}
     >
-      {value.toFixed(1)}h
+      {prefix}{formatTime(value)}
     </span>
   );
 }

@@ -63,7 +63,7 @@ export function CourseManagement({
           autoFocus
         />
       </div>
-      <div className="border border-gray-200 rounded-lg bg-white flex flex-col min-h-0 max-h-[10vh] md:max-h-60">
+      <div className="border border-gray-200 rounded-lg bg-white flex flex-col min-h-0 max-h-48 md:max-h-60">
         <div className="overflow-y-auto min-h-0 flex-1">
           {filteredSubjects.length > 0 ? (
             filteredSubjects.map(subject => (
@@ -112,7 +112,7 @@ export function CourseManagement({
 
       {showAddSubject && availableToAdd.length > 0 && renderAddSubjectPanel('mb-4 shrink-0 hidden md:block')}
 
-      {subjects.length === 0 ? (
+      {subjects.length === 0 && !showAddSubject ? (
         <div className="text-center py-8">
           <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50 text-gray-400" />
           <p className="text-sm text-gray-400 mb-3">{t('courseManagement.none')}</p>
@@ -123,7 +123,7 @@ export function CourseManagement({
             {t('courseManagement.first')}
           </button>
         </div>
-      ) : (
+      ) : subjects.length > 0 ? (
         <div className="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
           {subjects.map(subject => (
             <div
@@ -132,7 +132,7 @@ export function CourseManagement({
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 shrink-0 rounded-full"
                   style={{ backgroundColor: subject.color }}
                 />
                 <span className="text-sm font-medium text-gray-700">
@@ -148,7 +148,7 @@ export function CourseManagement({
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {!canAddMore && (
         <p className="text-xs text-gray-500 mt-3 text-center">

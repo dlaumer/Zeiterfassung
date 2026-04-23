@@ -7,6 +7,10 @@
     "en": "German",
     "de": "Deutsch"
   },
+  "language.label": {
+    "en": "Language",
+    "de": "Sprache"
+  },
   "app.title": {
     "en": "Workload Tracker",
     "de": "Lernaufwand-Tracker"
@@ -270,5 +274,249 @@
   "history.noSubjects": {
     "en": "No subjects in this submission.",
     "de": "Keine Fächer in dieser Einreichung."
+  },
+  "admin.login.title": {
+    "en": "Admin Login",
+    "de": "Admin-Anmeldung"
+  },
+  "admin.login.subtitle": {
+    "en": "Sign in with an admin account.",
+    "de": "Mit einem Admin-Konto anmelden."
+  },
+  "admin.login.email": {
+    "en": "Email",
+    "de": "E-Mail"
+  },
+  "admin.login.password": {
+    "en": "Password",
+    "de": "Passwort"
+  },
+  "admin.login.failed": {
+    "en": "Login failed. Check the admin email and password.",
+    "de": "Anmeldung fehlgeschlagen. Prüfe Admin-E-Mail und Passwort."
+  },
+  "admin.login.signingIn": {
+    "en": "Signing in...",
+    "de": "Anmelden..."
+  },
+  "admin.login.signIn": {
+    "en": "Sign in",
+    "de": "Anmelden"
+  },
+  "admin.title": {
+    "en": "Admin",
+    "de": "Admin"
+  },
+  "admin.subtitle": {
+    "en": "Participants, subjects, and chronological activity.",
+    "de": "Teilnehmende, Fächer und chronologische Aktivität."
+  },
+  "admin.refresh": {
+    "en": "Refresh",
+    "de": "Aktualisieren"
+  },
+  "admin.logout": {
+    "en": "Logout",
+    "de": "Abmelden"
+  },
+  "admin.searchPlaceholder": {
+    "en": "Search participants, subjects, or activity",
+    "de": "Teilnehmende, Fächer oder Aktivitäten suchen"
+  },
+  "admin.log.title": {
+    "en": "Chronological Log",
+    "de": "Chronologisches Protokoll"
+  },
+  "admin.events.count": {
+    "en": "{{count}} events",
+    "de": "{{count}} Ereignisse"
+  },
+  "admin.loadingActivity": {
+    "en": "Loading admin activity...",
+    "de": "Admin-Aktivität wird geladen..."
+  },
+  "admin.loadError": {
+    "en": "Could not load the admin overview.",
+    "de": "Die Admin-Übersicht konnte nicht geladen werden."
+  },
+  "admin.noMatchingActivity": {
+    "en": "No matching activity found.",
+    "de": "Keine passende Aktivität gefunden."
+  },
+  "admin.noActivityYet": {
+    "en": "No activity yet",
+    "de": "Noch keine Aktivität"
+  },
+  "admin.noPeriod": {
+    "en": "No period",
+    "de": "Kein Zeitraum"
+  },
+  "admin.event.appendum": {
+    "en": "Appendum",
+    "de": "Nachtrag"
+  },
+  "admin.event.initial": {
+    "en": "Submission",
+    "de": "Einreichung"
+  },
+  "admin.event.deletion": {
+    "en": "Deletion",
+    "de": "Löschung"
+  },
+  "admin.event.correction": {
+    "en": "Correction",
+    "de": "Korrektur"
+  },
+  "admin.event.activity": {
+    "en": "Activity",
+    "de": "Aktivität"
+  },
+  "admin.unknownParticipant": {
+    "en": "Unknown participant",
+    "de": "Unbekannte teilnehmende Person"
+  },
+  "admin.period": {
+    "en": "period",
+    "de": "Zeitraum"
+  },
+  "admin.duration.minutes": {
+    "en": "{{count}} min",
+    "de": "{{count}} Min."
+  },
+  "admin.duration.hours": {
+    "en": "{{count}} h",
+    "de": "{{count}} Std."
+  },
+  "admin.duration.hoursMinutes": {
+    "en": "{{hours}} h {{minutes}} min",
+    "de": "{{hours}} Std. {{minutes}} Min."
+  },
+  "admin.metric.workload": {
+    "en": "{{value}} workload",
+    "de": "{{value}} Aufwand"
+  },
+  "admin.metric.admin": {
+    "en": "{{value}} admin",
+    "de": "{{value}} Verwaltung"
+  },
+  "admin.metric.commute": {
+    "en": "{{value}} commute",
+    "de": "{{value}} Pendeln"
+  },
+  "admin.metric.rating": {
+    "en": "{{value}}/5 rating",
+    "de": "{{value}}/5 Bewertung"
+  },
+  "admin.metric.noRating": {
+    "en": "No rating",
+    "de": "Keine Bewertung"
+  },
+  "admin.subject.fallback": {
+    "en": "Subject",
+    "de": "Fach"
+  },
+  "admin.time.fallback": {
+    "en": "time",
+    "de": "Zeit"
+  },
+  "admin.participants.title": {
+    "en": "Participants",
+    "de": "Teilnehmende"
+  },
+  "admin.participants.none": {
+    "en": "No participants found.",
+    "de": "Keine Teilnehmenden gefunden."
+  },
+  "admin.participants.count": {
+    "en": "{{count}} participants",
+    "de": "{{count}} Teilnehmende"
+  },
+  "admin.participant.label": {
+    "en": "Participant",
+    "de": "Teilnehmende Person"
+  },
+  "admin.subjects.title": {
+    "en": "Subjects",
+    "de": "Fächer"
+  },
+  "admin.subjects.none": {
+    "en": "No subjects found.",
+    "de": "Keine Fächer gefunden."
+  },
+  "admin.subjects.count": {
+    "en": "{{count}} subjects",
+    "de": "{{count}} Fächer"
+  },
+  "admin.subject.label": {
+    "en": "Subject",
+    "de": "Fach"
+  },
+  "admin.submissions.count": {
+    "en": "{{count}} submissions",
+    "de": "{{count}} Einreichungen"
+  },
+  "admin.logItems.count": {
+    "en": "{{count}} log items",
+    "de": "{{count}} Protokolleinträge"
+  },
+  "admin.actionPending": {
+    "en": "{{label}} action will be defined later",
+    "de": "Aktion für {{label}} wird später definiert"
+  },
+  "admin.participantActions": {
+    "en": "Participant actions",
+    "de": "Aktionen für Teilnehmende"
+  },
+  "admin.participant.getLink": {
+    "en": "Get Link",
+    "de": "Link kopieren"
+  },
+  "admin.participant.exportAll": {
+    "en": "Export all data",
+    "de": "Alle Daten exportieren"
+  },
+  "admin.participant.exportClean": {
+    "en": "Export clean data",
+    "de": "Bereinigte Daten exportieren"
+  },
+  "admin.participant.remove": {
+    "en": "Remove participant",
+    "de": "Teilnehmende Person entfernen"
+  },
+  "admin.participant.linkCopied": {
+    "en": "Participant link copied to clipboard.",
+    "de": "Link wurde in die Zwischenablage kopiert."
+  },
+  "admin.participant.linkCopyFailed": {
+    "en": "Could not copy the participant link.",
+    "de": "Link konnte nicht kopiert werden."
+  },
+  "admin.participant.exportStarted": {
+    "en": "Export download started.",
+    "de": "Export-Download gestartet."
+  },
+  "admin.participant.exportFailed": {
+    "en": "Could not export participant data.",
+    "de": "Teilnehmendendaten konnten nicht exportiert werden."
+  },
+  "admin.participant.removed": {
+    "en": "Participant removed.",
+    "de": "Teilnehmende Person wurde entfernt."
+  },
+  "admin.participant.removeFailed": {
+    "en": "Could not remove the participant.",
+    "de": "Teilnehmende Person konnte nicht entfernt werden."
+  },
+  "admin.participant.removeTitle": {
+    "en": "Remove participant?",
+    "de": "Teilnehmende Person entfernen?"
+  },
+  "admin.participant.removeDescription": {
+    "en": "This will permanently remove {{name}} and their submitted data. This cannot be undone.",
+    "de": "{{name}} und die eingereichten Daten werden dauerhaft entfernt. Dies kann nicht rückgängig gemacht werden."
+  },
+  "admin.hoursDetails": {
+    "en": "Hours details",
+    "de": "Stundendetails"
   }
 }

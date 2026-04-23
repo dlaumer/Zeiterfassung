@@ -3,9 +3,10 @@ import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ViewEntryModal } from './components/ViewEntryModal';
 import { CourseManagement, Subject } from './components/CourseManagement';
-import { BookOpen, ChevronDown } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
+import { LanguageSelector } from './i18n/LanguageSelector';
 import PocketBase from 'pocketbase';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 
@@ -136,21 +137,6 @@ const ensureUniqueSubjectColors = <T extends { color?: string }>(subjects: T[]) 
   });
 };
 
-const LANGUAGE_OPTIONS = [
-  {
-    value: 'en' as const,
-    abbreviation: 'EN',
-    flagSrc: 'https://flagcdn.com/gb.svg',
-    flagAlt: 'United Kingdom flag'
-  },
-  {
-    value: 'de' as const,
-    abbreviation: 'DE',
-    flagSrc: 'https://flagcdn.com/de.svg',
-    flagAlt: 'German flag'
-  }
-];
-
 interface AppContentProps {
   participantId: string | null;
 }
@@ -160,7 +146,7 @@ type ParticipantStatus = 'loading' | 'valid' | 'invalid';
 function AppContent({ participantId }: AppContentProps) {
   const pb = new PocketBase('http://127.0.0.1:8090/');
 
-  const { t, language, setLanguage } = useI18n();
+  const { t } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
@@ -173,8 +159,6 @@ function AppContent({ participantId }: AppContentProps) {
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
   const [subjectPendingRemoval, setSubjectPendingRemoval] = useState<Subject | null>(null);
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
-  const selectedLanguageOption = LANGUAGE_OPTIONS.find((option) => option.value === language) ?? LANGUAGE_OPTIONS[0];
 
   useEffect(() => {
     let isMounted = true;
@@ -523,56 +507,7 @@ function AppContent({ participantId }: AppContentProps) {
   return (
     <div className="relative h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
       <div className="absolute right-2 top-2 z-20 md:right-4 md:top-4">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowLanguageMenu((isOpen) => !isOpen)}
-            aria-haspopup="listbox"
-            aria-expanded={showLanguageMenu}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 md:text-sm"
-          >
-            <img
-              src={selectedLanguageOption.flagSrc}
-              alt={selectedLanguageOption.flagAlt}
-              className="h-3.5 w-5 rounded-sm object-cover"
-            />
-            <span>{selectedLanguageOption.abbreviation}</span>
-            <ChevronDown className="h-4 w-4 text-gray-500" />
-          </button>
-
-          {showLanguageMenu && (
-            <div
-              role="listbox"
-              aria-label="Language"
-              className="absolute right-0 mt-1 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
-            >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="option"
-                  aria-selected={language === option.value}
-                  onClick={() => {
-                    setLanguage(option.value);
-                    setShowLanguageMenu(false);
-                  }}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold transition-colors md:text-sm ${
-                    language === option.value
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <img
-                    src={option.flagSrc}
-                    alt={option.flagAlt}
-                    className="h-3.5 w-5 rounded-sm object-cover"
-                  />
-                  {option.abbreviation}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <LanguageSelector />
       </div>
       <div className="max-w-7xl h-full mx-auto flex flex-col min-h-0">
         <div className="mb-2 md:mb-4 shrink-0">

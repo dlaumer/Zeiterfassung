@@ -151,4 +151,4 @@ function csvEscape(value) {
   )
 
   return e.string(200, csv)
-})
+}, $apis.requireAuth("admins"))

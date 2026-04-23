@@ -250,4 +250,4 @@ function chooseBaseSubmission(group) {
     )
 
     return e.string(200, csv)
-})
+}, $apis.requireAuth("admins"))

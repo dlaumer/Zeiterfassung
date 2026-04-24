@@ -73,7 +73,14 @@ interface WorkloadStatusHistoryEntry {
 
 interface WorkloadStatusResponse {
   submissionHistory: WorkloadStatusHistoryEntry[];
+  missingPeriods?: {
+    periodType: 'day' | 'week' | string;
+    periodStart: string;
+    periodEnd: string;
+  }[];
 }
+
+const SUBMISSION_TRACKING_START_DATE = '2026-04-01';
 
 function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
   const comments = historyEntry.comments ?? [];
@@ -158,6 +165,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [participantName, setParticipantName] = useState<string>('');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
+  const [missingSubmissionDates, setMissingSubmissionDates] = useState<Set<string>>(new Set());
   const [subjectPendingRemoval, setSubjectPendingRemoval] = useState<Subject | null>(null);
 
   useEffect(() => {
@@ -274,7 +282,7 @@ function AppContent({ participantId }: AppContentProps) {
 
     async function loadSubmissionHistory(id: string) {
       const response = await pb.send<WorkloadStatusResponse>('/api/workload-status', {
-        query: { participantId: id, lookbackDays: 365 },
+        query: { participantId: id, startDate: SUBMISSION_TRACKING_START_DATE },
       });
 
       if (!isMounted) {
@@ -283,6 +291,13 @@ function AppContent({ participantId }: AppContentProps) {
 
       const history = response.submissionHistory ?? [];
       setSubmissionHistory(history);
+      setMissingSubmissionDates(
+        new Set(
+          (response.missingPeriods ?? [])
+            .filter((item) => item.periodType === 'day' && item.periodStart)
+            .map((item) => String(item.periodStart).slice(0, 10)),
+        ),
+      );
 
       const backendEntries = new Map<string, DailyEntry>();
 
@@ -312,6 +327,7 @@ function AppContent({ participantId }: AppContentProps) {
 
     if (!participantId || participantStatus !== 'valid') {
       setSubmissionHistory([]);
+      setMissingSubmissionDates(new Set());
       setEntries(new Map());
       return;
     }
@@ -322,6 +338,7 @@ function AppContent({ participantId }: AppContentProps) {
         return;
       }
       setSubmissionHistory([]);
+      setMissingSubmissionDates(new Set());
       setEntries(new Map());
     });
 
@@ -506,12 +523,9 @@ function AppContent({ participantId }: AppContentProps) {
 
   return (
     <div className="relative h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
-      <div className="absolute right-2 top-2 z-20 md:right-4 md:top-4">
-        <LanguageSelector />
-      </div>
       <div className="max-w-7xl h-full mx-auto flex flex-col min-h-0">
         <div className="mb-2 md:mb-4 shrink-0">
-          <div className="flex items-start gap-3 pr-24 md:gap-4 mb-2">
+          <div className="grid items-start gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)] mb-2">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
                 <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-white" />
@@ -520,7 +534,9 @@ function AppContent({ participantId }: AppContentProps) {
                 {participantName ? `${t('app.title')} - ${participantName}` : t('app.title')}
               </h1>
             </div>
-
+            <div className="shrink-0 lg:justify-self-start">
+              <LanguageSelector />
+            </div>
           </div>
         </div>
 
@@ -531,10 +547,11 @@ function AppContent({ participantId }: AppContentProps) {
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
                 selectedDate={selectedDate}
-                onDateSelect={handleDateSelect}
-                entriesMap={entries}
-                subjects={subjects}
-              />
+              onDateSelect={handleDateSelect}
+              entriesMap={entries}
+              missingSubmissionDates={missingSubmissionDates}
+              subjects={subjects}
+            />
             </div>
           </div>
 

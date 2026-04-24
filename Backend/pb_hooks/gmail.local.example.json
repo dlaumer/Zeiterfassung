@@ -1,0 +1,9 @@
+{
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpUsername": "your-gmail-address@gmail.com",
+  "smtpPassword": "your-app-password",
+  "senderName": "Workload Tracker",
+  "senderAddress": "your-gmail-address@gmail.com",
+  "appUrl": "http://localhost:5173"
+}

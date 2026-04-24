@@ -21,6 +21,23 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         )
     }
 
+    function formatUtcDateTime(date) {
+        return (
+            date.getUTCFullYear() +
+            "-" +
+            pad2(date.getUTCMonth() + 1) +
+            "-" +
+            pad2(date.getUTCDate()) +
+            " " +
+            pad2(date.getUTCHours()) +
+            ":" +
+            pad2(date.getUTCMinutes()) +
+            ":" +
+            pad2(date.getUTCSeconds()) +
+            ".000Z"
+        )
+    }
+
     function startOfDay(date) {
         const d = new Date(date)
         d.setHours(0, 0, 0, 0)
@@ -81,6 +98,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                 [
                     "participant = {:participantId}",
                     'periodType = "day"',
+                    'submissionMode != "deleted"',
                     "periodStart >= {:dayStart}",
                     "periodStart <= {:dayEnd}",
                 ].join(" && "),
@@ -124,6 +142,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             submissionRecord.set("status", "submitted")
             submissionRecord.set("submissionMode", submissionMode)
             submissionRecord.set("replacesSubmission", replacesSubmissionId)
+            submissionRecord.set("submittedAt", formatUtcDateTime(new Date()))
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
@@ -202,6 +221,23 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
         )
     }
 
+    function formatUtcDateTime(date) {
+        return (
+            date.getUTCFullYear() +
+            "-" +
+            pad2(date.getUTCMonth() + 1) +
+            "-" +
+            pad2(date.getUTCDate()) +
+            " " +
+            pad2(date.getUTCHours()) +
+            ":" +
+            pad2(date.getUTCMinutes()) +
+            ":" +
+            pad2(date.getUTCSeconds()) +
+            ".000Z"
+        )
+    }
+
     function startOfDay(date) {
         const d = new Date(date)
         d.setHours(0, 0, 0, 0)
@@ -252,6 +288,7 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
                 [
                     "participant = {:participantId}",
                     'periodType = "day"',
+                    'submissionMode != "deleted"',
                     "periodStart >= {:dayStart}",
                     "periodStart <= {:dayEnd}",
                 ].join(" && "),
@@ -265,22 +302,12 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
                 }
             )
 
+            const deletedAt = formatUtcDateTime(new Date())
+
             for (const submission of daySubmissions) {
-                const relatedItems = txApp.findRecordsByFilter(
-                    "submission_items",
-                    'submission = {:submissionId}',
-                    "",
-                    5000,
-                    0,
-                    { submissionId: submission.id }
-                )
-
-                for (const item of relatedItems) {
-                    txApp.delete(item)
-                    deletedItems++
-                }
-
-                txApp.delete(submission)
+                submission.set("submissionMode", "deleted")
+                submission.set("deletedAt", deletedAt)
+                txApp.save(submission)
                 deletedSubmissions++
             }
         })

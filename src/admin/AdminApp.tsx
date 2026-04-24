@@ -8,7 +8,9 @@ import {
   Download,
   FileText,
   LogOut,
+  Mail,
   MoreHorizontal,
+  Plus,
   RefreshCw,
   Search,
   Shield,
@@ -18,6 +20,14 @@ import {
 import { I18nProvider, useI18n, type Language } from '../app/i18n/i18n';
 import { LanguageSelector } from '../app/i18n/LanguageSelector';
 import { ConfirmDialog } from '../app/components/ui/ConfirmDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../app/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +57,6 @@ interface AdminSubject {
   labelEn: string;
   labelDe: string;
   credits: number;
-  color: string;
   created: string;
   updated: string;
   participantCount: number;
@@ -89,6 +98,8 @@ interface AdminOverview {
   subjects: AdminSubject[];
   events: AdminEvent[];
 }
+
+type AdminMobileTab = 'log' | 'participants' | 'subjects';
 
 const emptyOverview: AdminOverview = {
   participants: [],
@@ -153,6 +164,14 @@ function getEventLabel(eventType: string, t: (id: string) => string) {
     return t('admin.event.appendum');
   }
 
+  if (eventType === 'submitted') {
+    return t('admin.event.initial');
+  }
+
+  if (eventType === 'deleted') {
+    return t('admin.event.deleted');
+  }
+
   if (eventType === 'initial') {
     return t('admin.event.initial');
   }
@@ -177,7 +196,7 @@ function getSubjectName(labelEn: string, labelDe: string, language: Language, fa
 }
 
 function eventBadgeClasses(kind: string, eventType: string) {
-  if (kind === 'deletion' || eventType === 'deletion') {
+  if (kind === 'deletion' || eventType === 'deletion' || eventType === 'deleted') {
     return 'border-red-200 bg-red-50 text-red-700';
   }
 
@@ -246,6 +265,7 @@ async function downloadAdminCsv(endpoint: string, participantId: string, fallbac
 interface ParticipantActionMenuProps {
   participant: AdminParticipant;
   onCopyLink: (participant: AdminParticipant) => void;
+  onSendReminder: (participant: AdminParticipant) => void;
   onExportAll: (participant: AdminParticipant) => void;
   onExportClean: (participant: AdminParticipant) => void;
   onRemove: (participant: AdminParticipant) => void;
@@ -254,6 +274,7 @@ interface ParticipantActionMenuProps {
 function ParticipantActionMenu({
   participant,
   onCopyLink,
+  onSendReminder,
   onExportAll,
   onExportClean,
   onRemove,
@@ -275,6 +296,10 @@ function ParticipantActionMenu({
         <DropdownMenuItem onSelect={() => onCopyLink(participant)} className="cursor-pointer">
           <Copy className="h-4 w-4" />
           {t('admin.participant.getLink')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onSendReminder(participant)} className="cursor-pointer">
+          <Mail className="h-4 w-4" />
+          {t('admin.participant.sendReminder')}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onExportAll(participant)} className="cursor-pointer">
           <Download className="h-4 w-4" />
@@ -298,6 +323,38 @@ function ParticipantActionMenu({
   );
 }
 
+interface SubjectActionMenuProps {
+  subject: AdminSubject;
+  onRemove: (subject: AdminSubject) => void;
+}
+
+function SubjectActionMenu({ subject, onRemove }: SubjectActionMenuProps) {
+  const { t } = useI18n();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title={t('admin.subjectActions')}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-48 border-gray-200 bg-white text-gray-900">
+        <DropdownMenuItem
+          onSelect={() => onRemove(subject)}
+          className="cursor-pointer text-red-700 focus:bg-red-50 focus:text-red-700"
+        >
+          <Trash2 className="h-4 w-4" />
+          {t('admin.subject.remove')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function AdminContent() {
   const { t, language } = useI18n();
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
@@ -310,6 +367,18 @@ function AdminContent() {
   const [actionStatus, setActionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [actionMessage, setActionMessage] = useState('');
   const [participantToRemove, setParticipantToRemove] = useState<AdminParticipant | null>(null);
+  const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('log');
+  const [showParticipantDialog, setShowParticipantDialog] = useState(false);
+  const [showSubjectDialog, setShowSubjectDialog] = useState(false);
+  const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
+  const [newParticipantName, setNewParticipantName] = useState('');
+  const [newParticipantEmail, setNewParticipantEmail] = useState('');
+  const [newParticipantEntryMode, setNewParticipantEntryMode] = useState<'day' | 'week'>('day');
+  const [newSubjectKey, setNewSubjectKey] = useState('');
+  const [newSubjectLabelEn, setNewSubjectLabelEn] = useState('');
+  const [newSubjectLabelDe, setNewSubjectLabelDe] = useState('');
+  const [newSubjectCredits, setNewSubjectCredits] = useState('0');
 
   const isAdminAuthenticated = pb.authStore.isValid && authRecord?.collectionName === 'admins';
 
@@ -397,6 +466,21 @@ function AdminContent() {
     }
   }
 
+  async function handleSendParticipantReminder(participant: AdminParticipant) {
+    try {
+      await pb.send('/api/admin/participant/reminder', {
+        method: 'POST',
+        body: {
+          participantId: participant.id,
+        },
+      });
+      showActionMessage('success', t('admin.participant.reminderSent', { email: participant.email || participant.name }));
+    } catch (error) {
+      console.error('Participant reminder failed:', error);
+      showActionMessage('error', t('admin.participant.reminderFailed'));
+    }
+  }
+
   async function handleConfirmRemoveParticipant() {
     if (!participantToRemove) {
       return;
@@ -413,6 +497,91 @@ function AdminContent() {
     } catch (error) {
       console.error('Participant removal failed:', error);
       showActionMessage('error', t('admin.participant.removeFailed'));
+    }
+  }
+
+  async function handleConfirmRemoveSubject() {
+    if (!subjectToRemove) {
+      return;
+    }
+
+    try {
+      await pb.send('/api/admin/subject', {
+        method: 'DELETE',
+        query: { subjectId: subjectToRemove.id },
+      });
+      setSubjectToRemove(null);
+      showActionMessage('success', t('admin.subject.removed'));
+      await loadOverview();
+    } catch (error) {
+      console.error('Subject removal failed:', error);
+      showActionMessage('error', t('admin.subject.removeFailed'));
+    }
+  }
+
+  function resetParticipantForm() {
+    setNewParticipantName('');
+    setNewParticipantEmail('');
+    setNewParticipantEntryMode('day');
+  }
+
+  function resetSubjectForm() {
+    setNewSubjectKey('');
+    setNewSubjectLabelEn('');
+    setNewSubjectLabelDe('');
+    setNewSubjectCredits('0');
+  }
+
+  async function handleCreateParticipant(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreateStatus('loading');
+
+    try {
+      await pb.send('/api/admin/participants', {
+        method: 'POST',
+        body: {
+          name: newParticipantName,
+          email: newParticipantEmail,
+          entryMode: newParticipantEntryMode,
+        },
+      });
+
+      setShowParticipantDialog(false);
+      resetParticipantForm();
+      showActionMessage('success', t('admin.participant.created'));
+      await loadOverview();
+    } catch (error) {
+      console.error('Participant creation failed:', error);
+      showActionMessage('error', t('admin.participant.createFailed'));
+    } finally {
+      setCreateStatus('idle');
+    }
+  }
+
+  async function handleCreateSubject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreateStatus('loading');
+
+    try {
+      await pb.send('/api/admin/subjects', {
+        method: 'POST',
+        body: {
+          key: newSubjectKey,
+          labelEn: newSubjectLabelEn,
+          labelDe: newSubjectLabelDe,
+          credits: Number(newSubjectCredits || 0),
+        },
+      });
+
+      setShowSubjectDialog(false);
+      resetSubjectForm();
+      showActionMessage('success', t('admin.subject.created'));
+      await loadOverview();
+    } catch (error) {
+      console.error('Subject creation failed:', error);
+      showActionMessage('error', t('admin.subject.createFailed'));
+    } finally {
+      setCreateStatus('idle');
     }
   }
 
@@ -556,21 +725,30 @@ function AdminContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-950">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 md:px-6">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-gray-950">
+      <header className="shrink-0 border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-normal">{t('admin.title')}</h1>
-                <p className="text-sm text-gray-500">{t('admin.subtitle')}</p>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="relative order-3 w-full max-w-xl md:order-2 md:flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t('admin.searchPlaceholder')}
+                className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </div>
+
+            <div className="order-2 flex shrink-0 flex-wrap items-center gap-2 md:order-3">
               <LanguageSelector />
               <button
                 type="button"
@@ -590,23 +768,12 @@ function AdminContent() {
               </button>
             </div>
           </div>
-
-          <div className="relative max-w-xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('admin.searchPlaceholder')}
-              className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-            />
-          </div>
-
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 md:px-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <section className="min-w-0">
-          <div className="mb-3 flex items-center justify-between gap-3">
+      <main className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-5 overflow-hidden px-4 py-5 pb-24 md:px-6 md:pb-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <section className={`min-w-0 min-h-0 flex-col ${activeMobileTab === 'log' ? 'flex' : 'hidden'} md:flex`}>
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Clock3 className="h-5 w-5 text-gray-600" />
               <h2 className="text-lg font-bold">{t('admin.log.title')}</h2>
@@ -614,7 +781,7 @@ function AdminContent() {
             <span className="text-sm text-gray-500">{t('admin.events.count', { count: filteredEvents.length })}</span>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             {status === 'loading' ? (
               <div className="p-6 text-sm text-gray-500">{t('admin.loadingActivity')}</div>
             ) : status === 'error' ? (
@@ -622,7 +789,7 @@ function AdminContent() {
             ) : filteredEvents.length === 0 ? (
               <div className="p-6 text-sm text-gray-500">{t('admin.noMatchingActivity')}</div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                 {filteredEvents.map((event) => (
                   <article key={event.id} className="grid gap-3 p-4 md:grid-cols-[10rem_minmax(0,1fr)] md:p-5">
                     <div className="text-sm text-gray-500">
@@ -638,7 +805,7 @@ function AdminContent() {
                             event.eventType,
                           )}`}
                         >
-                          {event.kind === 'deletion' && <Trash2 className="mr-1 h-3.5 w-3.5" />}
+                          {(event.kind === 'deletion' || event.eventType === 'deleted') && <Trash2 className="mr-1 h-3.5 w-3.5" />}
                           {getEventLabel(event.eventType, t)}
                         </span>
                         <span className="truncate text-sm font-semibold text-gray-950">
@@ -691,21 +858,31 @@ function AdminContent() {
           </div>
         </section>
 
-        <aside className="grid content-start gap-5">
-          <section>
-            <div className="mb-3 flex items-center justify-between gap-3">
+        <aside className={`min-h-0 gap-5 ${activeMobileTab === 'log' ? 'hidden' : 'grid'} md:grid md:grid-rows-2`}>
+          <section className={`min-h-0 flex-col ${activeMobileTab === 'participants' ? 'flex' : 'hidden'} md:flex`}>
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-gray-600" />
                 <h2 className="text-lg font-bold">{t('admin.participants.title')}</h2>
               </div>
-              <span className="text-sm text-gray-500">{filteredParticipants.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{filteredParticipants.length}</span>
+                <button
+                  type="button"
+                  onClick={() => setShowParticipantDialog(true)}
+                  title={t('admin.participant.add')}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
               {filteredParticipants.length === 0 ? (
                 <div className="p-4 text-sm text-gray-500">{t('admin.participants.none')}</div>
               ) : (
-                <div className="max-h-[15rem] divide-y divide-gray-100 overflow-y-auto">
+                <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                   {filteredParticipants.map((participant) => (
                     <div key={participant.id} className="flex items-start justify-between gap-3 p-4">
                       <div className="min-w-0">
@@ -721,6 +898,7 @@ function AdminContent() {
                       <ParticipantActionMenu
                         participant={participant}
                         onCopyLink={handleCopyParticipantLink}
+                        onSendReminder={handleSendParticipantReminder}
                         onExportAll={handleExportAllParticipantData}
                         onExportClean={handleExportCleanParticipantData}
                         onRemove={setParticipantToRemove}
@@ -732,31 +910,35 @@ function AdminContent() {
             </div>
           </section>
 
-          <section>
-            <div className="mb-3 flex items-center justify-between gap-3">
+          <section className={`min-h-0 flex-col ${activeMobileTab === 'subjects' ? 'flex' : 'hidden'} md:flex`}>
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-gray-600" />
                 <h2 className="text-lg font-bold">{t('admin.subjects.title')}</h2>
               </div>
-              <span className="text-sm text-gray-500">{filteredSubjects.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{filteredSubjects.length}</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSubjectDialog(true)}
+                  title={t('admin.subject.add')}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
               {filteredSubjects.length === 0 ? (
                 <div className="p-4 text-sm text-gray-500">{t('admin.subjects.none')}</div>
               ) : (
-                <div className="max-h-[15rem] divide-y divide-gray-100 overflow-y-auto">
+                <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                   {filteredSubjects.map((subject) => (
                     <div key={subject.id} className="flex items-start justify-between gap-3 p-4">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-3 w-3 rounded-sm border border-black/10"
-                            style={{ backgroundColor: subject.color || '#e5e7eb' }}
-                          />
-                          <div className="truncate text-sm font-bold text-gray-950">
-                            {getSubjectName(subject.labelEn, subject.labelDe, language, subject.key || subject.id)}
-                          </div>
+                        <div className="truncate text-sm font-bold text-gray-950">
+                          {getSubjectName(subject.labelEn, subject.labelDe, language, subject.key || subject.id)}
                         </div>
                         <div className="mt-1 truncate text-xs text-gray-500">{subject.key || subject.id}</div>
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
@@ -764,14 +946,7 @@ function AdminContent() {
                           <span>{t('admin.logItems.count', { count: subject.submissionItemCount })}</span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        disabled
-                        title={t('admin.actionPending', { label: t('admin.subject.label') })}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <SubjectActionMenu subject={subject} onRemove={setSubjectToRemove} />
                     </div>
                   ))}
                 </div>
@@ -781,8 +956,154 @@ function AdminContent() {
         </aside>
       </main>
 
+      <Dialog
+        open={showParticipantDialog}
+        onOpenChange={(isOpen) => {
+          setShowParticipantDialog(isOpen);
+          if (!isOpen) {
+            resetParticipantForm();
+          }
+        }}
+      >
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('admin.participant.addTitle')}</DialogTitle>
+            <DialogDescription>{t('admin.participant.addDescription')}</DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-4" onSubmit={handleCreateParticipant}>
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.participant.name')}
+              <input
+                value={newParticipantName}
+                onChange={(event) => setNewParticipantName(event.target.value)}
+                required
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.participant.email')}
+              <input
+                type="email"
+                value={newParticipantEmail}
+                onChange={(event) => setNewParticipantEmail(event.target.value)}
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.participant.entryMode')}
+              <select
+                value={newParticipantEntryMode}
+                onChange={(event) => setNewParticipantEntryMode(event.target.value as 'day' | 'week')}
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              >
+                <option value="day">{t('admin.participant.entryModeDay')}</option>
+                <option value="week">{t('admin.participant.entryModeWeek')}</option>
+              </select>
+            </label>
+
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setShowParticipantDialog(false)}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={createStatus === 'loading'}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {createStatus === 'loading' ? t('admin.creating') : t('admin.create')}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showSubjectDialog}
+        onOpenChange={(isOpen) => {
+          setShowSubjectDialog(isOpen);
+          if (!isOpen) {
+            resetSubjectForm();
+          }
+        }}
+      >
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('admin.subject.addTitle')}</DialogTitle>
+            <DialogDescription>{t('admin.subject.addDescription')}</DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-4" onSubmit={handleCreateSubject}>
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+              <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
+                {t('admin.subject.key')}
+                <input
+                  value={newSubjectKey}
+                  onChange={(event) => setNewSubjectKey(event.target.value)}
+                  required
+                  className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                />
+              </label>
+
+              <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
+                {t('admin.subject.credits')}
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={newSubjectCredits}
+                  onChange={(event) => setNewSubjectCredits(event.target.value)}
+                  className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                />
+              </label>
+            </div>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.subject.labelEn')}
+              <input
+                value={newSubjectLabelEn}
+                onChange={(event) => setNewSubjectLabelEn(event.target.value)}
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.subject.labelDe')}
+              <input
+                value={newSubjectLabelDe}
+                onChange={(event) => setNewSubjectLabelDe(event.target.value)}
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setShowSubjectDialog(false)}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={createStatus === 'loading'}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {createStatus === 'loading' ? t('admin.creating') : t('admin.create')}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {actionMessage && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-4">
           <div
             role="status"
             aria-live="polite"
@@ -797,6 +1118,44 @@ function AdminContent() {
         </div>
       )}
 
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveMobileTab('log')}
+            aria-current={activeMobileTab === 'log' ? 'page' : undefined}
+            className={`flex h-12 flex-col items-center justify-center gap-1 rounded-md text-xs font-bold transition-colors ${
+              activeMobileTab === 'log' ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Clock3 className="h-4 w-4" />
+            <span className="w-full truncate px-1">{t('admin.log.title')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMobileTab('participants')}
+            aria-current={activeMobileTab === 'participants' ? 'page' : undefined}
+            className={`flex h-12 flex-col items-center justify-center gap-1 rounded-md text-xs font-bold transition-colors ${
+              activeMobileTab === 'participants' ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span className="w-full truncate px-1">{t('admin.participants.title')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMobileTab('subjects')}
+            aria-current={activeMobileTab === 'subjects' ? 'page' : undefined}
+            className={`flex h-12 flex-col items-center justify-center gap-1 rounded-md text-xs font-bold transition-colors ${
+              activeMobileTab === 'subjects' ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="w-full truncate px-1">{t('admin.subjects.title')}</span>
+          </button>
+        </div>
+      </nav>
+
       <ConfirmDialog
         open={participantToRemove !== null}
         title={t('admin.participant.removeTitle')}
@@ -808,6 +1167,24 @@ function AdminContent() {
         variant="danger"
         onCancel={() => setParticipantToRemove(null)}
         onConfirm={handleConfirmRemoveParticipant}
+      />
+
+      <ConfirmDialog
+        open={subjectToRemove !== null}
+        title={t('admin.subject.removeTitle')}
+        description={t('admin.subject.removeDescription', {
+          name: getSubjectName(
+            subjectToRemove?.labelEn || '',
+            subjectToRemove?.labelDe || '',
+            language,
+            subjectToRemove?.key || subjectToRemove?.id || '',
+          ),
+        })}
+        confirmLabel={t('admin.subject.remove')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onCancel={() => setSubjectToRemove(null)}
+        onConfirm={handleConfirmRemoveSubject}
       />
     </div>
   );

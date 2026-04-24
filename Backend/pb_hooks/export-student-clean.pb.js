@@ -84,7 +84,10 @@ function chooseBaseSubmission(group) {
 
     const submissions = $app.findRecordsByFilter(
         "submissions",
-        "participant = {:participantId}",
+        [
+            "participant = {:participantId}",
+            'submissionMode != "deleted"',
+        ].join(" && "),
         "periodStart",
         5000,
         0,

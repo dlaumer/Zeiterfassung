@@ -126,7 +126,6 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             labelEn: adminStringValue(subject, "label_en"),
             labelDe: adminStringValue(subject, "label_de"),
             credits: adminNumberValue(subject, "credits"),
-            color: adminStringValue(subject, "color"),
             created: adminDateValue(subject, "created"),
             updated: adminDateValue(subject, "updated"),
         }
@@ -177,22 +176,30 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     const events = []
     for (const submission of submissions) {
         const participantId = adminStringValue(submission, "participant")
-        const happenedAt = adminDateValue(submission, "submittedAt") || adminDateValue(submission, "created")
+        const submissionMode = adminStringValue(submission, "submissionMode")
+        const submittedAt = adminDateValue(submission, "submittedAt") || adminDateValue(submission, "created")
+        const deletedAt = adminDateValue(submission, "deletedAt")
         const items = itemsBySubmissionId[submission.id] || []
         const totalMinutes = items.reduce((sum, item) => sum + item.durationMinutes, 0)
 
         if (participantStatsById[participantId]) {
             participantStatsById[participantId].submissionCount++
-            if (!participantStatsById[participantId].lastActivityAt || String(happenedAt).localeCompare(participantStatsById[participantId].lastActivityAt) > 0) {
-                participantStatsById[participantId].lastActivityAt = happenedAt
+
+            const lastRelevantActivity =
+                submissionMode === "deleted" && deletedAt
+                    ? deletedAt
+                    : submittedAt
+
+            if (!participantStatsById[participantId].lastActivityAt || String(lastRelevantActivity).localeCompare(participantStatsById[participantId].lastActivityAt) > 0) {
+                participantStatsById[participantId].lastActivityAt = lastRelevantActivity
             }
         }
 
         events.push({
             id: "submission:" + submission.id,
             kind: "submission",
-            eventType: adminStringValue(submission, "submissionMode") || "submitted",
-            happenedAt: happenedAt,
+            eventType: submissionMode === "deleted" ? "submitted" : submissionMode || "submitted",
+            happenedAt: submittedAt,
             participantId: participantId,
             participantName: adminFindParticipantName(participantById, participantId),
             submissionId: submission.id,
@@ -208,6 +215,29 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             totalMinutes: totalMinutes,
             items: items,
         })
+
+        if (submissionMode === "deleted" && deletedAt) {
+            events.push({
+                id: "submission-deleted:" + submission.id,
+                kind: "submission",
+                eventType: "deleted",
+                happenedAt: deletedAt,
+                participantId: participantId,
+                participantName: adminFindParticipantName(participantById, participantId),
+                submissionId: submission.id,
+                periodType: adminStringValue(submission, "periodType"),
+                periodStart: adminDateValue(submission, "periodStart"),
+                periodEnd: adminDateValue(submission, "periodEnd"),
+                periodDate: adminPeriodDate(adminDateValue(submission, "periodStart")),
+                dataRating: adminNumberValue(submission, "dataRating"),
+                generalAdminTime: adminNumberValue(submission, "generalAdminTime"),
+                commuteTime: adminNumberValue(submission, "commuteTime"),
+                comment: adminStringValue(submission, "comment"),
+                itemCount: items.length,
+                totalMinutes: totalMinutes,
+                items: items,
+            })
+        }
     }
 
     for (const eventRecord of deletionEvents) {
@@ -252,6 +282,64 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             ...subjectStatsById[id],
         })),
         events: events,
+    })
+}, $apis.requireAuth("admins"))
+
+routerAdd("POST", "/api/admin/participants", (e) => {
+    const body = e.requestInfo().body || {}
+
+    const name = String(body.name || "").trim()
+    const email = String(body.email || "").trim()
+    const entryMode = String(body.entryMode || "day").trim() === "week" ? "week" : "day"
+
+    if (!name) {
+        return e.json(400, { error: "Missing participant name" })
+    }
+
+    const collection = $app.findCollectionByNameOrId("participants")
+    const participant = new Record(collection)
+
+    participant.set("name", name)
+    participant.set("email", email)
+    participant.set("entryMode", entryMode)
+
+    $app.save(participant)
+
+    return e.json(200, {
+        ok: true,
+        participantId: participant.id,
+    })
+}, $apis.requireAuth("admins"))
+
+routerAdd("POST", "/api/admin/subjects", (e) => {
+    const body = e.requestInfo().body || {}
+
+    const key = String(body.key || "").trim()
+    const labelEn = String(body.labelEn || "").trim()
+    const labelDe = String(body.labelDe || "").trim()
+    const credits = Math.max(0, Number(body.credits || 0))
+
+    if (!key) {
+        return e.json(400, { error: "Missing subject key" })
+    }
+
+    if (!labelEn && !labelDe) {
+        return e.json(400, { error: "Missing subject label" })
+    }
+
+    const collection = $app.findCollectionByNameOrId("subjects")
+    const subject = new Record(collection)
+
+    subject.set("key", key)
+    subject.set("label_en", labelEn)
+    subject.set("label_de", labelDe)
+    subject.set("credits", credits)
+
+    $app.save(subject)
+
+    return e.json(200, {
+        ok: true,
+        subjectId: subject.id,
     })
 }, $apis.requireAuth("admins"))
 

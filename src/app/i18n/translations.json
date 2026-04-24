@@ -324,8 +324,8 @@
     "de": "Teilnehmende, Fächer oder Aktivitäten suchen"
   },
   "admin.log.title": {
-    "en": "Chronological Log",
-    "de": "Chronologisches Protokoll"
+    "en": "Log",
+    "de": "Protokoll"
   },
   "admin.events.count": {
     "en": "{{count}} events",
@@ -358,6 +358,10 @@
   "admin.event.initial": {
     "en": "Submission",
     "de": "Einreichung"
+  },
+  "admin.event.deleted": {
+    "en": "Deleted submission",
+    "de": "Gelöschte Einreichung"
   },
   "admin.event.deletion": {
     "en": "Deletion",
@@ -451,6 +455,10 @@
     "en": "Subject",
     "de": "Fach"
   },
+  "admin.subjectActions": {
+    "en": "Subject actions",
+    "de": "Aktionen f\u00fcr Fach"
+  },
   "admin.submissions.count": {
     "en": "{{count}} submissions",
     "de": "{{count}} Einreichungen"
@@ -470,6 +478,10 @@
   "admin.participant.getLink": {
     "en": "Get Link",
     "de": "Link kopieren"
+  },
+  "admin.participant.sendReminder": {
+    "en": "Send Reminder",
+    "de": "Erinnerung senden"
   },
   "admin.participant.exportAll": {
     "en": "Export all data",
@@ -499,6 +511,14 @@
     "en": "Could not export participant data.",
     "de": "Teilnehmendendaten konnten nicht exportiert werden."
   },
+  "admin.participant.reminderSent": {
+    "en": "Reminder email sent to {{email}}.",
+    "de": "Erinnerungs-E-Mail wurde an {{email}} gesendet."
+  },
+  "admin.participant.reminderFailed": {
+    "en": "Could not send the reminder email.",
+    "de": "Die Erinnerungs-E-Mail konnte nicht gesendet werden."
+  },
   "admin.participant.removed": {
     "en": "Participant removed.",
     "de": "Teilnehmende Person wurde entfernt."
@@ -514,6 +534,110 @@
   "admin.participant.removeDescription": {
     "en": "This will permanently remove {{name}} and their submitted data. This cannot be undone.",
     "de": "{{name}} und die eingereichten Daten werden dauerhaft entfernt. Dies kann nicht rückgängig gemacht werden."
+  },
+  "admin.participant.add": {
+    "en": "Add participant",
+    "de": "Teilnehmende Person hinzuf\u00fcgen"
+  },
+  "admin.participant.addTitle": {
+    "en": "Add participant",
+    "de": "Teilnehmende Person hinzuf\u00fcgen"
+  },
+  "admin.participant.addDescription": {
+    "en": "Create a participant record for the public time tracking flow.",
+    "de": "Erstelle einen Datensatz f\u00fcr die \u00f6ffentliche Zeiterfassung."
+  },
+  "admin.participant.name": {
+    "en": "Name",
+    "de": "Name"
+  },
+  "admin.participant.email": {
+    "en": "Email",
+    "de": "E-Mail"
+  },
+  "admin.participant.entryMode": {
+    "en": "Entry mode",
+    "de": "Erfassungsmodus"
+  },
+  "admin.participant.entryModeDay": {
+    "en": "Daily",
+    "de": "T\u00e4glich"
+  },
+  "admin.participant.entryModeWeek": {
+    "en": "Weekly",
+    "de": "W\u00f6chentlich"
+  },
+  "admin.participant.created": {
+    "en": "Participant created.",
+    "de": "Teilnehmende Person wurde erstellt."
+  },
+  "admin.participant.createFailed": {
+    "en": "Could not create the participant.",
+    "de": "Teilnehmende Person konnte nicht erstellt werden."
+  },
+  "admin.subject.add": {
+    "en": "Add subject",
+    "de": "Fach hinzuf\u00fcgen"
+  },
+  "admin.subject.addTitle": {
+    "en": "Add subject",
+    "de": "Fach hinzuf\u00fcgen"
+  },
+  "admin.subject.addDescription": {
+    "en": "Create a subject that can later be assigned to participants.",
+    "de": "Erstelle ein Fach, das sp\u00e4ter Teilnehmenden zugewiesen werden kann."
+  },
+  "admin.subject.key": {
+    "en": "Key",
+    "de": "K\u00fcrzel"
+  },
+  "admin.subject.labelEn": {
+    "en": "English label",
+    "de": "Englische Bezeichnung"
+  },
+  "admin.subject.labelDe": {
+    "en": "German label",
+    "de": "Deutsche Bezeichnung"
+  },
+  "admin.subject.credits": {
+    "en": "Credits",
+    "de": "Credits"
+  },
+  "admin.subject.created": {
+    "en": "Subject created.",
+    "de": "Fach wurde erstellt."
+  },
+  "admin.subject.createFailed": {
+    "en": "Could not create the subject.",
+    "de": "Fach konnte nicht erstellt werden."
+  },
+  "admin.subject.remove": {
+    "en": "Delete subject",
+    "de": "Fach l\u00f6schen"
+  },
+  "admin.subject.removed": {
+    "en": "Subject deleted.",
+    "de": "Fach wurde gel\u00f6scht."
+  },
+  "admin.subject.removeFailed": {
+    "en": "Could not delete the subject. It may still be used by submitted data.",
+    "de": "Fach konnte nicht gel\u00f6scht werden. Es wird m\u00f6glicherweise noch von eingereichten Daten verwendet."
+  },
+  "admin.subject.removeTitle": {
+    "en": "Delete subject?",
+    "de": "Fach l\u00f6schen?"
+  },
+  "admin.subject.removeDescription": {
+    "en": "This will permanently delete {{name}} and remove it from participant subject lists. Submitted data will block deletion.",
+    "de": "{{name}} wird dauerhaft gel\u00f6scht und aus den F\u00e4cherlisten der Teilnehmenden entfernt. Eingereichte Daten blockieren die L\u00f6schung."
+  },
+  "admin.create": {
+    "en": "Create",
+    "de": "Erstellen"
+  },
+  "admin.creating": {
+    "en": "Creating...",
+    "de": "Wird erstellt..."
   },
   "admin.hoursDetails": {
     "en": "Hours details",

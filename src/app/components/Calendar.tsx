@@ -9,10 +9,11 @@ interface CalendarProps {
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
   entriesMap: Map<string, any>;
+  missingSubmissionDates: Set<string>;
   subjects: Subject[];
 }
 
-export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, subjects }: CalendarProps) {
+export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects }: CalendarProps) {
   const { t } = useI18n();
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -43,6 +44,11 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   const hasEntry = (date: Date) => {
     const dateKey = format(date, 'yyyy-MM-dd');
     return entriesMap.has(dateKey);
+  };
+
+  const isMissingSubmissionDay = (date: Date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    return missingSubmissionDates.has(dateKey);
   };
 
   const getSubjectColorsForDate = (date: Date): string[] => {
@@ -101,6 +107,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
           const isToday = isSameDay(day, today);
           const isSelected = selectedDate && isSameDay(day, selectedDate);
           const hasEntryDay = hasEntry(day);
+          const isMissingDay = isMissingSubmissionDay(day);
           const subjectColors = getSubjectColorsForDate(day);
 
           return (
@@ -112,6 +119,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                 h-full min-h-0 rounded-lg md:rounded-xl px-1 py-1 text-xs md:text-sm font-medium transition-all relative
                 ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
                 ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
+                ${!hasEntryDay && isMissingDay ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
               `}
             >

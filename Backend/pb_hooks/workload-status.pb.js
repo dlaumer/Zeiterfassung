@@ -25,6 +25,27 @@ routerAdd("GET", "/api/workload-status", (e) => {
         return d
     }
 
+    function parseStartDateInput(value) {
+        const raw = String(value || "").trim()
+        if (!raw) return null
+
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+        if (!match) return null
+
+        const parsed = new Date(
+            Number(match[1]),
+            Number(match[2]) - 1,
+            Number(match[3]),
+            0,
+            0,
+            0,
+            0
+        )
+
+        if (isNaN(parsed.getTime())) return null
+        return parsed
+    }
+
     function startOfWeekMonday(date) {
         const d = startOfDay(date)
         const day = d.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
@@ -54,6 +75,11 @@ routerAdd("GET", "/api/workload-status", (e) => {
         }
 
         return result
+    }
+
+    function isWeekday(date) {
+        const day = date.getDay()
+        return day >= 1 && day <= 5
     }
 
     function buildExpectedWeeklyPeriods(rangeStart, currentWeekStart) {
@@ -201,6 +227,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     }
 
     const participantId = (e.requestInfo().query["participantId"] || "").trim()
+    const startDateInput = (e.requestInfo().query["startDate"] || "").trim()
     const lookbackDays = parseInt(e.requestInfo().query["lookbackDays"] || "28", 10)
 
     if (!participantId) {
@@ -226,14 +253,16 @@ routerAdd("GET", "/api/workload-status", (e) => {
     const currentWeekStart = startOfWeekMonday(now)
     const currentWeekEnd = endOfWeekSunday(now)
 
-    // We load all relevant submitted records in a lookback window.
-    const rangeStart = addDays(todayStart, -lookbackDays)
+    // Prefer an explicit start date. Keep lookbackDays as a fallback for compatibility.
+    const explicitRangeStart = parseStartDateInput(startDateInput)
+    const rangeStart = explicitRangeStart || addDays(todayStart, -lookbackDays)
     const rangeStartStr = formatDateTime(rangeStart)
 
     const submissions = $app.findRecordsByFilter(
         "submissions",
         [
             'participant = {:participantId}',
+            'submissionMode != "deleted"',
             'periodStart >= {:rangeStart}'
         ].join(" && "),
         "-periodStart",
@@ -428,6 +457,9 @@ routerAdd("GET", "/api/workload-status", (e) => {
         }
 
         missingPeriods = expectedPeriods.filter((p) => {
+            if (!isWeekday(p.start)) {
+                return false
+            }
             return !hasSubmissionForDay(submissions, p.start)
         })
 

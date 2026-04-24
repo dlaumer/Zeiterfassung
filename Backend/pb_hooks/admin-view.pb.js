@@ -66,6 +66,87 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         return String(periodStart || "").slice(0, 10)
     }
 
+    function adminParseDateOnly(value) {
+        const dateOnly = adminPeriodDate(value)
+        if (!dateOnly) {
+            return null
+        }
+
+        const date = new Date(dateOnly + "T00:00:00Z")
+        return Number.isNaN(date.getTime()) ? null : date
+    }
+
+    function adminFormatDateOnly(date) {
+        return date.toISOString().slice(0, 10)
+    }
+
+    function adminStartOfWeekMonday(value) {
+        const date = adminParseDateOnly(value)
+        if (!date) {
+            return ""
+        }
+
+        const weekday = date.getUTCDay()
+        const offset = (weekday + 6) % 7
+        date.setUTCDate(date.getUTCDate() - offset)
+        return adminFormatDateOnly(date)
+    }
+
+    function adminCountWeekdaysInclusive(startDate, endDate) {
+        if (startDate.getTime() > endDate.getTime()) {
+            return 0
+        }
+
+        let count = 0
+        const cursor = new Date(startDate.getTime())
+        cursor.setUTCHours(0, 0, 0, 0)
+
+        while (cursor.getTime() <= endDate.getTime()) {
+            const weekday = cursor.getUTCDay()
+            if (weekday !== 0 && weekday !== 6) {
+                count++
+            }
+
+            cursor.setUTCDate(cursor.getUTCDate() + 1)
+        }
+
+        return count
+    }
+
+    const adminMissingBaselineDate = "2026-04-01"
+
+    function adminExpectedSubmissionCount(entryMode, todayDate) {
+        const baselineDate = adminParseDateOnly(adminMissingBaselineDate)
+        if (!baselineDate) {
+            return 0
+        }
+
+        const today = new Date(todayDate.getTime())
+        today.setUTCHours(0, 0, 0, 0)
+
+        if (baselineDate.getTime() > today.getTime()) {
+            return 0
+        }
+
+        if (entryMode === "week") {
+            const createdWeek = adminStartOfWeekMonday(adminMissingBaselineDate)
+            const todayWeek = adminStartOfWeekMonday(adminFormatDateOnly(today))
+            if (!createdWeek || !todayWeek) {
+                return 0
+            }
+
+            const createdWeekDate = adminParseDateOnly(createdWeek)
+            const todayWeekDate = adminParseDateOnly(todayWeek)
+            if (!createdWeekDate || !todayWeekDate) {
+                return 0
+            }
+
+            return Math.floor((todayWeekDate.getTime() - createdWeekDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
+        }
+
+        return adminCountWeekdaysInclusive(baselineDate, today)
+    }
+
     function adminCreateDeletionEvent(app, deletedSubmission, participantName) {
         const collection = app.findCollectionByNameOrId("admin_activity_events")
         const eventRecord = new Record(collection)
@@ -91,6 +172,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     const participantSubjects = $app.findRecordsByFilter("participant_subjects", "", "", 5000, 0)
     const submissions = $app.findRecordsByFilter("submissions", "", "-submittedAt", 5000, 0)
     const submissionItems = $app.findRecordsByFilter("submission_items", "", "", 10000, 0)
+    let reminderEvents = []
 
     let deletionEvents = []
     try {
@@ -99,8 +181,15 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         deletionEvents = []
     }
 
+    try {
+        reminderEvents = $app.findRecordsByFilter("admin_reminders", "", "-created", 5000, 0)
+    } catch (error) {
+        reminderEvents = []
+    }
+
     const participantById = {}
     const participantStatsById = {}
+    const validSubmittedPeriodKeysByParticipant = {}
     for (const participant of participants) {
         participantById[participant.id] = {
             id: participant.id,
@@ -113,8 +202,10 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         participantStatsById[participant.id] = {
             subjectCount: 0,
             submissionCount: 0,
+            missingCount: 0,
             lastActivityAt: "",
         }
+        validSubmittedPeriodKeysByParticipant[participant.id] = {}
     }
 
     const subjectById = {}
@@ -183,7 +274,14 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         const totalMinutes = items.reduce((sum, item) => sum + item.durationMinutes, 0)
 
         if (participantStatsById[participantId]) {
-            participantStatsById[participantId].submissionCount++
+            if (submissionMode !== "deleted") {
+                participantStatsById[participantId].submissionCount++
+
+                const periodKey = adminStringValue(submission, "periodType") + ":" + adminPeriodDate(adminDateValue(submission, "periodStart"))
+                if (periodKey !== ":") {
+                    validSubmittedPeriodKeysByParticipant[participantId][periodKey] = true
+                }
+            }
 
             const lastRelevantActivity =
                 submissionMode === "deleted" && deletedAt
@@ -268,6 +366,47 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             totalMinutes: 0,
             items: [],
         })
+    }
+
+    for (const reminderRecord of reminderEvents) {
+        const participantId = adminStringValue(reminderRecord, "participant")
+        const happenedAt = adminDateValue(reminderRecord, "created")
+        const participantEmail = adminStringValue(reminderRecord, "participantEmail")
+        const sentByEmail = adminStringValue(reminderRecord, "sentByEmail")
+
+        if (participantStatsById[participantId] && (!participantStatsById[participantId].lastActivityAt || String(happenedAt).localeCompare(participantStatsById[participantId].lastActivityAt) > 0)) {
+            participantStatsById[participantId].lastActivityAt = happenedAt
+        }
+
+        events.push({
+            id: "admin-reminder:" + reminderRecord.id,
+            kind: "reminder",
+            eventType: "reminder",
+            happenedAt: happenedAt,
+            participantId: participantId,
+            participantName: adminStringValue(reminderRecord, "participantName") || adminFindParticipantName(participantById, participantId),
+            participantEmail: participantEmail,
+            sentByEmail: sentByEmail,
+            submissionId: "",
+            periodType: "",
+            periodStart: happenedAt,
+            periodEnd: "",
+            periodDate: adminPeriodDate(happenedAt),
+            dataRating: 0,
+            generalAdminTime: 0,
+            commuteTime: 0,
+            itemCount: 0,
+            totalMinutes: 0,
+            items: [],
+        })
+    }
+
+    const today = new Date()
+    for (const participantId of Object.keys(participantById)) {
+        const participant = participantById[participantId]
+        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, today)
+        const submittedPeriodCount = Object.keys(validSubmittedPeriodKeysByParticipant[participantId] || {}).length
+        participantStatsById[participantId].missingCount = Math.max(0, expectedCount - submittedPeriodCount)
     }
 
     events.sort((a, b) => String(b.happenedAt).localeCompare(String(a.happenedAt)))

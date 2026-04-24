@@ -327,6 +327,26 @@
     "en": "Log",
     "de": "Protokoll"
   },
+  "admin.log.dateFilter": {
+    "en": "Filter log by day",
+    "de": "Protokoll nach Tag filtern"
+  },
+  "admin.log.dateFilterActive": {
+    "en": "Filtered to {{date}}",
+    "de": "Gefiltert auf {{date}}"
+  },
+  "admin.log.dateFilterTitle": {
+    "en": "Day filter",
+    "de": "Tagesfilter"
+  },
+  "admin.log.dateFilterDescription": {
+    "en": "Show only submissions for the selected submission day.",
+    "de": "Zeige nur Einreichungen für den ausgewählten Einreichungstag."
+  },
+  "admin.log.clearDateFilter": {
+    "en": "Clear day filter",
+    "de": "Tagesfilter aufheben"
+  },
   "admin.events.count": {
     "en": "{{count}} events",
     "de": "{{count}} Ereignisse"
@@ -371,6 +391,10 @@
     "en": "Correction",
     "de": "Korrektur"
   },
+  "admin.event.reminder": {
+    "en": "Reminder sent",
+    "de": "Erinnerung gesendet"
+  },
   "admin.event.activity": {
     "en": "Activity",
     "de": "Aktivität"
@@ -378,6 +402,10 @@
   "admin.unknownParticipant": {
     "en": "Unknown participant",
     "de": "Unbekannte teilnehmende Person"
+  },
+  "admin.unknownEmail": {
+    "en": "unknown email",
+    "de": "unbekannte E-Mail"
   },
   "admin.period": {
     "en": "period",
@@ -414,6 +442,14 @@
   "admin.metric.noRating": {
     "en": "No rating",
     "de": "Keine Bewertung"
+  },
+  "admin.reminder.to": {
+    "en": "To: {{email}}",
+    "de": "An: {{email}}"
+  },
+  "admin.reminder.by": {
+    "en": "Sent by: {{email}}",
+    "de": "Gesendet von: {{email}}"
   },
   "admin.subject.fallback": {
     "en": "Subject",
@@ -462,6 +498,10 @@
   "admin.submissions.count": {
     "en": "{{count}} submissions",
     "de": "{{count}} Einreichungen"
+  },
+  "admin.missing.count": {
+    "en": "{{count}} missing",
+    "de": "{{count}} fehlend"
   },
   "admin.logItems.count": {
     "en": "{{count}} log items",

@@ -2,86 +2,87 @@
 
 
 routerAdd("POST", "/api/admin/participant/reminder", (e) => {
-    
-function reminderStringValue(record, fieldName) {
-    const value = record.get(fieldName)
-    return value === null || value === undefined ? "" : String(value || "")
-}
 
-function reminderLoadMailConfig() {
-    let fileConfig = {}
 
-    try {
-        const raw = toString($os.readFile(__hooks + "/gmail.local.json")).trim()
-        if (raw) {
-            fileConfig = JSON.parse(raw)
+    function reminderStringValue(record, fieldName) {
+        const value = record.get(fieldName)
+        return value === null || value === undefined ? "" : String(value || "")
+    }
+
+    function reminderLoadMailConfig() {
+        let fileConfig = {}
+
+        try {
+            const raw = toString($os.readFile(__hooks + "/gmail.local.json")).trim()
+            if (raw) {
+                fileConfig = JSON.parse(raw)
+            }
+        } catch (error) {
+            fileConfig = {}
         }
-    } catch (error) {
-        fileConfig = {}
+
+        const smtpHost = String($os.getenv("PB_SMTP_HOST") || fileConfig.smtpHost || "smtp.gmail.com").trim()
+        const smtpPort = Number($os.getenv("PB_SMTP_PORT") || fileConfig.smtpPort || 587)
+        const smtpUsername = String($os.getenv("PB_SMTP_USERNAME") || fileConfig.smtpUsername || "").trim()
+        const smtpPassword = String($os.getenv("PB_SMTP_PASSWORD") || fileConfig.smtpPassword || "").trim()
+        const senderName = String($os.getenv("PB_SMTP_SENDER_NAME") || fileConfig.senderName || $app.settings().meta.appName || "Workload Tracker").trim()
+        const senderAddress = String($os.getenv("PB_SMTP_SENDER_ADDRESS") || fileConfig.senderAddress || smtpUsername).trim()
+        const appUrl = String($os.getenv("PB_PUBLIC_APP_URL") || fileConfig.appUrl || $app.settings().meta.appURL || "").trim()
+
+        return {
+            smtpHost,
+            smtpPort,
+            smtpUsername,
+            smtpPassword,
+            senderName,
+            senderAddress,
+            appUrl,
+        }
     }
 
-    const smtpHost = String($os.getenv("PB_SMTP_HOST") || fileConfig.smtpHost || "smtp.gmail.com").trim()
-    const smtpPort = Number($os.getenv("PB_SMTP_PORT") || fileConfig.smtpPort || 587)
-    const smtpUsername = String($os.getenv("PB_SMTP_USERNAME") || fileConfig.smtpUsername || "").trim()
-    const smtpPassword = String($os.getenv("PB_SMTP_PASSWORD") || fileConfig.smtpPassword || "").trim()
-    const senderName = String($os.getenv("PB_SMTP_SENDER_NAME") || fileConfig.senderName || $app.settings().meta.appName || "Workload Tracker").trim()
-    const senderAddress = String($os.getenv("PB_SMTP_SENDER_ADDRESS") || fileConfig.senderAddress || smtpUsername).trim()
-    const appUrl = String($os.getenv("PB_PUBLIC_APP_URL") || fileConfig.appUrl || $app.settings().meta.appURL || "").trim()
+    function reminderEnsureMailClientConfigured() {
+        const config = reminderLoadMailConfig()
 
-    return {
-        smtpHost,
-        smtpPort,
-        smtpUsername,
-        smtpPassword,
-        senderName,
-        senderAddress,
-        appUrl,
-    }
-}
+        if (!config.smtpUsername || !config.smtpPassword) {
+            throw new Error("Missing SMTP credentials. Configure Backend/pb_hooks/gmail.local.json or PB_SMTP_* environment variables.")
+        }
 
-function reminderEnsureMailClientConfigured() {
-    const config = reminderLoadMailConfig()
+        if (!config.senderAddress) {
+            throw new Error("Missing sender email address for reminder emails.")
+        }
 
-    if (!config.smtpUsername || !config.smtpPassword) {
-        throw new Error("Missing SMTP credentials. Configure Backend/pb_hooks/gmail.local.json or PB_SMTP_* environment variables.")
-    }
+        const settings = $app.settings()
+        settings.smtp.enabled = true
+        settings.smtp.host = config.smtpHost
+        settings.smtp.port = config.smtpPort
+        settings.smtp.username = config.smtpUsername
+        settings.smtp.password = config.smtpPassword
+        settings.smtp.authMethod = "LOGIN"
+        settings.smtp.tls = false
+        settings.smtp.localName = "localhost"
+        settings.meta.senderName = config.senderName
+        settings.meta.senderAddress = config.senderAddress
 
-    if (!config.senderAddress) {
-        throw new Error("Missing sender email address for reminder emails.")
+        return config
     }
 
-    const settings = $app.settings()
-    settings.smtp.enabled = true
-    settings.smtp.host = config.smtpHost
-    settings.smtp.port = config.smtpPort
-    settings.smtp.username = config.smtpUsername
-    settings.smtp.password = config.smtpPassword
-    settings.smtp.authMethod = "LOGIN"
-    settings.smtp.tls = false
-    settings.smtp.localName = "localhost"
-    settings.meta.senderName = config.senderName
-    settings.meta.senderAddress = config.senderAddress
+    function reminderParticipantLink(participantId, appUrl) {
+        const normalizedBase = String(appUrl || "").trim().replace(/\/+$/, "")
+        if (!normalizedBase) {
+            return ""
+        }
 
-    return config
-}
-
-function reminderParticipantLink(participantId, appUrl) {
-    const normalizedBase = String(appUrl || "").trim().replace(/\/+$/, "")
-    if (!normalizedBase) {
-        return ""
+        return normalizedBase + "/" + participantId + "/"
     }
 
-    return normalizedBase + "/" + participantId + "/"
-}
-
-function reminderEmailHtml(participantName, participantLink) {
-    const safeName = participantName || "there"
-    const linkSection = participantLink
-        ? `<p><a href="${participantLink}">Open your workload tracker</a></p>
+    function reminderEmailHtml(participantName, participantLink) {
+        const safeName = participantName || "there"
+        const linkSection = participantLink
+            ? `<p><a href="${participantLink}">Open your workload tracker</a></p>
            <p><a href="${participantLink}">${participantLink}</a></p>`
-        : ""
+            : ""
 
-    return `
+        return `
         <p>Hello ${safeName},</p>
         <p>This is a friendly reminder to submit your workload tracking data.</p>
         ${linkSection}
@@ -92,13 +93,13 @@ function reminderEmailHtml(participantName, participantLink) {
         ${linkSection}
         <p>Vielen Dank und freundliche Gruesse.</p>
     `
-}
+    }
 
-function reminderEmailText(participantName, participantLink) {
-    const safeName = participantName || "there"
-    const linkLine = participantLink ? `\n\nOpen your workload tracker:\n${participantLink}` : ""
+    function reminderEmailText(participantName, participantLink) {
+        const safeName = participantName || "there"
+        const linkLine = participantLink ? `\n\nOpen your workload tracker:\n${participantLink}` : ""
 
-    return `Hello ${safeName},
+        return `Hello ${safeName},
 
 This is a friendly reminder to submit your workload tracking data.${linkLine}
 
@@ -109,7 +110,28 @@ Hallo ${safeName},
 Dies ist eine kurze Erinnerung, deine Lernaufwandsdaten einzureichen.${linkLine}
 
 Vielen Dank und freundliche Gruesse.`
-}
+    }
+
+    function reminderCreateLogRecord(e, participantId, participantName, participantEmail, participantLink, subject, senderAddress) {
+        const collection = $app.findCollectionByNameOrId("admin_reminders")
+        const record = new Record(collection)
+        const authRecord = e.auth
+
+        record.set("participant", participantId)
+        record.set("participantName", participantName)
+        record.set("participantEmail", participantEmail)
+        record.set("participantLink", participantLink)
+        record.set("subject", subject)
+        record.set("senderAddress", senderAddress)
+
+        if (authRecord) {
+            record.set("sentBy", authRecord.id)
+            record.set("sentByEmail", reminderStringValue(authRecord, "email"))
+        }
+
+        $app.save(record)
+    }
+
     const body = e.requestInfo().body || {}
     const participantId = String(body.participantId || "").trim()
 
@@ -134,6 +156,7 @@ Vielen Dank und freundliche Gruesse.`
     try {
         const config = reminderEnsureMailClientConfigured()
         const participantLink = reminderParticipantLink(participantId, config.appUrl)
+        const subject = "Reminder: submit your workload tracking"
 
         const message = new MailerMessage({
             from: {
@@ -141,12 +164,13 @@ Vielen Dank und freundliche Gruesse.`
                 name: config.senderName,
             },
             to: [{ address: participantEmail, name: participantName }],
-            subject: "Reminder: submit your workload tracking",
+            subject: subject,
             html: reminderEmailHtml(participantName, participantLink),
             text: reminderEmailText(participantName, participantLink),
         })
 
         $app.newMailClient().send(message)
+        reminderCreateLogRecord(e, participantId, participantName, participantEmail, participantLink, subject, config.senderAddress)
 
         return e.json(200, {
             ok: true,

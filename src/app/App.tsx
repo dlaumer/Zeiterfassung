@@ -534,7 +534,7 @@ function AppContent({ participantId }: AppContentProps) {
                 {participantName ? `${t('app.title')} - ${participantName}` : t('app.title')}
               </h1>
             </div>
-            <div className="shrink-0 lg:justify-self-start">
+            <div className="shrink-0 lg:justify-self-end">
               <LanguageSelector />
             </div>
           </div>

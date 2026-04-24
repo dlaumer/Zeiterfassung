@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import PocketBase from 'pocketbase';
 import {
   BookOpen,
+  CalendarDays,
   ChevronDown,
   Clock3,
   Copy,
@@ -16,6 +17,7 @@ import {
   Shield,
   Trash2,
   Users,
+  X,
 } from 'lucide-react';
 import { I18nProvider, useI18n, type Language } from '../app/i18n/i18n';
 import { LanguageSelector } from '../app/i18n/LanguageSelector';
@@ -35,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../app/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '../app/components/ui/popover';
 
 const pocketBaseUrl = 'http://127.0.0.1:8090';
 const pb = new PocketBase(`${pocketBaseUrl}/`);
@@ -48,6 +51,7 @@ interface AdminParticipant {
   updated: string;
   subjectCount: number;
   submissionCount: number;
+  missingCount: number;
   lastActivityAt: string;
 }
 
@@ -74,11 +78,13 @@ interface AdminEventItem {
 
 interface AdminEvent {
   id: string;
-  kind: 'submission' | 'deletion' | string;
+  kind: 'submission' | 'deletion' | 'reminder' | string;
   eventType: string;
   happenedAt: string;
   participantId: string;
   participantName: string;
+  participantEmail?: string;
+  sentByEmail?: string;
   submissionId: string;
   periodType: string;
   periodStart: string;
@@ -160,6 +166,10 @@ function formatMinutes(minutes: number, t: (id: string, params?: Record<string, 
 }
 
 function getEventLabel(eventType: string, t: (id: string) => string) {
+  if (eventType === 'reminder') {
+    return t('admin.event.reminder');
+  }
+
   if (eventType === 'appendum') {
     return t('admin.event.appendum');
   }
@@ -196,6 +206,10 @@ function getSubjectName(labelEn: string, labelDe: string, language: Language, fa
 }
 
 function eventBadgeClasses(kind: string, eventType: string) {
+  if (kind === 'reminder' || eventType === 'reminder') {
+    return 'border-violet-200 bg-violet-50 text-violet-700';
+  }
+
   if (kind === 'deletion' || eventType === 'deletion' || eventType === 'deleted') {
     return 'border-red-200 bg-red-50 text-red-700';
   }
@@ -369,6 +383,7 @@ function AdminContent() {
   const [participantToRemove, setParticipantToRemove] = useState<AdminParticipant | null>(null);
   const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('log');
+  const [selectedLogDate, setSelectedLogDate] = useState('');
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
@@ -652,6 +667,8 @@ function AdminContent() {
       [
         event.participantName,
         event.participantId,
+        event.participantEmail,
+        event.sentByEmail,
         event.eventType,
         event.periodDate,
         event.comment,
@@ -662,6 +679,14 @@ function AdminContent() {
         .includes(normalizedQuery),
     );
   }, [overview.events, query]);
+
+  const displayedEvents = useMemo(() => {
+    if (!selectedLogDate) {
+      return filteredEvents;
+    }
+
+    return filteredEvents.filter((event) => event.periodDate === selectedLogDate);
+  }, [filteredEvents, selectedLogDate]);
 
   if (!isAdminAuthenticated) {
     return (
@@ -738,14 +763,63 @@ function AdminContent() {
               </div>
             </div>
 
-            <div className="relative order-3 w-full max-w-xl md:order-2 md:flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t('admin.searchPlaceholder')}
-                className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-              />
+            <div className="order-3 flex w-full max-w-xl gap-2 md:order-2 md:flex-1">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={t('admin.searchPlaceholder')}
+                  className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                />
+              </div>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    title={
+                      selectedLogDate
+                        ? t('admin.log.dateFilterActive', {
+                            date: formatDate(selectedLogDate, language, t),
+                          })
+                        : t('admin.log.dateFilter')
+                    }
+                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border bg-white text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 ${
+                      selectedLogDate
+                        ? 'border-emerald-500 bg-emerald-100 text-emerald-800 ring-2 ring-emerald-200'
+                        : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                    }`}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 border-gray-200 bg-white p-4 text-gray-900">
+                  <div className="grid gap-3">
+                    <div>
+                      <div className="text-sm font-semibold">{t('admin.log.dateFilterTitle')}</div>
+                      <div className="text-xs text-gray-500">{t('admin.log.dateFilterDescription')}</div>
+                    </div>
+
+                    <input
+                      type="date"
+                      value={selectedLogDate}
+                      onChange={(event) => setSelectedLogDate(event.target.value)}
+                      className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLogDate('')}
+                      disabled={!selectedLogDate}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4" />
+                      {t('admin.log.clearDateFilter')}
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="order-2 flex shrink-0 flex-wrap items-center gap-2 md:order-3">
@@ -778,7 +852,7 @@ function AdminContent() {
               <Clock3 className="h-5 w-5 text-gray-600" />
               <h2 className="text-lg font-bold">{t('admin.log.title')}</h2>
             </div>
-            <span className="text-sm text-gray-500">{t('admin.events.count', { count: filteredEvents.length })}</span>
+            <span className="text-sm text-gray-500">{t('admin.events.count', { count: displayedEvents.length })}</span>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -786,11 +860,11 @@ function AdminContent() {
               <div className="p-6 text-sm text-gray-500">{t('admin.loadingActivity')}</div>
             ) : status === 'error' ? (
               <div className="p-6 text-sm font-semibold text-red-700">{t('admin.loadError')}</div>
-            ) : filteredEvents.length === 0 ? (
+            ) : displayedEvents.length === 0 ? (
               <div className="p-6 text-sm text-gray-500">{t('admin.noMatchingActivity')}</div>
             ) : (
               <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
-                {filteredEvents.map((event) => (
+                {displayedEvents.map((event) => (
                   <article key={event.id} className="grid gap-3 p-4 md:grid-cols-[10rem_minmax(0,1fr)] md:p-5">
                     <div className="text-sm text-gray-500">
                       <div className="font-semibold text-gray-900">{formatDateTime(event.happenedAt, language, t)}</div>
@@ -805,21 +879,31 @@ function AdminContent() {
                             event.eventType,
                           )}`}
                         >
+                          {event.kind === 'reminder' && <Mail className="mr-1 h-3.5 w-3.5" />}
                           {(event.kind === 'deletion' || event.eventType === 'deleted') && <Trash2 className="mr-1 h-3.5 w-3.5" />}
                           {getEventLabel(event.eventType, t)}
                         </span>
                         <span className="truncate text-sm font-semibold text-gray-950">
                           {event.participantName || event.participantId || t('admin.unknownParticipant')}
                         </span>
-                        <span className="text-xs text-gray-400">{event.periodType || t('admin.period')}</span>
+                        <span className="text-xs text-gray-400">
+                          {event.kind === 'reminder' ? t('admin.participant.label') : event.periodType || t('admin.period')}
+                        </span>
                       </div>
 
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                        <span>{t('admin.metric.workload', { value: formatMinutes(event.totalMinutes, t) })}</span>
-                        <span>{t('admin.metric.admin', { value: formatMinutes(event.generalAdminTime, t) })}</span>
-                        <span>{t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}</span>
-                        <span>{event.dataRating ? t('admin.metric.rating', { value: event.dataRating }) : t('admin.metric.noRating')}</span>
-                      </div>
+                      {event.kind === 'reminder' ? (
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                          <span>{t('admin.reminder.to', { email: event.participantEmail || t('admin.unknownEmail') })}</span>
+                          <span>{t('admin.reminder.by', { email: event.sentByEmail || t('admin.unknownEmail') })}</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                          <span>{t('admin.metric.workload', { value: formatMinutes(event.totalMinutes, t) })}</span>
+                          <span>{t('admin.metric.admin', { value: formatMinutes(event.generalAdminTime, t) })}</span>
+                          <span>{t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}</span>
+                          <span>{event.dataRating ? t('admin.metric.rating', { value: event.dataRating }) : t('admin.metric.noRating')}</span>
+                        </div>
+                      )}
 
                       {event.items.length > 0 && (
                         <details className="group mt-2">
@@ -893,6 +977,7 @@ function AdminContent() {
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
                           <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
                           <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
+                          <span>{t('admin.missing.count', { count: participant.missingCount })}</span>
                         </div>
                       </div>
                       <ParticipantActionMenu

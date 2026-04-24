@@ -144,6 +144,58 @@ const ensureUniqueSubjectColors = <T extends { color?: string }>(subjects: T[]) 
   });
 };
 
+function mergeDailyEntries(existingEntry: DailyEntry, addendum: DailyEntry): DailyEntry {
+  const mergedCourses = [...existingEntry.courses];
+
+  addendum.courses.forEach((newCourse) => {
+    const existingCourseIndex = mergedCourses.findIndex((course) => course.name === newCourse.name);
+
+    if (existingCourseIndex >= 0) {
+      mergedCourses[existingCourseIndex] = {
+        ...mergedCourses[existingCourseIndex],
+        hours: mergedCourses[existingCourseIndex].hours + newCourse.hours,
+      };
+      return;
+    }
+
+    mergedCourses.push(newCourse);
+  });
+
+  const mergedSubjectTimes = [...existingEntry.subjectTimes];
+
+  addendum.subjectTimes.forEach((newSubjectTime) => {
+    const existingSubjectTimeIndex = mergedSubjectTimes.findIndex(
+      (subjectTime) => subjectTime.subjectId === newSubjectTime.subjectId,
+    );
+
+    if (existingSubjectTimeIndex >= 0) {
+      const existingSubjectTime = mergedSubjectTimes[existingSubjectTimeIndex];
+
+      mergedSubjectTimes[existingSubjectTimeIndex] = {
+        ...existingSubjectTime,
+        classTime: existingSubjectTime.classTime + newSubjectTime.classTime,
+        selfStudyTime: existingSubjectTime.selfStudyTime + newSubjectTime.selfStudyTime,
+        hasClassEntry: existingSubjectTime.hasClassEntry || newSubjectTime.classTime > 0 || newSubjectTime.hasClassEntry,
+        hasStudyEntry: existingSubjectTime.hasStudyEntry || newSubjectTime.selfStudyTime > 0 || newSubjectTime.hasStudyEntry,
+      };
+      return;
+    }
+
+    mergedSubjectTimes.push(newSubjectTime);
+  });
+
+  return {
+    ...existingEntry,
+    reliability: addendum.reliability,
+    adminEffort: addendum.adminEffort,
+    commuteTime: addendum.commuteTime,
+    comment: addendum.comment,
+    courses: mergedCourses,
+    subjectTimes: mergedSubjectTimes,
+    skipped: false,
+  };
+}
+
 interface AppContentProps {
   participantId: string | null;
 }
@@ -373,12 +425,21 @@ function AppContent({ participantId }: AppContentProps) {
       body: payload,
     });
 
-    const newEntries = new Map(entries);
-    newEntries.set(entry.date, entry);
-    setEntries(newEntries);
+    setEntries((previousEntries) => {
+      const newEntries = new Map(previousEntries);
+      const previousEntry = newEntries.get(entry.date);
+      const nextEntry =
+        previousEntry && !previousEntry.skipped && !entry.skipped
+          ? mergeDailyEntries(previousEntry, entry)
+          : entry;
 
-    const entriesObj = Object.fromEntries(newEntries);
-    //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
+      newEntries.set(entry.date, nextEntry);
+
+      const entriesObj = Object.fromEntries(newEntries);
+      //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
+
+      return newEntries;
+    });
 
     setShowEntryModal(false);
     setShowViewModal(false);

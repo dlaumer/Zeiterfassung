@@ -60,6 +60,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const reEntryMode = existingEntry ? 'add' : null;
+  const isAddMode = reEntryMode === 'add' && !!existingEntry;
 
   useEffect(() => {
     setCourses([]);
@@ -138,7 +139,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 0);
   const hasChangedAdminEffort = adminEffort !== (existingEntry?.adminEffort ?? 0);
   const hasChangedCommuteTime = commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
-  const hasComment = comment.trim().length > 0;
+  const hasChangedComment = comment !== (existingEntry?.comment ?? '');
+  const hasComment = existingEntry ? hasChangedComment : comment.trim().length > 0;
+  const hasAddendumChanges =
+    hasEnteredSubjectTime ||
+    hasChangedReliability ||
+    hasChangedAdminEffort ||
+    hasChangedCommuteTime ||
+    hasChangedComment;
 
   const shouldShowCloseWarning =
     hasEnteredSubjectTime ||
@@ -169,31 +177,6 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       comment,
       skipped: false
     };
-
-    if (reEntryMode === 'add' && existingEntry) {
-      const mergedCourses = [...existingEntry.courses];
-      courses.forEach(newCourse => {
-        const existingCourseIndex = mergedCourses.findIndex(c => c.name === newCourse.name);
-        if (existingCourseIndex >= 0) {
-          mergedCourses[existingCourseIndex].hours += newCourse.hours;
-        } else {
-          mergedCourses.push(newCourse);
-        }
-      });
-      entry.courses = mergedCourses;
-
-      const mergedSubjectTimes = [...(existingEntry.subjectTimes || [])];
-      subjectTimes.forEach(newST => {
-        const existingSTIndex = mergedSubjectTimes.findIndex(st => st.subjectId === newST.subjectId);
-        if (existingSTIndex >= 0) {
-          mergedSubjectTimes[existingSTIndex].classTime += newST.classTime;
-          mergedSubjectTimes[existingSTIndex].selfStudyTime += newST.selfStudyTime;
-        } else {
-          mergedSubjectTimes.push(newST);
-        }
-      });
-      entry.subjectTimes = mergedSubjectTimes;
-    }
 
     try {
       await onSave(entry);
@@ -440,8 +423,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
           )}
           <button
             onClick={handleSubmit}
-            disabled={isSaving}
-            className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium"
+            disabled={isSaving || (isAddMode && !hasAddendumChanges)}
+            className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isSaving ? `${t('dailyEntry.submit')}...` : t('dailyEntry.submit')}
           </button>

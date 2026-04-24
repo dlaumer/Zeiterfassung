@@ -38,6 +38,23 @@ function chooseBaseSubmission(group) {
         return new Date(submittedAt || updated || created || 0)
     }
 
+    function pickLatestFieldValue(submissions, fieldName, fallbackValue) {
+        const newestFirst = [...submissions].sort(compareLatestFirst)
+
+        for (const submission of newestFirst) {
+            const rawValue = submission.get(fieldName)
+            if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
+                return rawValue
+            }
+        }
+
+        return fallbackValue
+    }
+
+    function minutesToHours(value) {
+        return Number(value || 0) / 60
+    }
+
     function getPeriodKey(submission) {
         const periodType = submission.get("periodType") || ""
         const periodStart = submission.get("periodStart") || ""
@@ -119,7 +136,7 @@ function chooseBaseSubmission(group) {
 
     for (const key of typeKeys) {
         for (const itemType of exportTypes) {
-            exportColumns.push(`${key}_${itemType}_minutes`)
+            exportColumns.push(`${key}_${itemType}_hours`)
         }
     }
 
@@ -141,7 +158,7 @@ function chooseBaseSubmission(group) {
         if (!workloadType) continue
 
         const key = workloadType.get("key")
-        const columnName = `${key}_${itemType}_minutes`
+        const columnName = `${key}_${itemType}_hours`
         const minutes = item.get("durationMinutes") || 0
 
         if (!itemsBySubmission[submissionId]) {
@@ -177,6 +194,8 @@ function chooseBaseSubmission(group) {
         "baseSubmissionMode",
         "appendumSubmissionIds",
         "dataRating",
+        "adminEffort_hours",
+        "commuteTime_hours",
         "comment",
         "submittedAt",
         ...exportColumns,
@@ -221,7 +240,18 @@ function chooseBaseSubmission(group) {
             }
         }
 
+        const effectiveSubmissions = []
+
+        if (baseSubmission) {
+            effectiveSubmissions.push(baseSubmission)
+        }
+
+        for (const appendum of appendumSubmissions) {
+            effectiveSubmissions.push(appendum)
+        }
+
         const representative = baseSubmission || appendumSubmissions[0]
+        const latestEffectiveSubmission = [...effectiveSubmissions].sort(compareLatestFirst)[0] || representative
 
         const row = [
             participant.id,
@@ -233,12 +263,14 @@ function chooseBaseSubmission(group) {
             baseSubmission ? baseSubmission.get("submissionMode") || "" : "",
             appendumSubmissions.map((s) => s.id).join(";"),
             representative.get("dataRating") || "",
-            representative.get("comment") || "",
-            representative.get("submittedAt") || "",
+            minutesToHours(pickLatestFieldValue(effectiveSubmissions, "generalAdminTime", 0)),
+            minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)),
+            latestEffectiveSubmission.get("comment") || "",
+            latestEffectiveSubmission.get("submittedAt") || "",
         ]
 
         for (const columnName of exportColumns) {
-            row.push(finalMap[columnName] || 0)
+            row.push(minutesToHours(finalMap[columnName] || 0))
         }
 
         rows.push(row)

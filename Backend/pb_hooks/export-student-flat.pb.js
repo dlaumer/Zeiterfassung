@@ -16,6 +16,10 @@ function csvEscape(value) {
   return str
 }
 
+function minutesToHours(value) {
+  return Number(value || 0) / 60
+}
+
   const participantId = (e.requestInfo().query["participantId"] || "").trim()
 
   if (!participantId) {
@@ -72,7 +76,7 @@ function csvEscape(value) {
 
   for (const key of typeKeys) {
     for (const itemType of exportTypes) {
-      exportColumns.push(`${key}_${itemType}_minutes`)
+      exportColumns.push(`${key}_${itemType}_hours`)
     }
   }
 
@@ -89,7 +93,7 @@ function csvEscape(value) {
     if (!workloadType) continue
 
     const key = workloadType.get("key")
-    const columnName = `${key}_${itemType}_minutes`
+    const columnName = `${key}_${itemType}_hours`
     const minutes = item.get("durationMinutes") || 0
 
     if (!itemsBySubmission[submissionId]) {
@@ -112,6 +116,8 @@ function csvEscape(value) {
     "periodEnd",
     "submissionMode",
     "dataRating",
+    "adminEffort_hours",
+    "commuteTime_hours",
     "comment",
     "submittedAt",
     ...exportColumns,
@@ -131,12 +137,14 @@ function csvEscape(value) {
       submission.get("periodEnd") || "",
       submission.get("submissionMode") || "",
       submission.get("dataRating") || "",
+      minutesToHours(submission.get("generalAdminTime")),
+      minutesToHours(submission.get("commuteTime")),
       submission.get("comment") || "",
       submission.get("submittedAt") || "",
     ]
 
     for (const columnName of exportColumns) {
-      row.push(submissionMap[columnName] || 0)
+      row.push(minutesToHours(submissionMap[columnName] || 0))
     }
 
     rows.push(row)

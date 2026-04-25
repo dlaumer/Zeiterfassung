@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import PocketBase from 'pocketbase';
 import {
   BookOpen,
-  CalendarDays,
   ChevronDown,
   Clock3,
   Copy,
   Download,
   FileText,
+  Filter,
   LogOut,
   Mail,
   MoreHorizontal,
@@ -93,6 +93,7 @@ interface AdminEvent {
   dataRating: number;
   generalAdminTime: number;
   commuteTime: number;
+  structuralChanges: number;
   comment: string;
   itemCount: number;
   totalMinutes: number;
@@ -106,6 +107,7 @@ interface AdminOverview {
 }
 
 type AdminMobileTab = 'log' | 'participants' | 'subjects';
+type AdminEntryModeFilter = 'all' | 'day' | 'week';
 
 const emptyOverview: AdminOverview = {
   participants: [],
@@ -146,6 +148,14 @@ function formatDate(value: string, language: Language, t: (id: string) => string
   return new Intl.DateTimeFormat(getIntlLocale(language), {
     dateStyle: 'medium',
   }).format(date);
+}
+
+function formatPeriodLabel(event: AdminEvent, language: Language, t: (id: string) => string) {
+  if (event.periodType === 'week' && event.periodStart && event.periodEnd) {
+    return `${formatDate(event.periodStart, language, t)} - ${formatDate(event.periodEnd, language, t)}`;
+  }
+
+  return formatDate(event.periodStart, language, t);
 }
 
 function formatMinutes(minutes: number, t: (id: string, params?: Record<string, string | number>) => string) {
@@ -203,6 +213,26 @@ function getSubjectName(labelEn: string, labelDe: string, language: Language, fa
   }
 
   return labelEn || labelDe || fallback;
+}
+
+function getAdminItemLabel(
+  item: AdminSubmissionItem,
+  periodType: string,
+  language: Language,
+  t: (id: string, params?: Record<string, string | number>) => string,
+) {
+  const subjectName = getSubjectName(
+    item.subjectLabelEn,
+    item.subjectLabelDe,
+    language,
+    item.subjectKey || t('admin.subject.fallback'),
+  );
+
+  if (periodType === 'week') {
+    return subjectName;
+  }
+
+  return `${subjectName} - ${item.type || t('admin.time.fallback')}`;
 }
 
 function eventBadgeClasses(kind: string, eventType: string) {
@@ -384,6 +414,7 @@ function AdminContent() {
   const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('log');
   const [selectedLogDate, setSelectedLogDate] = useState('');
+  const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
@@ -631,17 +662,19 @@ function AdminContent() {
 
   const filteredParticipants = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return overview.participants;
-    }
+    return overview.participants.filter((participant) => {
+      const matchesEntryMode = selectedEntryMode === 'all' || participant.entryMode === selectedEntryMode;
+      if (!matchesEntryMode) {
+        return false;
+      }
 
-    return overview.participants.filter((participant) =>
-      [participant.name, participant.email, participant.id]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedQuery),
-    );
-  }, [overview.participants, query]);
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [participant.name, participant.email, participant.id].join(' ').toLowerCase().includes(normalizedQuery);
+    });
+  }, [overview.participants, query, selectedEntryMode]);
 
   const filteredSubjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -659,12 +692,19 @@ function AdminContent() {
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return overview.events;
-    }
+    return overview.events.filter((event) => {
+      const matchesEntryMode =
+        selectedEntryMode === 'all' || event.kind === 'reminder' || event.periodType === selectedEntryMode;
 
-    return overview.events.filter((event) =>
-      [
+      if (!matchesEntryMode) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [
         event.participantName,
         event.participantId,
         event.participantEmail,
@@ -676,9 +716,9 @@ function AdminContent() {
       ]
         .join(' ')
         .toLowerCase()
-        .includes(normalizedQuery),
-    );
-  }, [overview.events, query]);
+        .includes(normalizedQuery);
+    });
+  }, [overview.events, query, selectedEntryMode]);
 
   const displayedEvents = useMemo(() => {
     if (!selectedLogDate) {
@@ -779,43 +819,72 @@ function AdminContent() {
                   <button
                     type="button"
                     title={
-                      selectedLogDate
-                        ? t('admin.log.dateFilterActive', {
-                            date: formatDate(selectedLogDate, language, t),
-                          })
-                        : t('admin.log.dateFilter')
+                      selectedLogDate || selectedEntryMode !== 'all'
+                        ? t('admin.filters.active')
+                        : t('admin.filters.title')
                     }
                     className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border bg-white text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 ${
-                      selectedLogDate
+                      selectedLogDate || selectedEntryMode !== 'all'
                         ? 'border-emerald-500 bg-emerald-100 text-emerald-800 ring-2 ring-emerald-200'
                         : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                     }`}
                   >
-                    <CalendarDays className="h-4 w-4" />
+                    <Filter className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-64 border-gray-200 bg-white p-4 text-gray-900">
+                <PopoverContent align="end" className="w-72 border-gray-200 bg-white p-4 text-gray-900">
                   <div className="grid gap-3">
                     <div>
-                      <div className="text-sm font-semibold">{t('admin.log.dateFilterTitle')}</div>
-                      <div className="text-xs text-gray-500">{t('admin.log.dateFilterDescription')}</div>
+                      <div className="text-sm font-semibold">{t('admin.filters.title')}</div>
+                      <div className="text-xs text-gray-500">{t('admin.filters.description')}</div>
                     </div>
 
-                    <input
-                      type="date"
-                      value={selectedLogDate}
-                      onChange={(event) => setSelectedLogDate(event.target.value)}
-                      className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-                    />
+                    <div className="grid gap-2">
+                      <div className="text-sm font-semibold">{t('admin.filters.entryModeTitle')}</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['all', 'day', 'week'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setSelectedEntryMode(mode)}
+                            className={`inline-flex h-10 items-center justify-center rounded-md border px-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 ${
+                              selectedEntryMode === mode
+                                ? 'border-gray-950 bg-gray-950 text-white'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {mode === 'all'
+                              ? t('admin.filters.mode.all')
+                              : mode === 'day'
+                                ? t('admin.entryMode.day')
+                                : t('admin.entryMode.week')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div className="text-sm font-semibold">{t('admin.log.dateFilterTitle')}</div>
+                      <div className="text-xs text-gray-500">{t('admin.log.dateFilterDescription')}</div>
+                      <input
+                        type="date"
+                        value={selectedLogDate}
+                        onChange={(event) => setSelectedLogDate(event.target.value)}
+                        className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                      />
+                    </div>
 
                     <button
                       type="button"
-                      onClick={() => setSelectedLogDate('')}
-                      disabled={!selectedLogDate}
+                      onClick={() => {
+                        setSelectedLogDate('');
+                        setSelectedEntryMode('all');
+                      }}
+                      disabled={!selectedLogDate && selectedEntryMode === 'all'}
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <X className="h-4 w-4" />
-                      {t('admin.log.clearDateFilter')}
+                      {t('admin.filters.clear')}
                     </button>
                   </div>
                 </PopoverContent>
@@ -868,7 +937,7 @@ function AdminContent() {
                   <article key={event.id} className="grid gap-3 p-4 md:grid-cols-[10rem_minmax(0,1fr)] md:p-5">
                     <div className="text-sm text-gray-500">
                       <div className="font-semibold text-gray-900">{formatDateTime(event.happenedAt, language, t)}</div>
-                      <div>{formatDate(event.periodStart, language, t)}</div>
+                      <div>{formatPeriodLabel(event, language, t)}</div>
                     </div>
 
                     <div className="min-w-0">
@@ -900,7 +969,13 @@ function AdminContent() {
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                           <span>{t('admin.metric.workload', { value: formatMinutes(event.totalMinutes, t) })}</span>
                           <span>{t('admin.metric.admin', { value: formatMinutes(event.generalAdminTime, t) })}</span>
-                          <span>{t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}</span>
+                          <span>
+                            {event.periodType === 'week'
+                              ? t('admin.metric.structuralChanges', {
+                                  value: formatMinutes(event.structuralChanges, t),
+                                })
+                              : t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}
+                          </span>
                           <span>{event.dataRating ? t('admin.metric.rating', { value: event.dataRating }) : t('admin.metric.noRating')}</span>
                         </div>
                       )}
@@ -918,12 +993,7 @@ function AdminContent() {
                                 key={item.id}
                                 className="inline-flex rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200"
                               >
-                                {getSubjectName(
-                                  item.subjectLabelEn,
-                                  item.subjectLabelDe,
-                                  language,
-                                  item.subjectKey || t('admin.subject.fallback'),
-                                )} - {item.type || t('admin.time.fallback')} -{' '}
+                                {getAdminItemLabel(item, event.periodType, language, t)} -{' '}
                                 {formatMinutes(item.durationMinutes, t)}
                               </span>
                             ))}

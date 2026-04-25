@@ -256,7 +256,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
     // Prefer an explicit start date. Keep lookbackDays as a fallback for compatibility.
     const explicitRangeStart = parseStartDateInput(startDateInput)
     const rangeStart = explicitRangeStart || addDays(todayStart, -lookbackDays)
-    const rangeStartStr = formatDateTime(rangeStart)
+    const submissionRangeStart = entryMode === "week" ? startOfWeekMonday(rangeStart) : rangeStart
+    const rangeStartStr = formatDateTime(submissionRangeStart)
 
     const submissions = $app.findRecordsByFilter(
         "submissions",
@@ -413,6 +414,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             .sort((a, b) => String(a.key).localeCompare(String(b.key)))
 
         const representativeCommuteTime = Number(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0) || 0)
+        const representativeStructuralChanges = Number(pickLatestFieldValue(effectiveSubmissions, "structuralChanges", 0) || 0)
         const representativeGeneralAdminTime = Number(pickLatestFieldValue(effectiveSubmissions, "generalAdminTime", 0) || 0)
         const representativeDataRating = Number(pickLatestFieldValue(effectiveSubmissions, "dataRating", 0) || 0)
         const representativeComment = String(pickLatestFieldValue(effectiveSubmissions, "comment", "") || "")
@@ -428,6 +430,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             periodEnd: representative.get("periodEnd") || "",
             periodDate: String(representative.get("periodStart") || "").slice(0, 10),
             commuteTime: representativeCommuteTime,
+            structuralChanges: representativeStructuralChanges,
             generalAdminTime: representativeGeneralAdminTime,
             dataRating: representativeDataRating,
             comment: representativeComment,

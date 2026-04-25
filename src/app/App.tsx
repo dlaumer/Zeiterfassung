@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ViewEntryModal } from './components/ViewEntryModal';
-import { CourseManagement, Subject } from './components/CourseManagement';
+import { CourseManagement, Subject, getSubjectDisplayName } from './components/CourseManagement';
 import { BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
@@ -31,6 +31,7 @@ interface DailyEntry {
   reliability: number;
   adminEffort: number;
   commuteTime: number;
+  structuralChanges?: number;
   comment: string;
   skipped: boolean;
 }
@@ -49,6 +50,20 @@ interface SaveDailyEntryPayload {
   }[];
 }
 
+interface SaveWeeklyEntryPayload {
+  participantId: string;
+  weekStart: string;
+  reliability: number;
+  adminEffortMinutes: number;
+  commuteMinutes: number;
+  structuralChangesMinutes: number;
+  comment: string;
+  categoryTimes: {
+    categoryId: string;
+    minutes: number;
+  }[];
+}
+
 interface WorkloadStatusSubject {
   id: string;
   key: string;
@@ -64,6 +79,7 @@ interface WorkloadStatusHistoryEntry {
   periodType: 'day' | 'week' | string;
   periodDate: string;
   commuteTime?: number;
+  structuralChanges?: number;
   generalAdminTime?: number;
   dataRating?: number;
   comment?: string;
@@ -72,6 +88,10 @@ interface WorkloadStatusHistoryEntry {
 }
 
 interface WorkloadStatusResponse {
+  participant?: {
+    id: string;
+    entryMode: 'day' | 'week' | string;
+  };
   submissionHistory: WorkloadStatusHistoryEntry[];
   missingPeriods?: {
     periodType: 'day' | 'week' | string;
@@ -81,6 +101,33 @@ interface WorkloadStatusResponse {
 }
 
 const SUBMISSION_TRACKING_START_DATE = '2026-04-01';
+
+const WEEKLY_CATEGORIES: Subject[] = [
+  {
+    id: 'weekly_preparation',
+    key: 'weekly_preparation',
+    labelEn: 'Preparation',
+    labelDe: 'Vorbereitung',
+    credits: 0,
+    color: '#2563eb',
+  },
+  {
+    id: 'weekly_contact_time',
+    key: 'weekly_contact_time',
+    labelEn: 'Contact time',
+    labelDe: 'Kontaktzeit',
+    credits: 0,
+    color: '#16a34a',
+  },
+  {
+    id: 'weekly_follow_up',
+    key: 'weekly_follow_up',
+    labelEn: 'Follow-up',
+    labelDe: 'Nachbereitung',
+    credits: 0,
+    color: '#f97316',
+  },
+];
 
 function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
   const comments = historyEntry.comments ?? [];
@@ -189,6 +236,7 @@ function mergeDailyEntries(existingEntry: DailyEntry, addendum: DailyEntry): Dai
     reliability: addendum.reliability,
     adminEffort: addendum.adminEffort,
     commuteTime: addendum.commuteTime,
+    structuralChanges: addendum.structuralChanges,
     comment: addendum.comment,
     courses: mergedCourses,
     subjectTimes: mergedSubjectTimes,
@@ -201,6 +249,35 @@ interface AppContentProps {
 }
 
 type ParticipantStatus = 'loading' | 'valid' | 'invalid';
+type EntryMode = 'day' | 'week';
+
+function WeeklyCategoryPanel({ categories }: { categories: Subject[] }) {
+  const { t, language } = useI18n();
+
+  return (
+    <div className="h-full min-h-0 bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col">
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <h3 className="font-semibold text-gray-900">{t('weeklyEntry.categories')}</h3>
+      </div>
+      <div className="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
+        {categories.map((category) => (
+          <div
+            key={category.id}
+            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+          >
+            <div
+              className="w-3 h-3 shrink-0 rounded-full"
+              style={{ backgroundColor: category.color }}
+            />
+            <span className="text-sm font-medium text-gray-700">
+              {getSubjectDisplayName(category, language)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function AppContent({ participantId }: AppContentProps) {
   const pb = new PocketBase('http://127.0.0.1:8090/');
@@ -215,6 +292,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
   const [participantName, setParticipantName] = useState<string>('');
+  const [entryMode, setEntryMode] = useState<EntryMode>('day');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
   const [missingSubmissionDates, setMissingSubmissionDates] = useState<Set<string>>(new Set());
@@ -228,6 +306,7 @@ function AppContent({ participantId }: AppContentProps) {
         if (isMounted) {
           setParticipantStatus('invalid');
           setParticipantName('');
+          setEntryMode('day');
         }
         return;
       }
@@ -240,6 +319,7 @@ function AppContent({ participantId }: AppContentProps) {
         }
 
         setParticipantName(participant.name ?? '');
+        setEntryMode(participant.entryMode === 'week' ? 'week' : 'day');
         setParticipantStatus('valid');
       } catch (error) {
         console.error('Participant lookup failed:', error);
@@ -250,6 +330,7 @@ function AppContent({ participantId }: AppContentProps) {
 
         setParticipantStatus('invalid');
         setParticipantName('');
+        setEntryMode('day');
       }
     }
 
@@ -317,7 +398,8 @@ function AppContent({ participantId }: AppContentProps) {
 
       return subjectsWithUniqueColors;
     }
-    if (!participantId || participantStatus !== 'valid') {
+    if (!participantId || participantStatus !== 'valid' || entryMode === 'week') {
+      setSubjects([]);
       return;
     }
 
@@ -327,7 +409,7 @@ function AppContent({ participantId }: AppContentProps) {
         setSubjects(subjects);
       })
       .catch(console.error);
-  }, [participantId, participantStatus]);
+  }, [participantId, participantStatus, entryMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -341,12 +423,14 @@ function AppContent({ participantId }: AppContentProps) {
         return;
       }
 
+      const responseEntryMode = response.participant?.entryMode === 'week' ? 'week' : 'day';
       const history = response.submissionHistory ?? [];
+      setEntryMode(responseEntryMode);
       setSubmissionHistory(history);
       setMissingSubmissionDates(
         new Set(
           (response.missingPeriods ?? [])
-            .filter((item) => item.periodType === 'day' && item.periodStart)
+            .filter((item) => item.periodType === responseEntryMode && item.periodStart)
             .map((item) => String(item.periodStart).slice(0, 10)),
         ),
       );
@@ -354,13 +438,13 @@ function AppContent({ participantId }: AppContentProps) {
       const backendEntries = new Map<string, DailyEntry>();
 
       history
-        .filter((item) => item.periodType === 'day' && item.periodDate)
+        .filter((item) => item.periodType === responseEntryMode && item.periodDate)
         .forEach((item) => {
           backendEntries.set(item.periodDate, {
             date: item.periodDate,
             courses: [],
             subjectTimes: item.subjects.map((subject) => ({
-              subjectId: subject.id,
+              subjectId: responseEntryMode === 'week' ? subject.key : subject.id,
               classTime: 0,
               selfStudyTime: 0,
               hasClassEntry: !!subject.hasClassEntry,
@@ -369,6 +453,7 @@ function AppContent({ participantId }: AppContentProps) {
             reliability: Number(item.dataRating ?? 0),
             adminEffort: Number(item.generalAdminTime ?? 0) / 60,
             commuteTime: Number(item.commuteTime ?? 0) / 60,
+            structuralChanges: Number(item.structuralChanges ?? 0) / 60,
             comment: getNewestComment(item),
             skipped: false,
           });
@@ -404,23 +489,39 @@ function AppContent({ participantId }: AppContentProps) {
       throw new Error('Missing participantId');
     }
 
-    const payload: SaveDailyEntryPayload = {
-      participantId,
-      date: entry.date,
-      reliability: entry.skipped ? 0 : entry.reliability,
-      adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
-      commuteMinutes: entry.skipped ? 0 : Math.round(entry.commuteTime * 60),
-      comment: entry.comment ?? '',
-      subjectTimes: entry.skipped
-        ? []
-        : entry.subjectTimes.map((subjectTime) => ({
-          subjectId: subjectTime.subjectId,
-          classMinutes: Math.round((subjectTime.classTime ?? 0) * 60),
-          studyMinutes: Math.round((subjectTime.selfStudyTime ?? 0) * 60),
-        })),
-    };
+    const payload: SaveDailyEntryPayload | SaveWeeklyEntryPayload = entryMode === 'week'
+      ? {
+        participantId,
+        weekStart: entry.date,
+        reliability: entry.skipped ? 0 : entry.reliability,
+        adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
+        commuteMinutes: 0,
+        structuralChangesMinutes: entry.skipped ? 0 : Math.round((entry.structuralChanges ?? 0) * 60),
+        comment: entry.comment ?? '',
+        categoryTimes: entry.skipped
+          ? []
+          : entry.subjectTimes.map((subjectTime) => ({
+            categoryId: subjectTime.subjectId,
+            minutes: Math.round((subjectTime.classTime ?? 0) * 60),
+          })),
+      }
+      : {
+        participantId,
+        date: entry.date,
+        reliability: entry.skipped ? 0 : entry.reliability,
+        adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
+        commuteMinutes: entry.skipped ? 0 : Math.round(entry.commuteTime * 60),
+        comment: entry.comment ?? '',
+        subjectTimes: entry.skipped
+          ? []
+          : entry.subjectTimes.map((subjectTime) => ({
+            subjectId: subjectTime.subjectId,
+            classMinutes: Math.round((subjectTime.classTime ?? 0) * 60),
+            studyMinutes: Math.round((subjectTime.selfStudyTime ?? 0) * 60),
+          })),
+      };
 
-    await pb.send('/api/submissions/daily', {
+    await pb.send(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
       method: 'POST',
       body: payload,
     });
@@ -450,12 +551,17 @@ function AppContent({ participantId }: AppContentProps) {
       throw new Error('Missing participantId');
     }
 
-    await pb.send('/api/submissions/daily', {
+    await pb.send(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
       method: 'DELETE',
-      body: {
-        participantId,
-        date,
-      },
+      body: entryMode === 'week'
+        ? {
+          participantId,
+          weekStart: date,
+        }
+        : {
+          participantId,
+          date,
+        },
     });
 
     const newEntries = new Map(entries);
@@ -565,6 +671,7 @@ function AppContent({ participantId }: AppContentProps) {
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
+  const activeSubjects = entryMode === 'week' ? WEEKLY_CATEGORIES : subjects;
 
   if (participantStatus === 'loading') {
     return (
@@ -608,21 +715,26 @@ function AppContent({ participantId }: AppContentProps) {
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
                 selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              entriesMap={entries}
-              missingSubmissionDates={missingSubmissionDates}
-              subjects={subjects}
-            />
+                onDateSelect={handleDateSelect}
+                entriesMap={entries}
+                missingSubmissionDates={missingSubmissionDates}
+                subjects={activeSubjects}
+                entryMode={entryMode}
+              />
             </div>
           </div>
 
           <div className="min-h-0">
-            <CourseManagement
-              subjects={subjects}
-              onAddSubject={handleAddSubject}
-              onRemoveSubject={handleRemoveSubject}
-              availableSubjects={availableSubjects}
-            />
+            {entryMode === 'week' ? (
+              <WeeklyCategoryPanel categories={WEEKLY_CATEGORIES} />
+            ) : (
+              <CourseManagement
+                subjects={subjects}
+                onAddSubject={handleAddSubject}
+                onRemoveSubject={handleRemoveSubject}
+                availableSubjects={availableSubjects}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -637,8 +749,9 @@ function AppContent({ participantId }: AppContentProps) {
           onSave={saveEntry}
           existingEntry={existingEntry}
           availableCourses={availableSubjects.map((subject) => subject.labelEn)}
-          subjects={subjects}
+          subjects={activeSubjects}
           defaultCommuteTime={defaultCommuteTime}
+          entryMode={entryMode}
         />
       )}
 
@@ -652,11 +765,12 @@ function AppContent({ participantId }: AppContentProps) {
           }}
           onDelete={() => {
             deleteEntry(format(selectedDate, 'yyyy-MM-dd')).catch((error) => {
-              console.error('Failed to delete day entry:', error);
+              console.error('Failed to delete entry:', error);
             });
           }}
           onAddWorkload={handleAddWorkload}
-          subjects={subjects}
+          subjects={activeSubjects}
+          entryMode={entryMode}
         />
       )}
 

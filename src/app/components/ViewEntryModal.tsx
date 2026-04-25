@@ -1,5 +1,5 @@
 import { X, Trash2, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, endOfWeek } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
 import { Subject } from './CourseManagement';
 
@@ -33,10 +33,16 @@ interface ViewEntryModalProps {
   onDelete: () => void;
   onAddWorkload: () => void;
   subjects?: Subject[];
+  entryMode?: 'day' | 'week';
 }
 
-export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }: ViewEntryModalProps) {
+export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload, entryMode = 'day' }: ViewEntryModalProps) {
   const { t } = useI18n();
+  const isWeekly = entryMode === 'week';
+  const periodEnd = endOfWeek(date, { weekStartsOn: 1 });
+  const periodLabel = isWeekly
+    ? `${format(date, 'MMMM d, yyyy')} - ${format(periodEnd, 'MMMM d, yyyy')}`
+    : format(date, 'EEEE, MMMM d, yyyy');
 
   if (entry.skipped) {
     return (
@@ -44,8 +50,8 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }
         <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="font-semibold text-gray-900">{t('viewEntry.daySkipped')}</h3>
-              <p className="text-sm text-gray-500">{format(date, 'EEEE, MMMM d, yyyy')}</p>
+              <h3 className="font-semibold text-gray-900">{isWeekly ? t('viewEntry.weekSkipped') : t('viewEntry.daySkipped')}</h3>
+              <p className="text-sm text-gray-500">{periodLabel}</p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <X className="w-5 h-5 text-gray-600" />
@@ -60,7 +66,7 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }
               className="flex-1 px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              {t('viewEntry.deleteDay')}
+              {isWeekly ? t('viewEntry.deleteWeek') : t('viewEntry.deleteDay')}
             </button>
             <button
               onClick={onAddWorkload}
@@ -81,7 +87,7 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="font-semibold text-gray-900">{t('viewEntry.existsTitle')}</h3>
-            <p className="text-sm text-gray-500">{format(date, 'EEEE, MMMM d, yyyy')}</p>
+            <p className="text-sm text-gray-500">{periodLabel}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="w-5 h-5 text-gray-600" />
@@ -89,7 +95,7 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }
         </div>
 
         <div className="bg-blue-50 rounded-xl p-4 mb-6">
-          <p className="text-sm text-blue-800">{t('viewEntry.existsInfo')}</p>
+          <p className="text-sm text-blue-800">{isWeekly ? t('viewEntry.weekExistsInfo') : t('viewEntry.existsInfo')}</p>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -105,7 +111,7 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload }
             className="w-full px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium flex items-center justify-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
-            {t('viewEntry.deleteDay')}
+            {isWeekly ? t('viewEntry.deleteWeek') : t('viewEntry.deleteDay')}
           </button>
         </div>
       </div>

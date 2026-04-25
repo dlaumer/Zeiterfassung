@@ -33,6 +33,7 @@ function adminCreateDeletionEvent(app, deletedSubmission, participantName) {
     eventRecord.set("dataRating", adminNumberValue(deletedSubmission, "dataRating"))
     eventRecord.set("generalAdminTime", adminNumberValue(deletedSubmission, "generalAdminTime"))
     eventRecord.set("commuteTime", adminNumberValue(deletedSubmission, "commuteTime"))
+    eventRecord.set("structuralChanges", adminNumberValue(deletedSubmission, "structuralChanges"))
 
     app.save(eventRecord)
 }
@@ -163,6 +164,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         eventRecord.set("dataRating", adminNumberValue(deletedSubmission, "dataRating"))
         eventRecord.set("generalAdminTime", adminNumberValue(deletedSubmission, "generalAdminTime"))
         eventRecord.set("commuteTime", adminNumberValue(deletedSubmission, "commuteTime"))
+        eventRecord.set("structuralChanges", adminNumberValue(deletedSubmission, "structuralChanges"))
 
         app.save(eventRecord)
     }
@@ -275,7 +277,9 @@ routerAdd("GET", "/api/admin/overview", (e) => {
 
         if (participantStatsById[participantId]) {
             if (submissionMode !== "deleted") {
-                participantStatsById[participantId].submissionCount++
+                if (submissionMode !== "appendum") {
+                    participantStatsById[participantId].submissionCount++
+                }
 
                 const periodKey = adminStringValue(submission, "periodType") + ":" + adminPeriodDate(adminDateValue(submission, "periodStart"))
                 if (periodKey !== ":") {
@@ -308,6 +312,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             dataRating: adminNumberValue(submission, "dataRating"),
             generalAdminTime: adminNumberValue(submission, "generalAdminTime"),
             commuteTime: adminNumberValue(submission, "commuteTime"),
+            structuralChanges: adminNumberValue(submission, "structuralChanges"),
             comment: adminStringValue(submission, "comment"),
             itemCount: items.length,
             totalMinutes: totalMinutes,
@@ -330,6 +335,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
                 dataRating: adminNumberValue(submission, "dataRating"),
                 generalAdminTime: adminNumberValue(submission, "generalAdminTime"),
                 commuteTime: adminNumberValue(submission, "commuteTime"),
+                structuralChanges: adminNumberValue(submission, "structuralChanges"),
                 comment: adminStringValue(submission, "comment"),
                 itemCount: items.length,
                 totalMinutes: totalMinutes,
@@ -361,6 +367,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             dataRating: adminNumberValue(eventRecord, "dataRating"),
             generalAdminTime: adminNumberValue(eventRecord, "generalAdminTime"),
             commuteTime: adminNumberValue(eventRecord, "commuteTime"),
+            structuralChanges: adminNumberValue(eventRecord, "structuralChanges"),
             comment: adminStringValue(eventRecord, "comment"),
             itemCount: 0,
             totalMinutes: 0,
@@ -395,6 +402,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             dataRating: 0,
             generalAdminTime: 0,
             commuteTime: 0,
+            structuralChanges: 0,
             itemCount: 0,
             totalMinutes: 0,
             items: [],

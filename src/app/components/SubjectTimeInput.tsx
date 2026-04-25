@@ -11,10 +11,12 @@ interface SubjectTimeInputProps {
   selfStudyTime: number;
   onClassTimeChange: (time: number) => void;
   onSelfStudyTimeChange: (time: number) => void;
-  statusTag?: string | null;
+  classStatusTag?: string | null;
+  studyStatusTag?: string | null;
   isFaded?: boolean;
   onRemove?: () => void;
   isAdditionalHours?: boolean;
+  singleTimeLabel?: string;
 }
 
 export function SubjectTimeInput({
@@ -24,13 +26,35 @@ export function SubjectTimeInput({
   selfStudyTime,
   onClassTimeChange,
   onSelfStudyTimeChange,
-  statusTag,
+  classStatusTag,
+  studyStatusTag,
   isFaded = false,
   onRemove,
-  isAdditionalHours = false
+  isAdditionalHours = false,
+  singleTimeLabel
 }: SubjectTimeInputProps) {
   const { t } = useI18n();
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const isSingleTimeMode = !!singleTimeLabel;
+  const hasStatusTag = !!classStatusTag || !!studyStatusTag;
+  const classHasExistingEntry = classStatusTag === t('dailyEntry.filledBefore');
+  const studyHasExistingEntry = studyStatusTag === t('dailyEntry.filledBefore');
+
+  const renderStatusTag = (statusTag?: string | null) => {
+    if (!statusTag) {
+      return null;
+    }
+
+    return (
+      <span className={`text-xs px-2 py-1 rounded-full ${
+        statusTag === t('dailyEntry.filledBefore')
+          ? 'bg-blue-100 text-blue-700'
+          : 'bg-gray-200 text-gray-600'
+      }`}>
+        {statusTag}
+      </span>
+    );
+  };
 
   const handleRemoveClick = () => {
     if (classTime > 0 || selfStudyTime > 0) {
@@ -59,16 +83,7 @@ export function SubjectTimeInput({
             <span className="font-medium text-gray-800">{subjectName}</span>
           </div>
           <div className="flex items-center gap-2">
-            {statusTag && (
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                statusTag === t('dailyEntry.filledBefore')
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-200 text-gray-600'
-              }`}>
-                {statusTag}
-              </span>
-            )}
-            {onRemove && !statusTag && (
+            {onRemove && !hasStatusTag && (
               <button
                 onClick={handleRemoveClick}
                 className="p-1 hover:bg-gray-200 rounded transition-colors"
@@ -81,13 +96,16 @@ export function SubjectTimeInput({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-600">{t('subject.classTime')}</label>
+          <label className="text-sm text-gray-600 flex items-center gap-2">
+            {singleTimeLabel ?? t('subject.classTime')}
+            {renderStatusTag(classStatusTag)}
+          </label>
           <EditableTimeDisplay
             value={classTime}
             onChange={onClassTimeChange}
             max={24}
-            prefix={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && classTime > 0 ? '+' : ''}
-            displayClassName={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && classTime > 0 ? 'text-green-600' : ''}
+            prefix={isAdditionalHours && classHasExistingEntry && classTime > 0 ? '+' : ''}
+            displayClassName={isAdditionalHours && classHasExistingEntry && classTime > 0 ? 'text-green-600' : ''}
           />
         </div>
         <Slider
@@ -115,18 +133,21 @@ export function SubjectTimeInput({
             }}
           />
         </Slider>
-        <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>
+        {!isSingleTimeMode && <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>}
       </div>
 
-      <div className="space-y-2">
+      {!isSingleTimeMode && <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-600">{t('subject.selfStudy')}</label>
+          <label className="text-sm text-gray-600 flex items-center gap-2">
+            {t('subject.selfStudy')}
+            {renderStatusTag(studyStatusTag)}
+          </label>
           <EditableTimeDisplay
             value={selfStudyTime}
             onChange={onSelfStudyTimeChange}
             max={24}
-            prefix={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && selfStudyTime > 0 ? '+' : ''}
-            displayClassName={isAdditionalHours && statusTag === t('dailyEntry.filledBefore') && selfStudyTime > 0 ? 'text-green-600' : ''}
+            prefix={isAdditionalHours && studyHasExistingEntry && selfStudyTime > 0 ? '+' : ''}
+            displayClassName={isAdditionalHours && studyHasExistingEntry && selfStudyTime > 0 ? 'text-green-600' : ''}
           />
         </div>
         <Slider
@@ -156,7 +177,7 @@ export function SubjectTimeInput({
           />
         </Slider>
         <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>
-      </div>
+      </div>}
     </div>
 
     {showRemoveConfirm && (

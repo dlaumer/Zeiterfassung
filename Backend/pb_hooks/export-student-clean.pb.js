@@ -129,21 +129,44 @@ function chooseBaseSubmission(group) {
         )
     }
 
-    const typeKeys = workloadTypes.map((t) => t.get("key"))
     const exportTypes = ["class", "study"]
-
-    const exportColumns = []
-
-    for (const key of typeKeys) {
-        for (const itemType of exportTypes) {
-            exportColumns.push(`${key}_${itemType}_hours`)
-        }
-    }
 
     const workloadTypeById = {}
     for (const wt of workloadTypes) {
         workloadTypeById[wt.id] = wt
     }
+
+    const submissionById = {}
+    for (const submission of submissions) {
+        submissionById[submission.id] = submission
+    }
+
+    function getExportColumnName(workloadType, itemType, submission) {
+        const key = workloadType.get("key")
+        const periodType = submission ? submission.get("periodType") || "" : ""
+
+        if (periodType === "week") {
+            return `${key}_hours`
+        }
+
+        return `${key}_${itemType}_hours`
+    }
+
+    const exportColumnSet = {}
+    for (const item of items) {
+        const workloadTypeId = item.get("workloadType")
+        const itemType = item.get("type")
+        const minutes = item.get("durationMinutes") || 0
+        const submission = submissionById[item.get("submission")]
+
+        if (!exportTypes.includes(itemType) || minutes <= 0) continue
+        if (!workloadTypeById[workloadTypeId]) continue
+        if (!submission) continue
+
+        exportColumnSet[getExportColumnName(workloadTypeById[workloadTypeId], itemType, submission)] = true
+    }
+
+    const exportColumns = Object.keys(exportColumnSet).sort()
 
     const itemsBySubmission = {}
 
@@ -151,14 +174,15 @@ function chooseBaseSubmission(group) {
         const submissionId = item.get("submission")
         const workloadTypeId = item.get("workloadType")
         const itemType = item.get("type")
+        const submission = submissionById[submissionId]
 
         if (!exportTypes.includes(itemType)) continue
 
         const workloadType = workloadTypeById[workloadTypeId]
         if (!workloadType) continue
+        if (!submission) continue
 
-        const key = workloadType.get("key")
-        const columnName = `${key}_${itemType}_hours`
+        const columnName = getExportColumnName(workloadType, itemType, submission)
         const minutes = item.get("durationMinutes") || 0
 
         if (!itemsBySubmission[submissionId]) {
@@ -196,6 +220,7 @@ function chooseBaseSubmission(group) {
         "dataRating",
         "adminEffort_hours",
         "commuteTime_hours",
+        "structuralChanges_hours",
         "comment",
         "submittedAt",
         ...exportColumns,
@@ -252,11 +277,12 @@ function chooseBaseSubmission(group) {
 
         const representative = baseSubmission || appendumSubmissions[0]
         const latestEffectiveSubmission = [...effectiveSubmissions].sort(compareLatestFirst)[0] || representative
+        const periodType = representative.get("periodType") || ""
 
         const row = [
             participant.id,
             participant.get("name") || "",
-            representative.get("periodType") || "",
+            periodType,
             representative.get("periodStart") || "",
             representative.get("periodEnd") || "",
             baseSubmission ? baseSubmission.id : "",
@@ -264,7 +290,8 @@ function chooseBaseSubmission(group) {
             appendumSubmissions.map((s) => s.id).join(";"),
             representative.get("dataRating") || "",
             minutesToHours(pickLatestFieldValue(effectiveSubmissions, "generalAdminTime", 0)),
-            minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)),
+            periodType === "week" ? "" : minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)),
+            periodType === "week" ? minutesToHours(pickLatestFieldValue(effectiveSubmissions, "structuralChanges", 0)) : "",
             latestEffectiveSubmission.get("comment") || "",
             latestEffectiveSubmission.get("submittedAt") || "",
         ]

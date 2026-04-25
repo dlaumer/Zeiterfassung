@@ -191,6 +191,22 @@
     "en": "Saving failed. Please try again.",
     "de": "Speichern fehlgeschlagen. Bitte erneut versuchen."
   },
+  "weeklyEntry.title": {
+    "en": "Weekly Workload Entry",
+    "de": "Wöchentlicher Aufwandseintrag"
+  },
+  "weeklyEntry.categories": {
+    "en": "Categories",
+    "de": "Kategorien"
+  },
+  "weeklyEntry.hours": {
+    "en": "Hours",
+    "de": "Stunden"
+  },
+  "weeklyEntry.structuralChanges": {
+    "en": "Structural Changes",
+    "de": "Structural Changes"
+  },
   "viewEntry.daySkipped": {
     "en": "Day Skipped",
     "de": "Tag übersprungen"
@@ -199,9 +215,17 @@
     "en": "This day was marked as skipped. No workload was recorded.",
     "de": "Dieser Tag wurde als übersprungen markiert. Es wurde kein Aufwand erfasst."
   },
+  "viewEntry.weekSkipped": {
+    "en": "Week Skipped",
+    "de": "Woche übersprungen"
+  },
   "viewEntry.deleteDay": {
     "en": "Delete Day Data",
     "de": "Tagesdaten löschen"
+  },
+  "viewEntry.deleteWeek": {
+    "en": "Delete Week Data",
+    "de": "Wochendaten löschen"
   },
   "viewEntry.addWorkload": {
     "en": "Add Workload",
@@ -214,6 +238,10 @@
   "viewEntry.existsInfo": {
     "en": "This day already has workload data recorded. You can add additional hours to the existing entry or delete all data for this day.",
     "de": "Für diesen Tag sind bereits Daten vorhanden. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für den Tag löschen."
+  },
+  "viewEntry.weekExistsInfo": {
+    "en": "This week already has workload data recorded. You can add additional hours to the existing entry or delete all data for this week.",
+    "de": "Für diese Woche sind bereits Daten vorhanden. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für die Woche löschen."
   },
   "subject.classTime": {
     "en": "Class Time",
@@ -322,6 +350,30 @@
   "admin.searchPlaceholder": {
     "en": "Search participants, subjects, or activity",
     "de": "Teilnehmende, Fächer oder Aktivitäten suchen"
+  },
+  "admin.filters.title": {
+    "en": "Filters",
+    "de": "Filter"
+  },
+  "admin.filters.active": {
+    "en": "Filters active",
+    "de": "Filter aktiv"
+  },
+  "admin.filters.description": {
+    "en": "Filter the log by day and limit the log and participants by entry mode.",
+    "de": "Filtere das Protokoll nach Tag und begrenze Protokoll und Teilnehmende nach Eintragsart."
+  },
+  "admin.filters.entryModeTitle": {
+    "en": "Entry mode",
+    "de": "Eintragsart"
+  },
+  "admin.filters.mode.all": {
+    "en": "All",
+    "de": "Alle"
+  },
+  "admin.filters.clear": {
+    "en": "Clear filters",
+    "de": "Filter zur\u00fccksetzen"
   },
   "admin.log.title": {
     "en": "Log",
@@ -435,6 +487,10 @@
     "en": "{{value}} commute",
     "de": "{{value}} Pendeln"
   },
+  "admin.metric.structuralChanges": {
+    "en": "{{value}} structural changes",
+    "de": "{{value}} Structural Changes"
+  },
   "admin.metric.rating": {
     "en": "{{value}}/5 rating",
     "de": "{{value}}/5 Bewertung"
@@ -502,6 +558,14 @@
   "admin.missing.count": {
     "en": "{{count}} missing",
     "de": "{{count}} fehlend"
+  },
+  "admin.entryMode.day": {
+    "en": "Daily",
+    "de": "T\u00e4glich"
+  },
+  "admin.entryMode.week": {
+    "en": "Weekly",
+    "de": "W\u00f6chentlich"
   },
   "admin.logItems.count": {
     "en": "{{count}} log items",

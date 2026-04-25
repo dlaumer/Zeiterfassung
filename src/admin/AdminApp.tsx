@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
 import {
   BookOpen,
@@ -39,7 +39,7 @@ import {
 } from '../app/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '../app/components/ui/popover';
 
-const pocketBaseUrl = 'http://127.0.0.1:8090';
+const pocketBaseUrl = 'http://78.47.244.186/';
 const pb = new PocketBase(`${pocketBaseUrl}/`);
 
 interface AdminParticipant {
@@ -262,18 +262,10 @@ function getParticipantLink(participantId: string) {
 async function copyTextToClipboard(text: string) {
   if (navigator.clipboard && window.isSecureContext) {
     await navigator.clipboard.writeText(text);
-    return;
+    return true;
   }
 
-  const textArea = document.createElement('textarea');
-  textArea.value = text;
-  textArea.style.position = 'fixed';
-  textArea.style.opacity = '0';
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-  document.execCommand('copy');
-  textArea.remove();
+  return false;
 }
 
 function getFilenameFromDisposition(disposition: string | null, fallback: string) {
@@ -308,7 +300,7 @@ async function downloadAdminCsv(endpoint: string, participantId: string, fallbac
 
 interface ParticipantActionMenuProps {
   participant: AdminParticipant;
-  onCopyLink: (participant: AdminParticipant) => void;
+  onCopyLink: (participantId: string) => void;
   onSendReminder: (participant: AdminParticipant) => void;
   onExportAll: (participant: AdminParticipant) => void;
   onExportClean: (participant: AdminParticipant) => void;
@@ -324,6 +316,10 @@ function ParticipantActionMenu({
   onRemove,
 }: ParticipantActionMenuProps) {
   const { t } = useI18n();
+  const handleCopyPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    onCopyLink(participant.id);
+  };
 
   return (
     <DropdownMenu>
@@ -337,7 +333,11 @@ function ParticipantActionMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48 border-gray-200 bg-white text-gray-900">
-        <DropdownMenuItem onSelect={() => onCopyLink(participant)} className="cursor-pointer">
+        <DropdownMenuItem
+          onPointerDown={handleCopyPointerDown}
+          onSelect={(event) => event.preventDefault()}
+          className="cursor-pointer"
+        >
           <Copy className="h-4 w-4" />
           {t('admin.participant.getLink')}
         </DropdownMenuItem>
@@ -410,6 +410,7 @@ function AdminContent() {
   const [loginStatus, setLoginStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [actionStatus, setActionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [actionMessage, setActionMessage] = useState('');
+  const [manualCopyText, setManualCopyText] = useState('');
   const [participantToRemove, setParticipantToRemove] = useState<AdminParticipant | null>(null);
   const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('log');
@@ -474,13 +475,20 @@ function AdminContent() {
     setActionMessage(message);
   }
 
-  async function handleCopyParticipantLink(participant: AdminParticipant) {
+  async function handleCopyParticipantLink(participantId: string) {
+    const participantLink = getParticipantLink(participantId);
+
     try {
-      await copyTextToClipboard(getParticipantLink(participant.id));
-      showActionMessage('success', t('admin.participant.linkCopied'));
+      const didCopy = await copyTextToClipboard(participantLink);
+      if (didCopy) {
+        showActionMessage('success', t('admin.participant.linkCopied'));
+        return;
+      }
+
+      setManualCopyText(participantLink);
     } catch (error) {
       console.error('Participant link copy failed:', error);
-      showActionMessage('error', t('admin.participant.linkCopyFailed'));
+      setManualCopyText(participantLink);
     }
   }
 
@@ -1040,8 +1048,13 @@ function AdminContent() {
                   {filteredParticipants.map((participant) => (
                     <div key={participant.id} className="flex items-start justify-between gap-3 p-4">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-gray-950">
-                          {participant.name || participant.id}
+                        <div className="flex items-center gap-2">
+                          <div className="truncate text-sm font-bold text-gray-950">
+                            {participant.name || participant.id}
+                          </div>
+                          <span className="shrink-0 text-xs font-medium text-gray-500">
+                            {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
+                          </span>
                         </div>
                         <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
@@ -1254,6 +1267,37 @@ function AdminContent() {
               </button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manualCopyText !== ''} onOpenChange={(isOpen) => !isOpen && setManualCopyText('')}>
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('admin.participant.manualCopyTitle')}</DialogTitle>
+            <DialogDescription>{t('admin.participant.manualCopyDescription')}</DialogDescription>
+          </DialogHeader>
+
+          <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+            {t('admin.participant.manualCopyLabel')}
+            <input
+              readOnly
+              autoFocus
+              value={manualCopyText}
+              onFocus={(event) => event.currentTarget.select()}
+              onClick={(event) => event.currentTarget.select()}
+              className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+            />
+          </label>
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setManualCopyText('')}
+              className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              {t('common.close')}
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

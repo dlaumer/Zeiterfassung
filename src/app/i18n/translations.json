@@ -607,6 +607,18 @@
     "en": "Could not copy the participant link.",
     "de": "Link konnte nicht kopiert werden."
   },
+  "admin.participant.manualCopyTitle": {
+    "en": "Copy link manually",
+    "de": "Link manuell kopieren"
+  },
+  "admin.participant.manualCopyDescription": {
+    "en": "Your browser did not allow automatic clipboard access. Copy the participant link from the field below.",
+    "de": "Dein Browser hat keinen automatischen Zugriff auf die Zwischenablage erlaubt. Kopiere den Teilnehmenden-Link aus dem Feld unten."
+  },
+  "admin.participant.manualCopyLabel": {
+    "en": "Participant link",
+    "de": "Teilnehmenden-Link"
+  },
   "admin.participant.exportStarted": {
     "en": "Export download started.",
     "de": "Export-Download gestartet."

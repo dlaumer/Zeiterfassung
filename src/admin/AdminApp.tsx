@@ -6,7 +6,6 @@ import {
   Clock3,
   Copy,
   Download,
-  FileText,
   Filter,
   LogOut,
   Mail,
@@ -22,6 +21,7 @@ import {
 import { I18nProvider, useI18n, type Language } from '../app/i18n/i18n';
 import { LanguageSelector } from '../app/i18n/LanguageSelector';
 import { ConfirmDialog } from '../app/components/ui/ConfirmDialog';
+import logoMethric from '../assets/logoMethric.png';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ import {
 } from '../app/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '../app/components/ui/popover';
 
-const pocketBaseUrl = 'http://78.47.244.186/';
+const pocketBaseUrl = 'https://api.methric.ch';
 const pb = new PocketBase(`${pocketBaseUrl}/`);
 
 interface AdminParticipant {
@@ -803,12 +803,11 @@ function AdminContent() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div className="flex shrink-0 items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-normal">{t('admin.title')}</h1>
-              </div>
+              <img
+                src={logoMethric}
+                alt={t('admin.title')}
+                className="h-11 w-auto object-contain"
+              />
             </div>
 
             <div className="order-3 flex w-full max-w-xl gap-2 md:order-2 md:flex-1">

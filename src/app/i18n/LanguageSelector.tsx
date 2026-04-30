@@ -27,13 +27,13 @@ export function LanguageSelector({ menuAlign = 'right' }: LanguageSelectorProps)
   const selectedLanguageOption = LANGUAGE_OPTIONS.find((option) => option.value === language) ?? LANGUAGE_OPTIONS[0];
 
   return (
-    <div className="relative">
+    <div className="relative inline-flex shrink-0">
       <button
         type="button"
         onClick={() => setShowLanguageMenu((isOpen) => !isOpen)}
         aria-haspopup="listbox"
         aria-expanded={showLanguageMenu}
-        className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 md:text-sm"
+        className="inline-flex h-9 min-w-[4.5rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 md:text-sm"
       >
         <img
           src={selectedLanguageOption.flagSrc}
@@ -48,7 +48,7 @@ export function LanguageSelector({ menuAlign = 'right' }: LanguageSelectorProps)
         <div
           role="listbox"
           aria-label={t('language.label')}
-          className={`absolute mt-1 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg ${
+          className={`absolute top-full z-20 mt-1 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg ${
             menuAlign === 'right' ? 'right-0' : 'left-0'
           }`}
         >

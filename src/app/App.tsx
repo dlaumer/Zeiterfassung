@@ -3,12 +3,12 @@ import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ViewEntryModal } from './components/ViewEntryModal';
 import { CourseManagement, Subject, getSubjectDisplayName } from './components/CourseManagement';
-import { BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import { LanguageSelector } from './i18n/LanguageSelector';
 import PocketBase from 'pocketbase';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
+import logoMethric from '../assets/logoMethric.png';
 
 interface SubjectTime {
   subjectId: string;
@@ -280,7 +280,7 @@ function WeeklyCategoryPanel({ categories }: { categories: Subject[] }) {
 }
 
 function AppContent({ participantId }: AppContentProps) {
-  const pb = new PocketBase('http://78.47.244.186//');
+  const pb = new PocketBase('https://api.methric.ch');
 
   const { t } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -692,17 +692,21 @@ function AppContent({ participantId }: AppContentProps) {
   return (
     <div className="relative h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
       <div className="max-w-7xl h-full mx-auto flex flex-col min-h-0">
-        <div className="mb-2 md:mb-4 shrink-0">
-          <div className="grid items-start gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)] mb-2">
-            <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
-                <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-white" />
-              </div>
-              <h1 className="font-bold text-lg md:text-xl text-gray-900 leading-tight">
-                {participantName ? `${t('app.title')} - ${participantName}` : t('app.title')}
-              </h1>
+        <div className="mb-2 shrink-0 md:mb-4">
+          <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)]">
+            <div className="flex min-w-0 items-center gap-2 md:gap-3">
+              <img
+                src={logoMethric}
+                alt={t('app.title')}
+                className="h-9 w-auto max-w-[8.5rem] shrink-0 object-contain sm:max-w-[10rem] md:h-12 md:max-w-[12rem]"
+              />
+              {participantName && (
+                <span className="truncate text-sm font-semibold text-gray-600 md:text-base">
+                  {participantName}
+                </span>
+              )}
             </div>
-            <div className="shrink-0 lg:justify-self-end">
+            <div className="shrink-0 justify-self-end">
               <LanguageSelector />
             </div>
           </div>

@@ -5,5 +5,5 @@
   "smtpPassword": "your-app-password",
   "senderName": "Workload Tracker",
   "senderAddress": "your-gmail-address@gmail.com",
-  "appUrl": "http://localhost:5173"
+  "appUrl": "https://methric.ch"
 }

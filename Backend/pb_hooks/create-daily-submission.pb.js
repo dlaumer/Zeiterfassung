@@ -93,6 +93,10 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                 { categoryKey }
             )
             if (existing) {
+                if (existing.get("entryMode") !== "week") {
+                    existing.set("entryMode", "week")
+                    txApp.save(existing)
+                }
                 return existing
             }
         } catch (error) {
@@ -105,6 +109,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
         record.set("label_en", category.labelEn)
         record.set("label_de", category.labelDe)
         record.set("credits", 0)
+        record.set("entryMode", "week")
         txApp.save(record)
         return record
     }
@@ -497,7 +502,12 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             const allowedSubjectIds = {}
             for (const enrollment of enrollmentRecords) {
                 const subjectId = String(enrollment.get("subject") || "")
-                if (subjectId) {
+                if (!subjectId) {
+                    continue
+                }
+
+                const subject = txApp.findRecordById("subjects", subjectId)
+                if (subject && subject.get("entryMode") === "day") {
                     allowedSubjectIds[subjectId] = true
                 }
             }

@@ -118,16 +118,19 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
-        {weekDays.map(day => (
-          <div key={day} className="text-center text-[11px] md:text-sm text-gray-500 font-medium py-1.5 md:py-2">
-            {day}
-          </div>
-        ))}
-      </div>
+      {entryMode !== 'week' && (
+        <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
+          {weekDays.map(day => (
+            <div key={day} className="text-center text-[11px] md:text-sm text-gray-500 font-medium py-1.5 md:py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div className="grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr flex-1 min-h-0">
-        {entryMode === 'week' ? weeks.map(weekStart => {
+      {entryMode === 'week' ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1 md:gap-2">
+          {weeks.map(weekStart => {
           const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
           const weekKey = format(weekStart, 'yyyy-MM-dd');
           const isCurrentMonth = isSameMonth(weekStart, currentDate) || isSameMonth(weekEnd, currentDate);
@@ -142,7 +145,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
               onClick={() => onDateSelect(weekStart)}
               disabled={!isCurrentMonth}
               className={`
-                col-span-7 h-full min-h-[3.25rem] rounded-lg md:rounded-xl px-3 py-2 text-xs md:text-sm font-medium transition-all relative
+                min-h-[3.75rem] shrink-0 rounded-lg md:rounded-xl px-3.5 py-2.5 text-xs md:text-sm font-medium transition-all relative
                 ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
                 ${hasEntryWeek ? 'bg-gray-200 text-gray-700' : ''}
                 ${!hasEntryWeek && isMissingWeek ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
@@ -160,7 +163,11 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
               </div>
             </button>
           );
-        }) : days.map(day => {
+        })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr flex-1 min-h-0">
+          {days.map(day => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isToday = isSameDay(day, today);
           const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -199,7 +206,8 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
             </button>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { X, Star, Bike, TrainFront, FileText, CheckCircle } from 'lucide-react';
 import { format, endOfWeek } from 'date-fns';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SubjectTimeInput } from './SubjectTimeInput';
 import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
@@ -46,6 +46,78 @@ interface DailyEntryModalProps {
 }
 
 const DEFAULT_TIME_SLIDER_MAX = 5;
+
+interface EditablePercentageDisplayProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function EditablePercentageDisplay({ value, onChange }: EditablePercentageDisplayProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(String(value));
+    }
+  }, [isEditing, value]);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = () => {
+    const nextValue = Number(editValue);
+
+    if (Number.isFinite(nextValue) && nextValue >= 0 && nextValue <= 100) {
+      onChange(nextValue);
+    }
+
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        min="0"
+        max="100"
+        step="1"
+        value={editValue}
+        onChange={(event) => setEditValue(event.target.value)}
+        onBlur={commitEdit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            commitEdit();
+          }
+          if (event.key === 'Escape') {
+            setIsEditing(false);
+          }
+        }}
+        className="w-14 rounded-full border border-indigo-300 bg-white px-2 py-0.5 text-right text-xs font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500"
+        aria-label="Percentage"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setEditValue(String(value));
+        setIsEditing(true);
+      }}
+      className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    >
+      {value}%
+    </button>
+  );
+}
 
 export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day' }: DailyEntryModalProps) {
   const { t, language } = useI18n();
@@ -125,6 +197,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
 
   const handleStructuralChangesManualChange = (time: number) => {
     setStructuralChanges(Math.min(time, weeklyWorkloadTotal));
+  };
+
+  const handleAdminEffortPercentageChange = (percentage: number) => {
+    setAdminEffort((weeklyWorkloadTotal * percentage) / 100);
+  };
+
+  const handleStructuralChangesPercentageChange = (percentage: number) => {
+    setStructuralChanges((weeklyWorkloadTotal * percentage) / 100);
   };
 
   const handleSkipDay = async () => {
@@ -391,9 +471,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                   clampToMax={isWeekly}
                 />
                 {isWeekly && (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                    {adminEffortPercentage}%
-                  </span>
+                  <EditablePercentageDisplay
+                    value={adminEffortPercentage}
+                    onChange={handleAdminEffortPercentageChange}
+                  />
                 )}
               </div>
             </div>
@@ -470,9 +551,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                   max={weeklyWorkloadTotal}
                   clampToMax
                 />
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                  {structuralChangesPercentage}%
-                </span>
+                <EditablePercentageDisplay
+                  value={structuralChangesPercentage}
+                  onChange={handleStructuralChangesPercentageChange}
+                />
               </div>
             </div>
             <Slider

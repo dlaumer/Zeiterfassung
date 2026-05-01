@@ -100,7 +100,7 @@ interface WorkloadStatusResponse {
   }[];
 }
 
-const SUBMISSION_TRACKING_START_DATE = '2026-04-01';
+const SUBMISSION_TRACKING_START_DATE = '2026-04-13';
 
 const WEEKLY_CATEGORIES: Subject[] = [
   {
@@ -344,7 +344,9 @@ function AppContent({ participantId }: AppContentProps) {
 
   useEffect(() => {
     async function loadAvailableSubjects() {
-      const allSubjects = await pb.collection('subjects').getFullList();
+      const allSubjects = await pb.collection('subjects').getFullList({
+        filter: pb.filter('entryMode = {:entryMode}', { entryMode: 'day' }),
+      });
 
       return allSubjects.map((subject) => ({
         id: subject.id,
@@ -370,19 +372,25 @@ function AppContent({ participantId }: AppContentProps) {
           expand: "subject",
         });
 
-      const subjects = enrollments.map((enrollment) => {
-        const subject = enrollment.expand?.subject;
+      const subjects = enrollments
+        .map((enrollment) => {
+          const subject = enrollment.expand?.subject;
 
-        return {
-          id: subject.id,
-          key: subject.key,
-          labelEn: subject.label_en,
-          labelDe: subject.label_de,
-          credits: subject.credits,
-          color: enrollment.color,
-          participantSubjectId: enrollment.id,
-        };
-      });
+          if (!subject || subject.entryMode !== 'day') {
+            return null;
+          }
+
+          return {
+            id: subject.id,
+            key: subject.key,
+            labelEn: subject.label_en,
+            labelDe: subject.label_de,
+            credits: subject.credits,
+            color: enrollment.color,
+            participantSubjectId: enrollment.id,
+          };
+        })
+        .filter((subject): subject is Subject => subject !== null);
 
       const subjectsWithUniqueColors = ensureUniqueSubjectColors(subjects);
 

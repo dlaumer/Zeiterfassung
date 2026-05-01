@@ -255,6 +255,22 @@ function eventBadgeClasses(kind: string, eventType: string) {
   return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 }
 
+function participantMissingToneClasses(missingCount: number) {
+  if (missingCount >= 10) {
+    return 'border-l-red-500 bg-red-50/55';
+  }
+
+  if (missingCount >= 5) {
+    return 'border-l-amber-500 bg-amber-50/55';
+  }
+
+  if (missingCount >= 1) {
+    return 'border-l-sky-500 bg-sky-50/55';
+  }
+
+  return 'border-l-emerald-500 bg-emerald-50/50';
+}
+
 function getParticipantLink(participantId: string) {
   return `${window.location.origin}/${participantId}/`;
 }
@@ -670,18 +686,30 @@ function AdminContent() {
 
   const filteredParticipants = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return overview.participants.filter((participant) => {
-      const matchesEntryMode = selectedEntryMode === 'all' || participant.entryMode === selectedEntryMode;
-      if (!matchesEntryMode) {
-        return false;
-      }
+    return overview.participants
+      .filter((participant) => {
+        const matchesEntryMode = selectedEntryMode === 'all' || participant.entryMode === selectedEntryMode;
+        if (!matchesEntryMode) {
+          return false;
+        }
 
-      if (!normalizedQuery) {
-        return true;
-      }
+        if (!normalizedQuery) {
+          return true;
+        }
 
-      return [participant.name, participant.email, participant.id].join(' ').toLowerCase().includes(normalizedQuery);
-    });
+        return [participant.name, participant.email, participant.id].join(' ').toLowerCase().includes(normalizedQuery);
+      })
+      .sort((a, b) => {
+        if (b.missingCount !== a.missingCount) {
+          return b.missingCount - a.missingCount;
+        }
+
+        if (a.entryMode !== b.entryMode) {
+          return a.entryMode === 'day' ? -1 : 1;
+        }
+
+        return (a.name || a.id).localeCompare(b.name || b.id);
+      });
   }, [overview.participants, query, selectedEntryMode]);
 
   const filteredSubjects = useMemo(() => {
@@ -898,31 +926,131 @@ function AdminContent() {
               </Popover>
             </div>
 
-            <div className="order-2 flex shrink-0 flex-wrap items-center gap-2 md:order-3">
-              <LanguageSelector />
+            <div className="order-2 grid w-full shrink-0 grid-cols-3 gap-2 md:order-3 md:w-auto md:flex md:flex-nowrap md:items-center">
+              <div className="min-w-0">
+                <LanguageSelector />
+              </div>
               <button
                 type="button"
                 onClick={loadOverview}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:w-auto"
               >
                 <RefreshCw className="h-4 w-4" />
-                {t('admin.refresh')}
+                <span className="truncate">{t('admin.refresh')}</span>
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:w-auto"
               >
                 <LogOut className="h-4 w-4" />
-                {t('admin.logout')}
+                <span className="truncate">{t('admin.logout')}</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-5 overflow-hidden px-4 py-5 pb-24 md:px-6 md:pb-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <section className={`min-w-0 min-h-0 flex-col ${activeMobileTab === 'log' ? 'flex' : 'hidden'} md:flex`}>
+      <main className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-5 overflow-hidden px-4 py-5 pb-24 md:px-6 md:pb-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]">
+        <section className={`min-h-0 flex-col ${activeMobileTab === 'participants' ? 'flex' : 'hidden'} md:flex`}>
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-gray-600" />
+              <h2 className="text-lg font-bold">{t('admin.participants.title')}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">{filteredParticipants.length}</span>
+              <button
+                type="button"
+                onClick={() => setShowParticipantDialog(true)}
+                title={t('admin.participant.add')}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            {filteredParticipants.length === 0 ? (
+              <div className="p-4 text-sm text-gray-500">{t('admin.participants.none')}</div>
+            ) : (
+              <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
+                {filteredParticipants.map((participant) => (
+                  <div
+                    key={participant.id}
+                    className={`flex items-start justify-between gap-3 border-l-4 p-4 transition-colors ${participantMissingToneClasses(
+                      participant.missingCount,
+                    )}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="truncate text-sm font-bold text-gray-950">
+                              {participant.name || participant.id}
+                            </div>
+                            <span className="shrink-0 text-xs font-medium text-gray-500">
+                              {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
+                            </span>
+                          </div>
+                          <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
+                        </div>
+
+                        <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 text-xs text-gray-600 md:flex">
+                          <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
+                          <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 font-semibold ${
+                              participant.missingCount >= 10
+                                ? 'bg-red-100 text-red-700'
+                                : participant.missingCount >= 5
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : participant.missingCount >= 1
+                                    ? 'bg-sky-100 text-sky-700'
+                                    : 'bg-emerald-100 text-emerald-700'
+                            }`}
+                          >
+                            {t('admin.missing.count', { count: participant.missingCount })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600 md:hidden">
+                        <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
+                        <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 font-semibold ${
+                            participant.missingCount >= 10
+                              ? 'bg-red-100 text-red-700'
+                              : participant.missingCount >= 5
+                                ? 'bg-amber-100 text-amber-800'
+                                : participant.missingCount >= 1
+                                  ? 'bg-sky-100 text-sky-700'
+                                  : 'bg-emerald-100 text-emerald-700'
+                          }`}
+                        >
+                          {t('admin.missing.count', { count: participant.missingCount })}
+                        </span>
+                      </div>
+                    </div>
+                    <ParticipantActionMenu
+                      participant={participant}
+                      onCopyLink={handleCopyParticipantLink}
+                      onSendReminder={handleSendParticipantReminder}
+                      onExportAll={handleExportAllParticipantData}
+                      onExportClean={handleExportCleanParticipantData}
+                      onRemove={setParticipantToRemove}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <aside className={`min-h-0 gap-5 ${activeMobileTab === 'participants' ? 'hidden' : 'grid'} md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,0.8fr)]`}>
+          <section className={`min-w-0 min-h-0 flex-col ${activeMobileTab === 'log' ? 'flex' : 'hidden'} md:flex`}>
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Clock3 className="h-5 w-5 text-gray-600" />
@@ -941,14 +1069,9 @@ function AdminContent() {
             ) : (
               <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                 {displayedEvents.map((event) => (
-                  <article key={event.id} className="grid gap-3 p-4 md:grid-cols-[10rem_minmax(0,1fr)] md:p-5">
-                    <div className="text-sm text-gray-500">
-                      <div className="font-semibold text-gray-900">{formatDateTime(event.happenedAt, language, t)}</div>
-                      <div>{formatPeriodLabel(event, language, t)}</div>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <article key={event.id} className="flex items-start justify-between gap-3 p-4 md:p-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-bold ${eventBadgeClasses(
                             event.kind,
@@ -962,119 +1085,74 @@ function AdminContent() {
                         <span className="truncate text-sm font-semibold text-gray-950">
                           {event.participantName || event.participantId || t('admin.unknownParticipant')}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="shrink-0 text-xs text-gray-400">
                           {event.kind === 'reminder' ? t('admin.participant.label') : event.periodType || t('admin.period')}
                         </span>
                       </div>
 
-                      {event.kind === 'reminder' ? (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                          <span>{t('admin.reminder.to', { email: event.participantEmail || t('admin.unknownEmail') })}</span>
-                          <span>{t('admin.reminder.by', { email: event.sentByEmail || t('admin.unknownEmail') })}</span>
+                      <div className="mb-2 text-xs text-gray-500 md:hidden">
+                        <div className="font-semibold leading-tight text-gray-900">
+                          {formatDateTime(event.happenedAt, language, t)}
                         </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                          <span>{t('admin.metric.workload', { value: formatMinutes(event.totalMinutes, t) })}</span>
-                          <span>{t('admin.metric.admin', { value: formatMinutes(event.generalAdminTime, t) })}</span>
-                          <span>
-                            {event.periodType === 'week'
-                              ? t('admin.metric.structuralChanges', {
-                                  value: formatMinutes(event.structuralChanges, t),
-                                })
-                              : t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}
-                          </span>
-                          <span>{event.dataRating ? t('admin.metric.rating', { value: event.dataRating }) : t('admin.metric.noRating')}</span>
-                        </div>
-                      )}
+                        <div className="mt-1 leading-tight">{formatPeriodLabel(event, language, t)}</div>
+                      </div>
 
-                      {event.items.length > 0 && (
+                      {event.kind !== 'reminder' && (
                         <details className="group mt-2">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 [&::-webkit-details-marker]:hidden">
                             <ChevronDown className="h-3.5 w-3.5 text-gray-500 transition-transform group-open:rotate-180" />
                             {t('admin.hoursDetails')}
                           </summary>
 
-                          <div className="mt-3 flex flex-wrap gap-2 rounded-md bg-gray-50 px-3 py-3">
-                            {event.items.map((item) => (
-                              <span
-                                key={item.id}
-                                className="inline-flex rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200"
-                              >
-                                {getAdminItemLabel(item, event.periodType, language, t)} -{' '}
-                                {formatMinutes(item.durationMinutes, t)}
+                          <div className="mt-3 rounded-md bg-gray-50 px-3 py-3">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                              <span>{t('admin.metric.workload', { value: formatMinutes(event.totalMinutes, t) })}</span>
+                              <span>{t('admin.metric.admin', { value: formatMinutes(event.generalAdminTime, t) })}</span>
+                              <span>
+                                {event.periodType === 'week'
+                                  ? t('admin.metric.structuralChanges', {
+                                      value: formatMinutes(event.structuralChanges, t),
+                                    })
+                                  : t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}
                               </span>
-                            ))}
+                              <span>{event.dataRating ? t('admin.metric.rating', { value: event.dataRating }) : t('admin.metric.noRating')}</span>
+                            </div>
+
+                            {event.items.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {event.items.map((item) => (
+                                  <span
+                                    key={item.id}
+                                    className="inline-flex rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200"
+                                  >
+                                    {getAdminItemLabel(item, event.periodType, language, t)} -{' '}
+                                    {formatMinutes(item.durationMinutes, t)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {event.comment && (
+                              <p className="mt-3 rounded-md bg-white px-3 py-2 text-sm text-gray-700 ring-1 ring-gray-200">
+                                {event.comment}
+                              </p>
+                            )}
                           </div>
                         </details>
                       )}
+                    </div>
 
-                      {event.comment && (
-                        <p className="mt-3 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">{event.comment}</p>
-                      )}
+                    <div className="hidden w-32 shrink-0 text-right text-xs text-gray-500 md:block">
+                      <div className="font-semibold leading-tight text-gray-900">
+                        {formatDateTime(event.happenedAt, language, t)}
+                      </div>
+                      <div className="mt-1 leading-tight">{formatPeriodLabel(event, language, t)}</div>
                     </div>
                   </article>
                 ))}
               </div>
             )}
           </div>
-        </section>
-
-        <aside className={`min-h-0 gap-5 ${activeMobileTab === 'log' ? 'hidden' : 'grid'} md:grid md:grid-rows-2`}>
-          <section className={`min-h-0 flex-col ${activeMobileTab === 'participants' ? 'flex' : 'hidden'} md:flex`}>
-            <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-gray-600" />
-                <h2 className="text-lg font-bold">{t('admin.participants.title')}</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">{filteredParticipants.length}</span>
-                <button
-                  type="button"
-                  onClick={() => setShowParticipantDialog(true)}
-                  title={t('admin.participant.add')}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-              {filteredParticipants.length === 0 ? (
-                <div className="p-4 text-sm text-gray-500">{t('admin.participants.none')}</div>
-              ) : (
-                <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
-                  {filteredParticipants.map((participant) => (
-                    <div key={participant.id} className="flex items-start justify-between gap-3 p-4">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="truncate text-sm font-bold text-gray-950">
-                            {participant.name || participant.id}
-                          </div>
-                          <span className="shrink-0 text-xs font-medium text-gray-500">
-                            {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
-                          </span>
-                        </div>
-                        <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-                          <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
-                          <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
-                          <span>{t('admin.missing.count', { count: participant.missingCount })}</span>
-                        </div>
-                      </div>
-                      <ParticipantActionMenu
-                        participant={participant}
-                        onCopyLink={handleCopyParticipantLink}
-                        onSendReminder={handleSendParticipantReminder}
-                        onExportAll={handleExportAllParticipantData}
-                        onExportClean={handleExportCleanParticipantData}
-                        onRemove={setParticipantToRemove}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </section>
 
           <section className={`min-h-0 flex-col ${activeMobileTab === 'subjects' ? 'flex' : 'hidden'} md:flex`}>
@@ -1103,12 +1181,22 @@ function AdminContent() {
                 <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                   {filteredSubjects.map((subject) => (
                     <div key={subject.id} className="flex items-start justify-between gap-3 p-4">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-gray-950">
-                          {getSubjectName(subject.labelEn, subject.labelDe, language, subject.key || subject.id)}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-bold text-gray-950">
+                              {getSubjectName(subject.labelEn, subject.labelDe, language, subject.key || subject.id)}
+                            </div>
+                            <div className="mt-1 truncate text-xs text-gray-500">{subject.key || subject.id}</div>
+                          </div>
+
+                          <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 text-xs text-gray-600 md:flex">
+                            <span>{t('admin.participants.count', { count: subject.participantCount })}</span>
+                            <span>{t('admin.logItems.count', { count: subject.submissionItemCount })}</span>
+                          </div>
                         </div>
-                        <div className="mt-1 truncate text-xs text-gray-500">{subject.key || subject.id}</div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
+
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600 md:hidden">
                           <span>{t('admin.participants.count', { count: subject.participantCount })}</span>
                           <span>{t('admin.logItems.count', { count: subject.submissionItemCount })}</span>
                         </div>

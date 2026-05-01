@@ -303,7 +303,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
     const subjects = $app.findRecordsByFilter(
         "subjects",
-        "",
+        entryMode === "week" ? 'entryMode = "week"' : 'entryMode = "day"',
         "key",
         1000,
         0

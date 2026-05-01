@@ -48,50 +48,86 @@ export function CourseManagement({
 
   const canAddMore = subjects.length < 12;
 
-  const renderAddSubjectPanel = (className?: string) => (
-    <div className={`bg-gray-50 rounded-xl p-4 space-y-3 ${className ?? ''}`}>
-      <p className="text-sm text-gray-600 mb-2">{t('courseManagement.selectToAdd')}</p>
+  const closeAddSubjectOverlay = () => {
+    setShowAddSubject(false);
+    setSearchQuery('');
+  };
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t('courseManagement.search')}
-          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-          autoFocus
-        />
-      </div>
-      <div className="border border-gray-200 rounded-lg bg-white flex flex-col min-h-0 max-h-48 md:max-h-60">
-        <div className="overflow-y-auto min-h-0 flex-1">
-          {filteredSubjects.length > 0 ? (
-            filteredSubjects.map(subject => (
-              <button
-                key={subject.id}
-                onClick={() => handleAddSubject(subject)}
-                className="w-full px-3 py-2 text-left hover:bg-indigo-50 transition-colors text-sm border-b border-gray-100 last:border-b-0"
-              >
-                {getSubjectDisplayName(subject, language)}
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-4 text-center text-sm text-gray-500">
-              {t('courseManagement.noFound')}
+  const renderAddSubjectOverlay = () => (
+    <div className="fixed inset-0 z-50 bg-white md:flex md:items-center md:justify-center md:bg-gray-950/35 md:p-6">
+      <button
+        type="button"
+        aria-label={t('common.close')}
+        onClick={closeAddSubjectOverlay}
+        className="hidden md:block absolute inset-0 cursor-default"
+      />
+
+      <div className="relative flex h-dvh w-full flex-col bg-white p-5 shadow-xl md:h-auto md:max-h-[min(34rem,calc(100dvh-3rem))] md:max-w-md md:rounded-xl md:border md:border-gray-200 md:p-5">
+        <div className="mb-4 flex shrink-0 items-start justify-between gap-4">
+          <div>
+            <h4 className="text-lg font-semibold text-gray-900">{t('common.add')}</h4>
+            <p className="mt-1 text-sm text-gray-600">{t('courseManagement.selectToAdd')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={closeAddSubjectOverlay}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {availableToAdd.length > 0 ? (
+          <>
+            <div className="relative mb-3 shrink-0">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('courseManagement.search')}
+                className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                autoFocus
+              />
             </div>
-          )}
+
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white md:max-h-80">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {filteredSubjects.length > 0 ? (
+                  filteredSubjects.map(subject => (
+                    <button
+                      key={subject.id}
+                      type="button"
+                      onClick={() => handleAddSubject(subject)}
+                      className="w-full border-b border-gray-100 px-4 py-3 text-left text-sm font-medium transition-colors last:border-b-0 hover:bg-indigo-50"
+                    >
+                      {getSubjectDisplayName(subject, language)}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-8 text-center text-sm text-gray-500">
+                    {t('courseManagement.noFound')}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg bg-gray-50 p-6 text-center">
+            <p className="text-sm text-gray-500">{t('courseManagement.allAdded')}</p>
+          </div>
+        )}
+
+        <div className="mt-4 shrink-0 md:hidden">
+          <button
+            type="button"
+            onClick={closeAddSubjectOverlay}
+            className="flex h-11 w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 shadow-sm"
+          >
+            {t('common.cancel')}
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={() => {
-          setShowAddSubject(false);
-          setSearchQuery('');
-        }}
-        className="text-sm text-gray-500 hover:text-gray-700 w-full text-center sticky bottom-0 bg-gray-50 py-1"
-      >
-        {t('common.cancel')}
-      </button>
     </div>
   );
 
@@ -109,8 +145,6 @@ export function CourseManagement({
           </button>
         )}
       </div>
-
-      {showAddSubject && availableToAdd.length > 0 && renderAddSubjectPanel('mb-4 shrink-0 hidden md:block')}
 
       {subjects.length === 0 && !showAddSubject ? (
         <div className="text-center py-8">
@@ -156,19 +190,7 @@ export function CourseManagement({
         </p>
       )}
 
-      {showAddSubject && availableToAdd.length > 0 && renderAddSubjectPanel('mt-4 shrink-0 md:hidden')}
-
-      {showAddSubject && availableToAdd.length === 0 && (
-        <div className="mt-4 bg-gray-50 rounded-xl p-4 text-center shrink-0">
-          <p className="text-sm text-gray-500">{t('courseManagement.allAdded')}</p>
-          <button
-            onClick={() => setShowAddSubject(false)}
-            className="text-sm text-indigo-600 hover:text-indigo-700 mt-2"
-          >
-            {t('common.close')}
-          </button>
-        </div>
-      )}
+      {showAddSubject && renderAddSubjectOverlay()}
     </div>
   );
 }

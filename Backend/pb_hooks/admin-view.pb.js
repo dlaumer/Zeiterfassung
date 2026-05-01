@@ -114,7 +114,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         return count
     }
 
-    const adminMissingBaselineDate = "2026-04-01"
+    const adminMissingBaselineDate = "2026-04-13"
 
     function adminExpectedSubmissionCount(entryMode, todayDate) {
         const baselineDate = adminParseDateOnly(adminMissingBaselineDate)
@@ -170,7 +170,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     }
 
     const participants = $app.findRecordsByFilter("participants", "", "name", 1000, 0)
-    const subjects = $app.findRecordsByFilter("subjects", "", "key", 1000, 0)
+    const subjects = $app.findRecordsByFilter("subjects", 'entryMode = "day"', "key", 1000, 0)
     const participantSubjects = $app.findRecordsByFilter("participant_subjects", "", "", 5000, 0)
     const submissions = $app.findRecordsByFilter("submissions", "", "-submittedAt", 5000, 0)
     const submissionItems = $app.findRecordsByFilter("submission_items", "", "", 10000, 0)
@@ -481,6 +481,7 @@ routerAdd("POST", "/api/admin/subjects", (e) => {
     subject.set("label_en", labelEn)
     subject.set("label_de", labelDe)
     subject.set("credits", credits)
+    subject.set("entryMode", "day")
 
     $app.save(subject)
 

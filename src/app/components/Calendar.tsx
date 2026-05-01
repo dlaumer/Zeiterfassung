@@ -76,7 +76,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
 
         return {
           color: subjectColor,
-          opacity: hasClassTime ? 1 : 0.6,
+          opacity: hasClassTime ? 1 : 0.35,
         };
       })
       .filter((dotColor: DotColor | null): dotColor is DotColor => !!dotColor);
@@ -129,7 +129,10 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
       )}
 
       {entryMode === 'week' ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1 md:gap-2">
+        <div
+          className="grid min-h-0 flex-1 gap-1 overflow-hidden md:gap-2"
+          style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+        >
           {weeks.map(weekStart => {
           const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
           const weekKey = format(weekStart, 'yyyy-MM-dd');
@@ -145,7 +148,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
               onClick={() => onDateSelect(weekStart)}
               disabled={!isCurrentMonth}
               className={`
-                min-h-[3.75rem] shrink-0 rounded-lg md:rounded-xl px-3.5 py-2.5 text-xs md:text-sm font-medium transition-all relative
+                h-full min-h-0 rounded-lg md:rounded-xl px-2.5 py-1.5 text-[10px] font-medium transition-all relative sm:text-xs md:px-3.5 md:py-2.5 md:text-sm
                 ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
                 ${hasEntryWeek ? 'bg-gray-200 text-gray-700' : ''}
                 ${!hasEntryWeek && isMissingWeek ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
@@ -154,10 +157,10 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
             >
               <div className="h-full flex items-center justify-between gap-3">
                 <div className="text-left">
-                  <div className="font-semibold">{format(weekStart, 'd MMM')} - {format(weekEnd, 'd MMM')}</div>
-                  <div className="text-[11px] md:text-xs text-gray-500">{t('history.week')}</div>
+                  <div className="truncate font-semibold leading-tight">{format(weekStart, 'd MMM')} - {format(weekEnd, 'd MMM')}</div>
+                  <div className="truncate text-[9px] leading-tight text-gray-500 sm:text-[11px] md:text-xs">{t('history.week')}</div>
                 </div>
-                <div className="min-w-12 flex justify-end overflow-hidden">
+                <div className="min-w-8 flex justify-end overflow-hidden md:min-w-12">
                   {renderDots(subjectColors)}
                 </div>
               </div>

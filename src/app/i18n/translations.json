@@ -11,6 +11,18 @@
     "en": "Language",
     "de": "Sprache"
   },
+  "contact.button": {
+    "en": "Contact",
+    "de": "Kontakt"
+  },
+  "contact.title": {
+    "en": "Questions?",
+    "de": "Fragen?"
+  },
+  "contact.description": {
+    "en": "If you have questions about the data entry, please contact:",
+    "de": "Bei Fragen zur Dateneingabe wenden Sie sich bitte an:"
+  },
   "app.title": {
     "en": "Workload Tracker",
     "de": "Lernaufwand-Tracker"

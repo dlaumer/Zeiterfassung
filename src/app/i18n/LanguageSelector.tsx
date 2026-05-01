@@ -33,15 +33,13 @@ export function LanguageSelector({ menuAlign = 'right' }: LanguageSelectorProps)
         onClick={() => setShowLanguageMenu((isOpen) => !isOpen)}
         aria-haspopup="listbox"
         aria-expanded={showLanguageMenu}
-        className="inline-flex h-9 min-w-[4.5rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 md:text-sm"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
         <img
           src={selectedLanguageOption.flagSrc}
           alt={selectedLanguageOption.flagAlt}
           className="h-3.5 w-5 rounded-sm object-cover"
         />
-        <span>{selectedLanguageOption.abbreviation}</span>
-        <ChevronDown className="h-4 w-4 text-gray-500" />
       </button>
 
       {showLanguageMenu && (

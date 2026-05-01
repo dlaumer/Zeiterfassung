@@ -162,7 +162,7 @@ export function SubjectTimeInput({
               className="absolute h-full rounded-full transition-all"
               style={{
                 backgroundColor: subjectColor,
-                opacity: 0.6,
+                opacity: 0.35,
                 width: `${(Math.min(selfStudyTime, 8) / 8) * 100}%`
               }}
             />
@@ -171,6 +171,7 @@ export function SubjectTimeInput({
             className="block w-5 h-5 bg-white border-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
             style={{
               borderColor: subjectColor,
+              opacity: 0.65,
               position: 'absolute',
               left: `calc(${(Math.min(selfStudyTime, 8) / 8) * 100}% - 10px)`
             }}

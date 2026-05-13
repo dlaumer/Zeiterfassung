@@ -784,7 +784,7 @@ function AppContent({ participantId }: AppContentProps) {
             </div>
           </div>
 
-          <div className="min-h-0">
+          <div className="min-w-0 min-h-0">
             {entryMode === 'week' ? (
               <WeeklyCategoryPanel categories={WEEKLY_CATEGORIES} />
             ) : (

@@ -152,13 +152,13 @@ export function CourseManagement({
   );
 
   return (
-    <div className="h-full min-h-0 bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col">
-      <div className="flex items-center justify-between mb-4 shrink-0">
-        <h3 className="font-semibold text-gray-900">{t('courseManagement.title')}</h3>
+    <div className="h-full min-h-0 min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6 flex flex-col">
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-3 shrink-0">
+        <h3 className="min-w-0 truncate font-semibold text-gray-900">{t('courseManagement.title')}</h3>
         {canAddMore && (
           <button
             onClick={() => setShowAddSubject(true)}
-            className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+            className="flex shrink-0 items-center gap-1 whitespace-nowrap text-sm text-indigo-600 transition-colors hover:text-indigo-700"
           >
             <Plus className="w-4 h-4" />
             {t('common.add')}
@@ -178,11 +178,11 @@ export function CourseManagement({
           </button>
         </div>
       ) : subjects.length > 0 ? (
-        <div className="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
           {subjects.map(subject => (
             <div
               key={subject.id}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+              className="group flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div
@@ -207,7 +207,7 @@ export function CourseManagement({
               </div>
               <button
                 onClick={() => onRemoveSubject(subject.id)}
-                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 md:opacity-0 md:group-hover:opacity-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
               </button>

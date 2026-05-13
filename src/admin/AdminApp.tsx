@@ -491,7 +491,7 @@ function AdminContent() {
   const [manualCopyText, setManualCopyText] = useState('');
   const [participantToRemove, setParticipantToRemove] = useState<AdminParticipant | null>(null);
   const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
-  const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('log');
+  const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('participants');
   const [selectedLogDate, setSelectedLogDate] = useState('');
   const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
@@ -1069,7 +1069,7 @@ function AdminContent() {
       </header>
 
       <main className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-5 overflow-hidden px-4 py-5 pb-24 md:px-6 md:pb-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]">
-        <section className={`min-h-0 flex-col ${activeMobileTab === 'participants' ? 'flex' : 'hidden'} md:flex`}>
+        <section className={`min-w-0 min-h-0 flex-col ${activeMobileTab === 'participants' ? 'flex' : 'hidden'} md:flex`}>
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-gray-600" />
@@ -1096,7 +1096,7 @@ function AdminContent() {
                 {filteredParticipants.map((participant) => (
                   <div
                     key={participant.id}
-                    className={`flex items-start justify-between gap-3 border-l-4 p-4 transition-colors ${participantMissingToneClasses(
+                    className={`flex min-w-0 items-start justify-between gap-3 overflow-hidden border-l-4 p-4 transition-colors ${participantMissingToneClasses(
                       participant.missingCount,
                     )}`}
                   >
@@ -1151,14 +1151,16 @@ function AdminContent() {
                         </span>
                       </div>
                     </div>
-                    <ParticipantActionMenu
-                      participant={participant}
-                      onCopyLink={handleCopyParticipantLink}
-                      onSendReminder={handleSendParticipantReminder}
-                      onExportAll={handleExportAllParticipantData}
-                      onExportClean={handleExportCleanParticipantData}
-                      onRemove={setParticipantToRemove}
-                    />
+                    <div className="shrink-0">
+                      <ParticipantActionMenu
+                        participant={participant}
+                        onCopyLink={handleCopyParticipantLink}
+                        onSendReminder={handleSendParticipantReminder}
+                        onExportAll={handleExportAllParticipantData}
+                        onExportClean={handleExportCleanParticipantData}
+                        onRemove={setParticipantToRemove}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1166,7 +1168,7 @@ function AdminContent() {
           </div>
         </section>
 
-        <aside className={`min-h-0 gap-5 ${activeMobileTab === 'participants' ? 'hidden' : 'grid'} md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,0.8fr)]`}>
+        <aside className={`min-w-0 min-h-0 gap-5 ${activeMobileTab === 'participants' ? 'hidden' : 'grid'} md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,0.8fr)]`}>
           <section className={`min-w-0 min-h-0 flex-col ${activeMobileTab === 'log' ? 'flex' : 'hidden'} md:flex`}>
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -1176,7 +1178,7 @@ function AdminContent() {
             <span className="text-sm text-gray-500">{t('admin.events.count', { count: displayedEvents.length })}</span>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             {status === 'loading' ? (
               <div className="p-6 text-sm text-gray-500">{t('admin.loadingActivity')}</div>
             ) : status === 'error' ? (
@@ -1186,8 +1188,8 @@ function AdminContent() {
             ) : (
               <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                 {displayedEvents.map((event) => (
-                  <article key={event.id} className="flex items-start justify-between gap-3 p-4 md:p-4">
-                    <div className="min-w-0 flex-1">
+                  <article key={event.id} className="grid min-w-0 w-full gap-3 overflow-hidden p-4 md:grid-cols-[minmax(0,_1fr)_9rem] md:items-start md:p-4">
+                    <div className="min-w-0 overflow-hidden">
                       <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-bold ${eventBadgeClasses(
@@ -1259,7 +1261,7 @@ function AdminContent() {
                       )}
                     </div>
 
-                    <div className="hidden w-32 shrink-0 text-right text-xs text-gray-500 md:block">
+                    <div className="hidden w-36 max-w-36 shrink-0 text-right text-xs text-gray-500 md:block">
                       <div className="font-semibold leading-tight text-gray-900">
                         {formatDateTime(event.happenedAt, language, t)}
                       </div>
@@ -1272,7 +1274,7 @@ function AdminContent() {
           </div>
           </section>
 
-          <section className={`min-h-0 flex-col ${activeMobileTab === 'subjects' ? 'flex' : 'hidden'} md:flex`}>
+          <section className={`min-w-0 min-h-0 flex-col ${activeMobileTab === 'subjects' ? 'flex' : 'hidden'} md:flex`}>
             <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-gray-600" />
@@ -1297,7 +1299,7 @@ function AdminContent() {
               ) : (
                 <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                   {filteredSubjects.map((subject) => (
-                    <div key={subject.id} className="flex items-start justify-between gap-3 p-4">
+                    <div key={subject.id} className="flex min-w-0 items-start justify-between gap-3 overflow-hidden p-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                           <div className="min-w-0">
@@ -1328,7 +1330,9 @@ function AdminContent() {
                           <span>{t('admin.logItems.count', { count: subject.submissionItemCount })}</span>
                         </div>
                       </div>
-                      <SubjectActionMenu subject={subject} onRemove={setSubjectToRemove} />
+                      <div className="shrink-0">
+                        <SubjectActionMenu subject={subject} onRemove={setSubjectToRemove} />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1347,7 +1351,7 @@ function AdminContent() {
           }
         }}
       >
-        <DialogContent className="bg-white sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('admin.participant.addTitle')}</DialogTitle>
             <DialogDescription>{t('admin.participant.addDescription')}</DialogDescription>
@@ -1415,7 +1419,7 @@ function AdminContent() {
           }
         }}
       >
-        <DialogContent className="bg-white sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('admin.subject.addTitle')}</DialogTitle>
             <DialogDescription>{t('admin.subject.addDescription')}</DialogDescription>

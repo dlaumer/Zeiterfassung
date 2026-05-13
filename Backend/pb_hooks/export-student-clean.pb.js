@@ -302,7 +302,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
             periodType,
             representative.get("periodStart") || "",
             representative.get("periodEnd") || "",
-            latestEffectiveSubmission.get("comment") || "",
+            latestEffectiveSubmission.get("submittedAt") || "",
             baseSubmission ? baseSubmission.id : "",
             baseSubmission ? baseSubmission.get("submissionMode") || "" : "",
             appendumSubmissions.map((s) => s.id).join(";"),
@@ -319,7 +319,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         }
 
         row.push(
-            latestEffectiveSubmission.get("submittedAt") || "",
+            latestEffectiveSubmission.get("comment") || "",
         )
 
         for (const columnName of exportColumns) {

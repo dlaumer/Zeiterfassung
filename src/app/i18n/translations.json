@@ -560,8 +560,8 @@
     "de": "{{count}} Fächer"
   },
   "admin.subject.label": {
-    "en": "Subject",
-    "de": "Fach"
+    "en": "Label",
+    "de": "Bezeichnung"
   },
   "admin.subjectActions": {
     "en": "Subject actions",
@@ -719,9 +719,41 @@
     "en": "Create a subject that can later be assigned to participants.",
     "de": "Erstelle ein Fach, das sp\u00e4ter Teilnehmenden zugewiesen werden kann."
   },
+  "admin.subject.importTitle": {
+    "en": "Import subject list",
+    "de": "F\u00e4cherliste importieren"
+  },
+  "admin.subject.importDescription": {
+    "en": "Upload an Excel file with Key, module label, ECTS, and optional LE number. The module label is used for English and German.",
+    "de": "Lade eine Excel-Datei mit Key, Modulname, ECTS und optionaler LE-Nummer hoch. Der Modulname wird f\u00fcr Deutsch und Englisch verwendet."
+  },
+  "admin.subject.importFile": {
+    "en": "Upload Excel file",
+    "de": "Excel-Datei hochladen"
+  },
+  "admin.subject.importing": {
+    "en": "Importing...",
+    "de": "Importiere..."
+  },
+  "admin.subject.imported": {
+    "en": "{{count}} subjects imported.",
+    "de": "{{count}} F\u00e4cher importiert."
+  },
+  "admin.subject.importNone": {
+    "en": "No new subjects found in this file.",
+    "de": "Keine neuen F\u00e4cher in dieser Datei gefunden."
+  },
+  "admin.subject.importFailed": {
+    "en": "Could not import the subject list.",
+    "de": "F\u00e4cherliste konnte nicht importiert werden."
+  },
   "admin.subject.key": {
     "en": "Key",
     "de": "K\u00fcrzel"
+  },
+  "admin.subject.number": {
+    "en": "Number",
+    "de": "Nummer"
   },
   "admin.subject.labelEn": {
     "en": "English label",

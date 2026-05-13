@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type PointerEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
 import {
   BookOpen,
@@ -15,6 +15,7 @@ import {
   Search,
   Shield,
   Trash2,
+  Upload,
   Users,
   X,
 } from 'lucide-react';
@@ -105,6 +106,13 @@ interface AdminOverview {
   participants: AdminParticipant[];
   subjects: AdminSubject[];
   events: AdminEvent[];
+}
+
+interface SubjectImportRow {
+  number: string;
+  key: string;
+  label: string;
+  credits: number;
 }
 
 type AdminMobileTab = 'log' | 'participants' | 'subjects';
@@ -218,6 +226,52 @@ function getSubjectName(labelEn: string, labelDe: string, language: Language, fa
 
 function formatSubjectCredits(credits: number, language: Language) {
   return `${credits} ${language === 'de' ? 'KP' : 'CP'}`;
+}
+
+function normalizeImportCell(value: unknown) {
+  return String(value ?? '').trim();
+}
+
+function getImportCell(row: Record<string, unknown>, names: string[]) {
+  for (const name of names) {
+    const value = normalizeImportCell(row[name]);
+    if (value) {
+      return value;
+    }
+  }
+
+  return '';
+}
+
+async function parseSubjectImportRows(fileData: ArrayBuffer): Promise<SubjectImportRow[]> {
+  const XLSX = await import('xlsx');
+  const workbook = XLSX.read(fileData, { type: 'array' });
+  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: '' });
+  const seenKeys = new Set<string>();
+
+  return rows
+    .map((row) => {
+      const label = getImportCell(row, ['Modulname DE / EN', 'Modulname', 'Module name', 'Label']);
+      const key = getImportCell(row, ['Key', 'Kürzel', 'Kuerzel']) || label;
+      const credits = Number(getImportCell(row, ['Anzahl ECTS', 'ECTS', 'Credits']) || 0);
+
+      return {
+        number: getImportCell(row, ['LE-Nummer', 'LE Nummer', 'Number']),
+        key,
+        label,
+        credits: Number.isFinite(credits) ? Math.max(0, credits) : 0,
+      };
+    })
+    .filter((row) => row.key && row.label)
+    .filter((row) => {
+      const normalizedKey = row.key.toLowerCase();
+      if (seenKeys.has(normalizedKey)) {
+        return false;
+      }
+      seenKeys.add(normalizedKey);
+      return true;
+    });
 }
 
 function getAdminItemLabel(
@@ -443,12 +497,13 @@ function AdminContent() {
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
+  const [subjectImportStatus, setSubjectImportStatus] = useState<'idle' | 'loading'>('idle');
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
   const [newParticipantEntryMode, setNewParticipantEntryMode] = useState<'day' | 'week'>('day');
+  const [newSubjectNumber, setNewSubjectNumber] = useState('');
   const [newSubjectKey, setNewSubjectKey] = useState('');
-  const [newSubjectLabelEn, setNewSubjectLabelEn] = useState('');
-  const [newSubjectLabelDe, setNewSubjectLabelDe] = useState('');
+  const [newSubjectLabel, setNewSubjectLabel] = useState('');
   const [newSubjectCredits, setNewSubjectCredits] = useState('0');
 
   const isAdminAuthenticated = pb.authStore.isValid && authRecord?.collectionName === 'admins';
@@ -608,9 +663,9 @@ function AdminContent() {
   }
 
   function resetSubjectForm() {
+    setNewSubjectNumber('');
     setNewSubjectKey('');
-    setNewSubjectLabelEn('');
-    setNewSubjectLabelDe('');
+    setNewSubjectLabel('');
     setNewSubjectCredits('0');
   }
 
@@ -649,8 +704,9 @@ function AdminContent() {
         method: 'POST',
         body: {
           key: newSubjectKey,
-          labelEn: newSubjectLabelEn,
-          labelDe: newSubjectLabelDe,
+          number: newSubjectNumber,
+          labelEn: newSubjectLabel,
+          labelDe: newSubjectLabel,
           credits: Number(newSubjectCredits || 0),
         },
       });
@@ -664,6 +720,54 @@ function AdminContent() {
       showActionMessage('error', t('admin.subject.createFailed'));
     } finally {
       setCreateStatus('idle');
+    }
+  }
+
+  async function handleImportSubjects(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    setSubjectImportStatus('loading');
+
+    try {
+      const parsedRows = await parseSubjectImportRows(await file.arrayBuffer());
+      const existingKeys = new Set(overview.subjects.map((subject) => subject.key.toLowerCase()));
+      const rowsToCreate = parsedRows.filter((row) => !existingKeys.has(row.key.toLowerCase()));
+
+      if (rowsToCreate.length === 0) {
+        showActionMessage('error', t('admin.subject.importNone'));
+        return;
+      }
+
+      let createdCount = 0;
+
+      for (const row of rowsToCreate) {
+        await pb.send('/api/admin/subjects', {
+          method: 'POST',
+          body: {
+            key: row.key,
+            number: row.number,
+            labelEn: row.label,
+            labelDe: row.label,
+            credits: row.credits,
+          },
+        });
+        createdCount += 1;
+      }
+
+      setShowSubjectDialog(false);
+      resetSubjectForm();
+      showActionMessage('success', t('admin.subject.imported', { count: createdCount }));
+      await loadOverview();
+    } catch (error) {
+      console.error('Subject import failed:', error);
+      showActionMessage('error', t('admin.subject.importFailed'));
+    } finally {
+      setSubjectImportStatus('idle');
     }
   }
 
@@ -1317,14 +1421,56 @@ function AdminContent() {
             <DialogDescription>{t('admin.subject.addDescription')}</DialogDescription>
           </DialogHeader>
 
+          <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-gray-700 ring-1 ring-gray-200">
+                <Upload className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-gray-900">{t('admin.subject.importTitle')}</div>
+                <p className="mt-1 text-xs text-gray-500">{t('admin.subject.importDescription')}</p>
+                <label className="mt-3 inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus-within:ring-2 focus-within:ring-gray-900">
+                  {subjectImportStatus === 'loading' ? t('admin.subject.importing') : t('admin.subject.importFile')}
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    disabled={subjectImportStatus === 'loading'}
+                    onChange={handleImportSubjects}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
           <form className="grid gap-4" onSubmit={handleCreateSubject}>
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
                 {t('admin.subject.key')}
                 <input
                   value={newSubjectKey}
                   onChange={(event) => setNewSubjectKey(event.target.value)}
                   required
+                  className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                />
+              </label>
+
+              <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
+                {t('admin.subject.number')}
+                <input
+                  value={newSubjectNumber}
+                  onChange={(event) => setNewSubjectNumber(event.target.value)}
+                  className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+              <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
+                {t('admin.subject.label')}
+                <input
+                  value={newSubjectLabel}
+                  onChange={(event) => setNewSubjectLabel(event.target.value)}
                   className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
                 />
               </label>
@@ -1341,24 +1487,6 @@ function AdminContent() {
                 />
               </label>
             </div>
-
-            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
-              {t('admin.subject.labelEn')}
-              <input
-                value={newSubjectLabelEn}
-                onChange={(event) => setNewSubjectLabelEn(event.target.value)}
-                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-              />
-            </label>
-
-            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
-              {t('admin.subject.labelDe')}
-              <input
-                value={newSubjectLabelDe}
-                onChange={(event) => setNewSubjectLabelDe(event.target.value)}
-                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-              />
-            </label>
 
             <DialogFooter>
               <button

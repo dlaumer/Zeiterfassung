@@ -463,6 +463,7 @@ routerAdd("POST", "/api/admin/subjects", (e) => {
     const body = e.requestInfo().body || {}
 
     const key = String(body.key || "").trim()
+    const number = String(body.number || "").trim()
     const labelEn = String(body.labelEn || "").trim()
     const labelDe = String(body.labelDe || "").trim()
     const credits = Math.max(0, Number(body.credits || 0))
@@ -479,6 +480,7 @@ routerAdd("POST", "/api/admin/subjects", (e) => {
     const subject = new Record(collection)
 
     subject.set("key", key)
+    subject.set("number", number)
     subject.set("label_en", labelEn)
     subject.set("label_de", labelDe)
     subject.set("credits", credits)

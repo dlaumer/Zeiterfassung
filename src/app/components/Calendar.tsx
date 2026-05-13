@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
+import { getDateLocale } from '../i18n/dateLocale';
 import { Subject } from './CourseManagement';
 
 interface CalendarProps {
@@ -20,7 +21,8 @@ interface DotColor {
 }
 
 export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day' }: CalendarProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const dateLocale = getDateLocale(language);
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -100,7 +102,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
     <div className="h-full bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 flex flex-col min-h-0">
       <div className="flex items-center justify-between mb-2 md:mb-3 shrink-0">
         <h2 className="font-semibold text-gray-900 text-lg md:text-xl">
-          {format(currentDate, 'MMMM yyyy')}
+          {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
         </h2>
         <div className="flex gap-1 md:gap-2">
           <button
@@ -146,10 +148,9 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
             <button
               key={weekKey}
               onClick={() => onDateSelect(weekStart)}
-              disabled={!isCurrentMonth}
               className={`
                 h-full min-h-0 rounded-lg md:rounded-xl px-2.5 py-1.5 text-[10px] font-medium transition-all relative sm:text-xs md:px-3.5 md:py-2.5 md:text-sm
-                ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
+                ${!isCurrentMonth ? 'text-gray-300 hover:bg-gray-50' : 'hover:bg-gray-50'}
                 ${hasEntryWeek ? 'bg-gray-200 text-gray-700' : ''}
                 ${!hasEntryWeek && isMissingWeek ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
                 ${!isSelected && !hasEntryWeek ? 'text-gray-700' : ''}
@@ -157,7 +158,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
             >
               <div className="h-full flex items-center justify-between gap-3">
                 <div className="text-left">
-                  <div className="truncate font-semibold leading-tight">{format(weekStart, 'd MMM')} - {format(weekEnd, 'd MMM')}</div>
+                  <div className="truncate font-semibold leading-tight">{format(weekStart, 'd MMM', { locale: dateLocale })} - {format(weekEnd, 'd MMM', { locale: dateLocale })}</div>
                   <div className="truncate text-[9px] leading-tight text-gray-500 sm:text-[11px] md:text-xs">{t('history.week')}</div>
                 </div>
                 <div className="min-w-8 flex justify-end overflow-hidden md:min-w-12">
@@ -182,10 +183,9 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
             <button
               key={day.toString()}
               onClick={() => onDateSelect(day)}
-              disabled={!isCurrentMonth}
               className={`
                 h-full min-h-0 rounded-lg md:rounded-xl px-1 py-1 text-xs md:text-sm font-medium transition-all relative
-                ${!isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}
+                ${!isCurrentMonth ? 'text-gray-300 hover:bg-gray-50' : 'hover:bg-gray-50'}
                 ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
                 ${!hasEntryDay && isMissingDay ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}

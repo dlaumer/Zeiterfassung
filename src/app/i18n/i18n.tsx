@@ -10,9 +10,22 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 const dictionary = translations as TranslationDictionary;
 
-const getCookieLanguage = (): Language => {
+const isLanguage = (value: string | null | undefined): value is Language => {
+  return value === 'en' || value === 'de';
+};
+
+const getUrlLanguage = (): Language | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const urlLanguage = new URLSearchParams(window.location.search).get('lang');
+  return isLanguage(urlLanguage) ? urlLanguage : null;
+};
+
+const getCookieLanguage = (): Language | null => {
   if (typeof document === 'undefined') {
-    return 'en';
+    return null;
   }
 
   const cookieValue = document.cookie
@@ -20,7 +33,11 @@ const getCookieLanguage = (): Language => {
     .find((cookie) => cookie.startsWith(`${LANGUAGE_COOKIE}=`))
     ?.split('=')[1];
 
-  return cookieValue === 'de' ? 'de' : 'en';
+  return isLanguage(cookieValue) ? cookieValue : null;
+};
+
+const getInitialLanguage = (): Language => {
+  return getUrlLanguage() ?? getCookieLanguage() ?? 'de';
 };
 
 const saveCookieLanguage = (language: Language) => {
@@ -29,6 +46,16 @@ const saveCookieLanguage = (language: Language) => {
   }
 
   document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
+};
+
+const saveUrlLanguage = (language: Language) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('lang', language);
+  window.history.replaceState(window.history.state, '', url);
 };
 
 interface I18nContextValue {
@@ -40,11 +67,12 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => getCookieLanguage());
+  const [language, setLanguageState] = useState<Language>(() => getInitialLanguage());
 
   const setLanguage = (nextLanguage: Language) => {
     setLanguageState(nextLanguage);
     saveCookieLanguage(nextLanguage);
+    saveUrlLanguage(nextLanguage);
   };
 
   const t = (id: string, params?: Record<string, string | number>): string => {

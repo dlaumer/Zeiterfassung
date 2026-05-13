@@ -57,6 +57,7 @@ interface AdminParticipant {
 
 interface AdminSubject {
   id: string;
+  number: string;
   key: string;
   labelEn: string;
   labelDe: string;
@@ -215,6 +216,10 @@ function getSubjectName(labelEn: string, labelDe: string, language: Language, fa
   return labelEn || labelDe || fallback;
 }
 
+function formatSubjectCredits(credits: number, language: Language) {
+  return `${credits} ${language === 'de' ? 'KP' : 'CP'}`;
+}
+
 function getAdminItemLabel(
   item: AdminSubmissionItem,
   periodType: string,
@@ -289,9 +294,12 @@ function getFilenameFromDisposition(disposition: string | null, fallback: string
   return match?.[1] || fallback;
 }
 
-async function downloadAdminCsv(endpoint: string, participantId: string, fallbackFilename: string) {
+async function downloadAdminCsv(endpoint: string, participantId: string, fallbackFilename: string, periodType?: string) {
   const url = new URL(endpoint, pocketBaseUrl);
   url.searchParams.set('participantId', participantId);
+  if (periodType === 'day' || periodType === 'week') {
+    url.searchParams.set('periodType', periodType);
+  }
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -510,10 +518,12 @@ function AdminContent() {
 
   async function handleExportAllParticipantData(participant: AdminParticipant) {
     try {
+      const periodType = participant.entryMode === 'week' ? 'week' : 'day';
       await downloadAdminCsv(
         '/api/export-student-flat',
         participant.id,
-        `student_${participant.id}_submissions.csv`,
+        `student_${participant.id}_${periodType}_submissions.csv`,
+        periodType,
       );
       showActionMessage('success', t('admin.participant.exportStarted'));
     } catch (error) {
@@ -524,10 +534,12 @@ function AdminContent() {
 
   async function handleExportCleanParticipantData(participant: AdminParticipant) {
     try {
+      const periodType = participant.entryMode === 'week' ? 'week' : 'day';
       await downloadAdminCsv(
         '/api/export-student-clean',
         participant.id,
-        `student_${participant.id}_clean.csv`,
+        `student_${participant.id}_${periodType}_clean.csv`,
+        periodType,
       );
       showActionMessage('success', t('admin.participant.exportStarted'));
     } catch (error) {
@@ -719,7 +731,7 @@ function AdminContent() {
     }
 
     return overview.subjects.filter((subject) =>
-      [subject.key, subject.labelEn, subject.labelDe, subject.id]
+      [subject.number, subject.key, subject.labelEn, subject.labelDe, subject.id]
         .join(' ')
         .toLowerCase()
         .includes(normalizedQuery),
@@ -743,6 +755,7 @@ function AdminContent() {
       return [
         event.participantName,
         event.participantId,
+        event.submissionId,
         event.participantEmail,
         event.sentByEmail,
         event.eventType,
@@ -1187,7 +1200,17 @@ function AdminContent() {
                             <div className="truncate text-sm font-bold text-gray-950">
                               {getSubjectName(subject.labelEn, subject.labelDe, language, subject.key || subject.id)}
                             </div>
-                            <div className="mt-1 truncate text-xs text-gray-500">{subject.key || subject.id}</div>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                              {subject.number ? (
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+                                  {subject.number}
+                                </span>
+                              ) : null}
+                              <span className="truncate">{subject.key || subject.id}</span>
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
+                                {formatSubjectCredits(subject.credits, language)}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 text-xs text-gray-600 md:flex">

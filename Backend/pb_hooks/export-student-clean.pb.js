@@ -3,25 +3,25 @@
 routerAdd("GET", "/api/export-student-clean", (e) => {
 
 
-function chooseBaseSubmission(group) {
-    const corrections = group.filter((s) => {
-        return s.get("submissionMode") === "correction"
-    })
+    function chooseBaseSubmission(group) {
+        const corrections = group.filter((s) => {
+            return s.get("submissionMode") === "correction"
+        })
 
-    if (corrections.length > 0) {
-        return corrections.sort(compareLatestFirst)[0]
+        if (corrections.length > 0) {
+            return corrections.sort(compareLatestFirst)[0]
+        }
+
+        const initials = group.filter((s) => {
+            return s.get("submissionMode") === "initial"
+        })
+
+        if (initials.length > 0) {
+            return initials.sort(compareLatestFirst)[0]
+        }
+
+        return null
     }
-
-    const initials = group.filter((s) => {
-        return s.get("submissionMode") === "initial"
-    })
-
-    if (initials.length > 0) {
-        return initials.sort(compareLatestFirst)[0]
-    }
-
-    return null
-}
 
     function compareLatestFirst(a, b) {
         const aDate = getSubmissionSortDate(a)
@@ -80,6 +80,7 @@ function chooseBaseSubmission(group) {
         return str
     }
     const participantId = (e.requestInfo().query["participantId"] || "").trim()
+    const requestedPeriodType = (e.requestInfo().query["periodType"] || "").trim()
 
     if (!participantId) {
         return e.json(400, { error: "Missing participantId" })
@@ -89,6 +90,23 @@ function chooseBaseSubmission(group) {
 
     if (!participant) {
         return e.json(404, { error: "Participant not found" })
+    }
+
+    const participantEntryMode = participant.get("entryMode") || ""
+    const exportPeriodType = ["day", "week"].includes(requestedPeriodType)
+        ? requestedPeriodType
+        : (["day", "week"].includes(participantEntryMode) ? participantEntryMode : "")
+    const includeCommuteTime = exportPeriodType !== "week"
+    const includeStructuralChanges = exportPeriodType !== "day"
+    const submissionFilterParts = [
+        "participant = {:participantId}",
+        'submissionMode != "deleted"',
+    ]
+    const submissionFilterParams = { participantId }
+
+    if (exportPeriodType) {
+        submissionFilterParts.push("periodType = {:periodType}")
+        submissionFilterParams.periodType = exportPeriodType
     }
 
     const workloadTypes = $app.findRecordsByFilter(
@@ -101,14 +119,11 @@ function chooseBaseSubmission(group) {
 
     const submissions = $app.findRecordsByFilter(
         "submissions",
-        [
-            "participant = {:participantId}",
-            'submissionMode != "deleted"',
-        ].join(" && "),
+        submissionFilterParts.join(" && "),
         "periodStart",
         5000,
         0,
-        { participantId }
+        submissionFilterParams
     )
 
     const submissionIds = submissions.map((s) => s.id)
@@ -143,13 +158,15 @@ function chooseBaseSubmission(group) {
 
     function getExportColumnName(workloadType, itemType, submission) {
         const key = workloadType.get("key")
+        const credits = String(workloadType.get("credits") || 0)
         const periodType = submission ? submission.get("periodType") || "" : ""
+        const prefix = itemType === "study" ? "S" : "U"
 
         if (periodType === "week") {
-            return `${key}_hours`
+            return `U_${key}_${credits}`
         }
 
-        return `${key}_${itemType}_hours`
+        return `${prefix}_${key}_${credits}`
     }
 
     const exportColumnSet = {}
@@ -214,15 +231,15 @@ function chooseBaseSubmission(group) {
         "periodType",
         "periodStart",
         "periodEnd",
+        "submittedAt",
         "baseSubmissionId",
         "baseSubmissionMode",
         "appendumSubmissionIds",
         "dataRating",
         "adminEffort_hours",
-        "commuteTime_hours",
-        "structuralChanges_hours",
+        ...(includeCommuteTime ? ["commuteTime_hours"] : []),
+        ...(includeStructuralChanges ? ["structuralChanges_hours"] : []),
         "comment",
-        "submittedAt",
         ...exportColumns,
     ]
 
@@ -285,16 +302,25 @@ function chooseBaseSubmission(group) {
             periodType,
             representative.get("periodStart") || "",
             representative.get("periodEnd") || "",
+            latestEffectiveSubmission.get("comment") || "",
             baseSubmission ? baseSubmission.id : "",
             baseSubmission ? baseSubmission.get("submissionMode") || "" : "",
             appendumSubmissions.map((s) => s.id).join(";"),
             representative.get("dataRating") || "",
             minutesToHours(pickLatestFieldValue(effectiveSubmissions, "generalAdminTime", 0)),
-            periodType === "week" ? "" : minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)),
-            periodType === "week" ? minutesToHours(pickLatestFieldValue(effectiveSubmissions, "structuralChanges", 0)) : "",
-            latestEffectiveSubmission.get("comment") || "",
-            latestEffectiveSubmission.get("submittedAt") || "",
         ]
+
+        if (includeCommuteTime) {
+            row.push(periodType === "week" ? "" : minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)))
+        }
+
+        if (includeStructuralChanges) {
+            row.push(periodType === "week" ? minutesToHours(pickLatestFieldValue(effectiveSubmissions, "structuralChanges", 0)) : "")
+        }
+
+        row.push(
+            latestEffectiveSubmission.get("submittedAt") || "",
+        )
 
         for (const columnName of exportColumns) {
             row.push(minutesToHours(finalMap[columnName] || 0))
@@ -308,7 +334,7 @@ function chooseBaseSubmission(group) {
     e.response.header().set("Content-Type", "text/csv; charset=utf-8")
     e.response.header().set(
         "Content-Disposition",
-        `attachment; filename="student_${participantId}_clean.csv"`
+        `attachment; filename="student_${participantId}${exportPeriodType ? "_" + exportPeriodType : ""}_clean.csv"`
     )
 
     return e.string(200, csv)

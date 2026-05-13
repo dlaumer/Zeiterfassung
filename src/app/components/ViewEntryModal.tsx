@@ -1,6 +1,7 @@
 import { X, Trash2, Plus } from 'lucide-react';
 import { format, endOfWeek } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
+import { getDateLocale } from '../i18n/dateLocale';
 import { Subject } from './CourseManagement';
 
 interface SubjectTime {
@@ -37,12 +38,13 @@ interface ViewEntryModalProps {
 }
 
 export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload, entryMode = 'day' }: ViewEntryModalProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const isWeekly = entryMode === 'week';
+  const dateLocale = getDateLocale(language);
   const periodEnd = endOfWeek(date, { weekStartsOn: 1 });
   const periodLabel = isWeekly
-    ? `${format(date, 'MMMM d, yyyy')} - ${format(periodEnd, 'MMMM d, yyyy')}`
-    : format(date, 'EEEE, MMMM d, yyyy');
+    ? `${format(date, 'MMMM d, yyyy', { locale: dateLocale })} - ${format(periodEnd, 'MMMM d, yyyy', { locale: dateLocale })}`
+    : format(date, 'EEEE, MMMM d, yyyy', { locale: dateLocale });
 
   if (entry.skipped) {
     return (

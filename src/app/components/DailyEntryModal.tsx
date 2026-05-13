@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { SubjectTimeInput } from './SubjectTimeInput';
 import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
+import { getDateLocale } from '../i18n/dateLocale';
 import { Subject, getSubjectDisplayName } from './CourseManagement';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EditableTimeDisplay } from './EditableTimeDisplay';
+import categoryGuideUrl from '../../assets/KategorisierungZeiterfassung.pdf';
 
 interface SubjectTime {
   subjectId: string;
@@ -137,10 +139,11 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const reEntryMode = existingEntry ? 'add' : null;
   const isAddMode = reEntryMode === 'add' && !!existingEntry;
   const isWeekly = entryMode === 'week';
+  const dateLocale = getDateLocale(language);
   const periodEnd = endOfWeek(date, { weekStartsOn: 1 });
   const periodLabel = isWeekly
-    ? `${format(date, 'MMMM d, yyyy')} - ${format(periodEnd, 'MMMM d, yyyy')}`
-    : format(date, 'EEEE, MMMM d, yyyy');
+    ? `${format(date, 'MMMM d, yyyy', { locale: dateLocale })} - ${format(periodEnd, 'MMMM d, yyyy', { locale: dateLocale })}`
+    : format(date, 'EEEE, MMMM d, yyyy', { locale: dateLocale });
 
   useEffect(() => {
     setCourses([]);
@@ -366,6 +369,18 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             💡 <strong>{t('dailyEntry.tip')}</strong>
             <p>{t('dailyEntry.tipDescription1')}</p> 
             <p>{t('dailyEntry.tipDescription2')}</p>
+            {isWeekly && (
+              <p>
+                <a
+                  href={categoryGuideUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-blue-900 underline underline-offset-2 hover:text-blue-700"
+                >
+                  {t('weeklyEntry.categoryGuide')}
+                </a>
+              </p>
+            )}
           </p>
         </div>
 

@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/i18n';
 export interface Subject {
   id: string;
   participantSubjectId?: string;
+  number?: string;
   key: string;
   labelEn: string;
   labelDe: string;
@@ -14,6 +15,8 @@ export interface Subject {
 
 export const getSubjectDisplayName = (subject: Subject, language: 'en' | 'de') =>
   language === 'de' ? subject.labelDe : subject.labelEn;
+
+const formatSubjectCredits = (credits: number, language: 'en' | 'de') => `${credits} ${language === 'de' ? 'KP' : 'CP'}`;
 
 interface CourseManagementProps {
   subjects: Subject[];
@@ -43,7 +46,10 @@ export function CourseManagement({
   );
 
   const filteredSubjects = availableToAdd.filter(subject =>
-    getSubjectDisplayName(subject, language).toLowerCase().includes(searchQuery.toLowerCase())
+    [getSubjectDisplayName(subject, language), subject.number ?? '', subject.key]
+      .join(' ')
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
   );
 
   const canAddMore = subjects.length < 12;
@@ -101,7 +107,21 @@ export function CourseManagement({
                       onClick={() => handleAddSubject(subject)}
                       className="w-full border-b border-gray-100 px-4 py-3 text-left text-sm font-medium transition-colors last:border-b-0 hover:bg-indigo-50"
                     >
-                      {getSubjectDisplayName(subject, language)}
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-gray-900">
+                          {getSubjectDisplayName(subject, language)}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                          {subject.number && (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+                              {subject.number}
+                            </span>
+                          )}
+                          <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
+                            {formatSubjectCredits(subject.credits, language)}
+                          </span>
+                        </div>
+                      </div>
                     </button>
                   ))
                 ) : (
@@ -164,14 +184,26 @@ export function CourseManagement({
               key={subject.id}
               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div
                   className="w-3 h-3 shrink-0 rounded-full"
                   style={{ backgroundColor: subject.color }}
                 />
-                <span className="text-sm font-medium text-gray-700">
-                  {getSubjectDisplayName(subject, language)}
-                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-gray-700">
+                    {getSubjectDisplayName(subject, language)}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    {subject.number && (
+                      <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-gray-200">
+                        {subject.number}
+                      </span>
+                    )}
+                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
+                      {formatSubjectCredits(subject.credits, language)}
+                    </span>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => onRemoveSubject(subject.id)}

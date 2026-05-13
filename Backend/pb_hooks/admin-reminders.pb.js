@@ -1,19 +1,16 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-
 routerAdd("POST", "/api/admin/participant/reminder", (e) => {
-
-
     function reminderStringValue(record, fieldName) {
         const value = record.get(fieldName)
         return value === null || value === undefined ? "" : String(value || "")
     }
 
-    function reminderLoadMailConfig() {
+    function reminderLoadConfig() {
         let fileConfig = {}
 
         try {
-            const raw = toString($os.readFile(__hooks + "/gmail.local.json")).trim()
+            const raw = toString($os.readFile(__hooks + "/resend.local.json")).trim()
             if (raw) {
                 fileConfig = JSON.parse(raw)
             }
@@ -21,47 +18,31 @@ routerAdd("POST", "/api/admin/participant/reminder", (e) => {
             fileConfig = {}
         }
 
-        const smtpHost = String($os.getenv("PB_SMTP_HOST") || fileConfig.smtpHost || "smtp.gmail.com").trim()
-        const smtpPort = Number($os.getenv("PB_SMTP_PORT") || fileConfig.smtpPort || 587)
-        const smtpUsername = String($os.getenv("PB_SMTP_USERNAME") || fileConfig.smtpUsername || "").trim()
-        const smtpPassword = String($os.getenv("PB_SMTP_PASSWORD") || fileConfig.smtpPassword || "").trim()
-        const senderName = String($os.getenv("PB_SMTP_SENDER_NAME") || fileConfig.senderName || $app.settings().meta.appName || "Workload Tracker").trim()
-        const senderAddress = String($os.getenv("PB_SMTP_SENDER_ADDRESS") || fileConfig.senderAddress || smtpUsername).trim()
+        const apiKey = String($os.getenv("RESEND_API_KEY") || fileConfig.apiKey || "").trim()
+        const senderName = String($os.getenv("RESEND_SENDER_NAME") || fileConfig.senderName || "Methric Team").trim()
+        const senderAddress = String($os.getenv("RESEND_SENDER_ADDRESS") || fileConfig.senderAddress || "").trim()
+        const replyTo = String($os.getenv("RESEND_REPLY_TO") || fileConfig.replyTo || senderAddress).trim()
         const appUrl = String($os.getenv("PB_PUBLIC_APP_URL") || fileConfig.appUrl || $app.settings().meta.appURL || "").trim()
 
         return {
-            smtpHost,
-            smtpPort,
-            smtpUsername,
-            smtpPassword,
+            apiKey,
             senderName,
             senderAddress,
+            replyTo,
             appUrl,
         }
     }
 
-    function reminderEnsureMailClientConfigured() {
-        const config = reminderLoadMailConfig()
+    function reminderValidateConfig() {
+        const config = reminderLoadConfig()
 
-        if (!config.smtpUsername || !config.smtpPassword) {
-            throw new Error("Missing SMTP credentials. Configure Backend/pb_hooks/gmail.local.json or PB_SMTP_* environment variables.")
+        if (!config.apiKey) {
+            throw new Error("Missing Resend API key. Configure Backend/pb_hooks/resend.local.json or RESEND_API_KEY.")
         }
 
         if (!config.senderAddress) {
             throw new Error("Missing sender email address for reminder emails.")
         }
-
-        const settings = $app.settings()
-        settings.smtp.enabled = true
-        settings.smtp.host = config.smtpHost
-        settings.smtp.port = config.smtpPort
-        settings.smtp.username = config.smtpUsername
-        settings.smtp.password = config.smtpPassword
-        settings.smtp.authMethod = "LOGIN"
-        settings.smtp.tls = false
-        settings.smtp.localName = "localhost"
-        settings.meta.senderName = config.senderName
-        settings.meta.senderAddress = config.senderAddress
 
         return config
     }
@@ -77,39 +58,54 @@ routerAdd("POST", "/api/admin/participant/reminder", (e) => {
 
     function reminderEmailHtml(participantName, participantLink) {
         const safeName = participantName || "there"
-        const linkSection = participantLink
-            ? `<p><a href="${participantLink}">Open your workload tracker</a></p>
-           <p><a href="${participantLink}">${participantLink}</a></p>`
+        const linkSectionEn = participantLink
+            ? `<p><a href="${participantLink}?lang=en">Open your workload tracker</a></p>`
+            : ""
+        const linkSectionDe = participantLink
+            ? `<p><a href="${participantLink}?lang=de">Arbeitsaufwand erfassen</a></p>`
             : ""
 
         return `
         <p>Hello ${safeName},</p>
         <p>This is a friendly reminder to submit your workload tracking data.</p>
-        ${linkSection}
+        ${linkSectionEn}
+        <p>You receive this email because you participate in the Methric study.</p>
         <p>Thank you.</p>
+        <p>Methric Team</p>
         <hr />
         <p>Hallo ${safeName},</p>
         <p>Dies ist eine kurze Erinnerung, deine Lernaufwandsdaten einzureichen.</p>
-        ${linkSection}
+        ${linkSectionDe}
+        <p>Du erhaeltst diese E-Mail, weil du an der Methric-Studie teilnimmst.</p>
         <p>Vielen Dank und freundliche Gruesse.</p>
+        <p>Methric Team</p>
     `
     }
 
     function reminderEmailText(participantName, participantLink) {
         const safeName = participantName || "there"
-        const linkLine = participantLink ? `\n\nOpen your workload tracker:\n${participantLink}` : ""
+        const englishLink = participantLink ? `\n\nOpen your workload tracker:\n${participantLink}?lang=en` : ""
+        const germanLink = participantLink ? `\n\nArbeitsaufwand erfassen:\n${participantLink}?lang=de` : ""
 
         return `Hello ${safeName},
 
-This is a friendly reminder to submit your workload tracking data.${linkLine}
+This is a friendly reminder to submit your workload tracking data.${englishLink}
+
+You receive this email because you participate in the Methric study.
 
 Thank you.
 
+Methric Team
+
 Hallo ${safeName},
 
-Dies ist eine kurze Erinnerung, deine Lernaufwandsdaten einzureichen.${linkLine}
+Dies ist eine kurze Erinnerung, deine Lernaufwandsdaten einzureichen.${germanLink}
 
-Vielen Dank und freundliche Gruesse.`
+Du erhaeltst diese E-Mail, weil du an der Methric-Studie teilnimmst.
+
+Vielen Dank und freundliche Gruesse.
+
+Methric Team`
     }
 
     function reminderCreateLogRecord(e, participantId, participantName, participantEmail, participantLink, subject, senderAddress) {
@@ -154,22 +150,35 @@ Vielen Dank und freundliche Gruesse.`
     }
 
     try {
-        const config = reminderEnsureMailClientConfigured()
+        const config = reminderValidateConfig()
         const participantLink = reminderParticipantLink(participantId, config.appUrl)
         const subject = "Reminder: submit your workload tracking"
+        const fromValue = config.senderName
+            ? `${config.senderName} <${config.senderAddress}>`
+            : config.senderAddress
 
-        const message = new MailerMessage({
-            from: {
-                address: config.senderAddress,
-                name: config.senderName,
+        const response = $http.send({
+            method: "POST",
+            url: "https://api.resend.com/emails",
+            timeout: 120,
+            headers: {
+                "Authorization": "Bearer " + config.apiKey,
+                "Content-Type": "application/json",
             },
-            to: [{ address: participantEmail, name: participantName }],
-            subject: subject,
-            html: reminderEmailHtml(participantName, participantLink),
-            text: reminderEmailText(participantName, participantLink),
+            body: JSON.stringify({
+                from: fromValue,
+                to: [participantEmail],
+                reply_to: config.replyTo ? [config.replyTo] : undefined,
+                subject: subject,
+                html: reminderEmailHtml(participantName, participantLink),
+                text: reminderEmailText(participantName, participantLink),
+            }),
         })
 
-        $app.newMailClient().send(message)
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+            throw new Error("Resend API returned status " + response.statusCode + ": " + toString(response.body))
+        }
+
         reminderCreateLogRecord(e, participantId, participantName, participantEmail, participantLink, subject, config.senderAddress)
 
         return e.json(200, {

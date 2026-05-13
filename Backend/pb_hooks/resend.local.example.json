@@ -1,0 +1,7 @@
+{
+  "apiKey": "re_your_resend_api_key",
+  "senderName": "Methric Team",
+  "senderAddress": "noreply@methric.ch",
+  "replyTo": "noreply@methric.ch",
+  "appUrl": "https://methric.ch"
+}

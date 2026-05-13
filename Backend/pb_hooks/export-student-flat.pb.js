@@ -1,26 +1,27 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 routerAdd("GET", "/api/export-student-flat", (e) => {
-    
-function toCsvRow(values) {
-  return values.map(csvEscape).join(",")
-}
 
-function csvEscape(value) {
-  const str = String(value ?? "")
-
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`
+  function toCsvRow(values) {
+    return values.map(csvEscape).join(",")
   }
 
-  return str
-}
+  function csvEscape(value) {
+    const str = String(value ?? "")
 
-function minutesToHours(value) {
-  return Number(value || 0) / 60
-}
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+
+    return str
+  }
+
+  function minutesToHours(value) {
+    return Number(value || 0) / 60
+  }
 
   const participantId = (e.requestInfo().query["participantId"] || "").trim()
+  const requestedPeriodType = (e.requestInfo().query["periodType"] || "").trim()
 
   if (!participantId) {
     return e.json(400, { error: "Missing participantId" })
@@ -30,6 +31,20 @@ function minutesToHours(value) {
 
   if (!participant) {
     return e.json(404, { error: "Participant not found" })
+  }
+
+  const participantEntryMode = participant.get("entryMode") || ""
+  const exportPeriodType = ["day", "week"].includes(requestedPeriodType)
+    ? requestedPeriodType
+    : (["day", "week"].includes(participantEntryMode) ? participantEntryMode : "")
+  const includeCommuteTime = exportPeriodType !== "week"
+  const includeStructuralChanges = exportPeriodType !== "day"
+  const submissionFilterParts = ["participant = {:participantId}"]
+  const submissionFilterParams = { participantId }
+
+  if (exportPeriodType) {
+    submissionFilterParts.push("periodType = {:periodType}")
+    submissionFilterParams.periodType = exportPeriodType
   }
 
   // No active filter anymore
@@ -43,11 +58,11 @@ function minutesToHours(value) {
 
   const submissions = $app.findRecordsByFilter(
     "submissions",
-    "participant = {:participantId}",
+    submissionFilterParts.join(" && "),
     "periodStart",
     2000,
     0,
-    { participantId }
+    submissionFilterParams
   )
 
   const submissionIds = submissions.map((s) => s.id)
@@ -82,13 +97,15 @@ function minutesToHours(value) {
 
   function getExportColumnName(workloadType, itemType, submission) {
     const key = workloadType.get("key")
+    const credits = String(workloadType.get("credits") || 0)
     const periodType = submission ? submission.get("periodType") || "" : ""
+    const prefix = itemType === "study" ? "S" : "U"
 
     if (periodType === "week") {
-      return `${key}_hours`
+      return `U_${key}_${credits}`
     }
 
-    return `${key}_${itemType}_hours`
+    return `${prefix}_${key}_${credits}`
   }
 
   const exportColumnSet = {}
@@ -142,13 +159,13 @@ function minutesToHours(value) {
     "periodType",
     "periodStart",
     "periodEnd",
+    "submittedAt",
     "submissionMode",
     "dataRating",
     "adminEffort_hours",
-    "commuteTime_hours",
-    "structuralChanges_hours",
+    ...(includeCommuteTime ? ["commuteTime_hours"] : []),
+    ...(includeStructuralChanges ? ["structuralChanges_hours"] : []),
     "comment",
-    "submittedAt",
     ...exportColumns,
   ]
 
@@ -165,14 +182,23 @@ function minutesToHours(value) {
       periodType,
       submission.get("periodStart") || "",
       submission.get("periodEnd") || "",
+      submission.get("submittedAt") || "",
       submission.get("submissionMode") || "",
       submission.get("dataRating") || "",
       minutesToHours(submission.get("generalAdminTime")),
-      periodType === "week" ? "" : minutesToHours(submission.get("commuteTime")),
-      periodType === "week" ? minutesToHours(submission.get("structuralChanges")) : "",
-      submission.get("comment") || "",
-      submission.get("submittedAt") || "",
     ]
+
+    if (includeCommuteTime) {
+      row.push(periodType === "week" ? "" : minutesToHours(submission.get("commuteTime")))
+    }
+
+    if (includeStructuralChanges) {
+      row.push(periodType === "week" ? minutesToHours(submission.get("structuralChanges")) : "")
+    }
+
+    row.push(
+      submission.get("comment") || "",
+    )
 
     for (const columnName of exportColumns) {
       row.push(minutesToHours(submissionMap[columnName] || 0))
@@ -186,7 +212,7 @@ function minutesToHours(value) {
   e.response.header().set("Content-Type", "text/csv; charset=utf-8")
   e.response.header().set(
     "Content-Disposition",
-    `attachment; filename="student_${participantId}_submissions.csv"`
+    `attachment; filename="student_${participantId}${exportPeriodType ? "_" + exportPeriodType : ""}_submissions.csv"`
   )
 
   return e.string(200, csv)

@@ -114,7 +114,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         return count
     }
 
-    const adminMissingBaselineDate = "2026-04-13"
+    const adminMissingBaselineDate = "2026-05-01"
 
     function adminExpectedSubmissionCount(entryMode, todayDate) {
         const baselineDate = adminParseDateOnly(adminMissingBaselineDate)
@@ -215,6 +215,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     for (const subject of subjects) {
         subjectById[subject.id] = {
             id: subject.id,
+            number: adminStringValue(subject, "number"),
             key: adminStringValue(subject, "key"),
             labelEn: adminStringValue(subject, "label_en"),
             labelDe: adminStringValue(subject, "label_de"),

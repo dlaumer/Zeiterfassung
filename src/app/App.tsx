@@ -68,6 +68,7 @@ interface SaveWeeklyEntryPayload {
 
 interface WorkloadStatusSubject {
   id: string;
+  number?: string;
   key: string;
   labelEn: string;
   labelDe: string;
@@ -102,11 +103,12 @@ interface WorkloadStatusResponse {
   }[];
 }
 
-const SUBMISSION_TRACKING_START_DATE = '2026-04-13';
+const SUBMISSION_TRACKING_START_DATE = '2026-05-01';
 
 const WEEKLY_CATEGORIES: Subject[] = [
   {
     id: 'weekly_preparation',
+    number: '',
     key: 'weekly_preparation',
     labelEn: 'Preparation',
     labelDe: 'Vorbereitung',
@@ -115,6 +117,7 @@ const WEEKLY_CATEGORIES: Subject[] = [
   },
   {
     id: 'weekly_contact_time',
+    number: '',
     key: 'weekly_contact_time',
     labelEn: 'Contact time',
     labelDe: 'Kontaktzeit',
@@ -123,6 +126,7 @@ const WEEKLY_CATEGORIES: Subject[] = [
   },
   {
     id: 'weekly_follow_up',
+    number: '',
     key: 'weekly_follow_up',
     labelEn: 'Follow-up',
     labelDe: 'Nachbereitung',
@@ -391,6 +395,7 @@ function AppContent({ participantId }: AppContentProps) {
 
       return allSubjects.map((subject) => ({
         id: subject.id,
+        number: subject.number ?? '',
         key: subject.key,
         labelEn: subject.label_en,
         labelDe: subject.label_de,
@@ -423,6 +428,7 @@ function AppContent({ participantId }: AppContentProps) {
 
           return {
             id: subject.id,
+            number: subject.number ?? '',
             key: subject.key,
             labelEn: subject.label_en,
             labelDe: subject.label_de,

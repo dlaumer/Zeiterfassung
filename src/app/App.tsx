@@ -95,6 +95,7 @@ interface WorkloadStatusResponse {
     id: string;
     entryMode: 'day' | 'week' | string;
   };
+  referenceDate?: string;
   submissionHistory: WorkloadStatusHistoryEntry[];
   missingPeriods?: {
     periodType: 'day' | 'week' | string;
@@ -102,8 +103,6 @@ interface WorkloadStatusResponse {
     periodEnd: string;
   }[];
 }
-
-const SUBMISSION_TRACKING_START_DATE = '2026-05-01';
 
 const WEEKLY_CATEGORIES: Subject[] = [
   {
@@ -471,7 +470,7 @@ function AppContent({ participantId }: AppContentProps) {
 
     async function loadSubmissionHistory(id: string) {
       const response = await pb.send<WorkloadStatusResponse>('/api/workload-status', {
-        query: { participantId: id, startDate: SUBMISSION_TRACKING_START_DATE },
+        query: { participantId: id },
       });
 
       if (!isMounted) {

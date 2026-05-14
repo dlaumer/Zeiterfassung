@@ -26,7 +26,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     }
 
     function parseStartDateInput(value) {
-        const raw = String(value || "").trim()
+        const raw = String(value || "").trim().slice(0, 10)
         if (!raw) return null
 
         const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
@@ -44,6 +44,20 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
         if (isNaN(parsed.getTime())) return null
         return parsed
+    }
+
+    function getReferenceDateStart(app) {
+        try {
+            const records = app.findRecordsByFilter("referenceDate", "", "", 1, 0)
+            if (records.length === 0) {
+                return null
+            }
+
+            return parseStartDateInput(records[0].get("referenceDate"))
+        } catch (error) {
+            console.error("Failed to load workload reference date:", error)
+            return null
+        }
     }
 
     function startOfWeekMonday(date) {
@@ -253,9 +267,11 @@ routerAdd("GET", "/api/workload-status", (e) => {
     const currentWeekStart = startOfWeekMonday(now)
     const currentWeekEnd = endOfWeekSunday(now)
 
-    // Prefer an explicit start date. Keep lookbackDays as a fallback for compatibility.
+    // The canonical missing-period start comes from the admin-managed referenceDate record.
+    // Keep explicit startDate and lookbackDays as fallbacks for older callers and empty setup data.
+    const referenceDateStart = getReferenceDateStart($app)
     const explicitRangeStart = parseStartDateInput(startDateInput)
-    const rangeStart = explicitRangeStart || addDays(todayStart, -lookbackDays)
+    const rangeStart = referenceDateStart || explicitRangeStart || addDays(todayStart, -lookbackDays)
     const submissionRangeStart = entryMode === "week" ? startOfWeekMonday(rangeStart) : rangeStart
     const rangeStartStr = formatDateTime(submissionRangeStart)
 
@@ -492,6 +508,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
         },
 
         currentPeriod: currentPeriod,
+
+        referenceDate: formatDateTime(rangeStart),
 
         submittedPeriods: submittedPeriods,
 

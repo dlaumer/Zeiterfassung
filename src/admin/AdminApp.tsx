@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type Po
 import PocketBase from 'pocketbase';
 import {
   BookOpen,
+  CalendarDays,
   ChevronDown,
   Clock3,
   Copy,
@@ -12,6 +13,7 @@ import {
   MoreHorizontal,
   Plus,
   RefreshCw,
+  Save,
   Search,
   Shield,
   Trash2,
@@ -106,6 +108,7 @@ interface AdminOverview {
   participants: AdminParticipant[];
   subjects: AdminSubject[];
   events: AdminEvent[];
+  referenceDate: string;
 }
 
 interface SubjectImportRow {
@@ -122,6 +125,7 @@ const emptyOverview: AdminOverview = {
   participants: [],
   subjects: [],
   events: [],
+  referenceDate: '',
 };
 
 function getIntlLocale(language: Language) {
@@ -496,6 +500,7 @@ function AdminContent() {
   const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
+  const [showReferenceDateDialog, setShowReferenceDateDialog] = useState(false);
   const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
   const [subjectImportStatus, setSubjectImportStatus] = useState<'idle' | 'loading'>('idle');
   const [newParticipantName, setNewParticipantName] = useState('');
@@ -505,6 +510,8 @@ function AdminContent() {
   const [newSubjectKey, setNewSubjectKey] = useState('');
   const [newSubjectLabel, setNewSubjectLabel] = useState('');
   const [newSubjectCredits, setNewSubjectCredits] = useState('0');
+  const [referenceDateInput, setReferenceDateInput] = useState('');
+  const [referenceDateStatus, setReferenceDateStatus] = useState<'idle' | 'loading'>('idle');
 
   const isAdminAuthenticated = pb.authStore.isValid && authRecord?.collectionName === 'admins';
 
@@ -520,10 +527,12 @@ function AdminContent() {
     try {
       const result = await pb.send<AdminOverview>('/api/admin/overview');
       setOverview(result);
+      setReferenceDateInput(result.referenceDate || '');
       setStatus('ready');
     } catch (error) {
       console.error('Admin overview lookup failed:', error);
       setOverview(emptyOverview);
+      setReferenceDateInput('');
       setStatus('error');
     }
   }
@@ -669,6 +678,11 @@ function AdminContent() {
     setNewSubjectCredits('0');
   }
 
+  function openReferenceDateDialog() {
+    setReferenceDateInput(overview.referenceDate || '');
+    setShowReferenceDateDialog(true);
+  }
+
   async function handleCreateParticipant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateStatus('loading');
@@ -720,6 +734,35 @@ function AdminContent() {
       showActionMessage('error', t('admin.subject.createFailed'));
     } finally {
       setCreateStatus('idle');
+    }
+  }
+
+  async function handleUpdateReferenceDate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setReferenceDateStatus('loading');
+
+    try {
+      const result = await pb.send<{ referenceDate: string }>('/api/admin/reference-date', {
+        method: 'POST',
+        body: {
+          referenceDate: referenceDateInput,
+        },
+      });
+
+      const updatedReferenceDate = result.referenceDate || referenceDateInput;
+      setOverview((currentOverview) => ({
+        ...currentOverview,
+        referenceDate: updatedReferenceDate,
+      }));
+      setReferenceDateInput(updatedReferenceDate);
+      setShowReferenceDateDialog(false);
+      showActionMessage('success', t('admin.referenceDate.saved'));
+      await loadOverview();
+    } catch (error) {
+      console.error('Reference date update failed:', error);
+      showActionMessage('error', t('admin.referenceDate.saveFailed'));
+    } finally {
+      setReferenceDateStatus('idle');
     }
   }
 
@@ -1065,6 +1108,7 @@ function AdminContent() {
               </button>
             </div>
           </div>
+
         </div>
       </header>
 
@@ -1077,6 +1121,14 @@ function AdminContent() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">{filteredParticipants.length}</span>
+              <button
+                type="button"
+                onClick={openReferenceDateDialog}
+                title={`${t('admin.referenceDate.title')}: ${formatDate(overview.referenceDate, language, t)}`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                <CalendarDays className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => setShowParticipantDialog(true)}
@@ -1404,6 +1456,61 @@ function AdminContent() {
                 className="inline-flex h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 {createStatus === 'loading' ? t('admin.creating') : t('admin.create')}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showReferenceDateDialog}
+        onOpenChange={(isOpen) => {
+          setShowReferenceDateDialog(isOpen);
+          if (!isOpen) {
+            setReferenceDateInput(overview.referenceDate || '');
+          }
+        }}
+      >
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('admin.referenceDate.title')}</DialogTitle>
+            <DialogDescription>{t('admin.referenceDate.description')}</DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-4" onSubmit={handleUpdateReferenceDate}>
+            <div className="rounded-md border border-gray-200 bg-slate-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase text-gray-500">{t('admin.referenceDate.current')}</div>
+              <div className="mt-1 text-sm font-bold text-gray-950">
+                {formatDate(overview.referenceDate, language, t)}
+              </div>
+            </div>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.referenceDate.input')}
+              <input
+                type="date"
+                value={referenceDateInput}
+                onChange={(event) => setReferenceDateInput(event.target.value)}
+                required
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setShowReferenceDateDialog(false)}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={referenceDateStatus === 'loading' || !referenceDateInput || referenceDateInput === overview.referenceDate}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                <Save className="h-4 w-4" />
+                {referenceDateStatus === 'loading' ? t('admin.referenceDate.saving') : t('admin.referenceDate.save')}
               </button>
             </DialogFooter>
           </form>

@@ -114,23 +114,35 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         return count
     }
 
-    const adminMissingBaselineDate = "2026-05-01"
+    function adminGetReferenceDate(app) {
+        try {
+            const records = app.findRecordsByFilter("referenceDate", "", "", 1, 0)
+            if (records.length === 0) {
+                return ""
+            }
 
-    function adminExpectedSubmissionCount(entryMode, todayDate) {
-        const baselineDate = adminParseDateOnly(adminMissingBaselineDate)
-        if (!baselineDate) {
+            return adminPeriodDate(adminDateValue(records[0], "referenceDate"))
+        } catch (error) {
+            console.error("Failed to load admin reference date:", error)
+            return ""
+        }
+    }
+
+    function adminExpectedSubmissionCount(entryMode, todayDate, referenceDate) {
+        const parsedReferenceDate = adminParseDateOnly(referenceDate)
+        if (!parsedReferenceDate) {
             return 0
         }
 
         const today = new Date(todayDate.getTime())
         today.setUTCHours(0, 0, 0, 0)
 
-        if (baselineDate.getTime() > today.getTime()) {
+        if (parsedReferenceDate.getTime() > today.getTime()) {
             return 0
         }
 
         if (entryMode === "week") {
-            const createdWeek = adminStartOfWeekMonday(adminMissingBaselineDate)
+            const createdWeek = adminStartOfWeekMonday(referenceDate)
             const todayWeek = adminStartOfWeekMonday(adminFormatDateOnly(today))
             if (!createdWeek || !todayWeek) {
                 return 0
@@ -145,7 +157,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             return Math.floor((todayWeekDate.getTime() - createdWeekDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
         }
 
-        return adminCountWeekdaysInclusive(baselineDate, today)
+        return adminCountWeekdaysInclusive(parsedReferenceDate, today)
     }
 
     function adminCreateDeletionEvent(app, deletedSubmission, participantName) {
@@ -174,6 +186,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     const participantSubjects = $app.findRecordsByFilter("participant_subjects", "", "", 5000, 0)
     const submissions = $app.findRecordsByFilter("submissions", "", "-submittedAt", 5000, 0)
     const submissionItems = $app.findRecordsByFilter("submission_items", "", "", 10000, 0)
+    const referenceDate = adminGetReferenceDate($app)
     let reminderEvents = []
 
     let deletionEvents = []
@@ -413,7 +426,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     const today = new Date()
     for (const participantId of Object.keys(participantById)) {
         const participant = participantById[participantId]
-        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, today)
+        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, today, referenceDate)
         const submittedPeriodCount = Object.keys(validSubmittedPeriodKeysByParticipant[participantId] || {}).length
         participantStatsById[participantId].missingCount = Math.max(0, expectedCount - submittedPeriodCount)
     }
@@ -430,6 +443,33 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             ...subjectStatsById[id],
         })),
         events: events,
+        referenceDate: referenceDate,
+    })
+}, $apis.requireAuth("admins"))
+
+routerAdd("POST", "/api/admin/reference-date", (e) => {
+    const body = e.requestInfo().body || {}
+    const referenceDate = String(body.referenceDate || "").trim().slice(0, 10)
+
+    if (!referenceDate) {
+        return e.json(400, { error: "Missing referenceDate" })
+    }
+
+    const parsedReferenceDate = new Date(referenceDate + "T00:00:00Z")
+    if (Number.isNaN(parsedReferenceDate.getTime()) || parsedReferenceDate.toISOString().slice(0, 10) !== referenceDate) {
+        return e.json(400, { error: "Invalid referenceDate" })
+    }
+
+    const collection = $app.findCollectionByNameOrId("referenceDate")
+    const existingRecords = $app.findRecordsByFilter("referenceDate", "", "", 1, 0)
+    const record = existingRecords.length > 0 ? existingRecords[0] : new Record(collection)
+
+    record.set("referenceDate", referenceDate)
+    $app.save(record)
+
+    return e.json(200, {
+        ok: true,
+        referenceDate: referenceDate,
     })
 }, $apis.requireAuth("admins"))
 

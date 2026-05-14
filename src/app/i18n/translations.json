@@ -355,6 +355,38 @@
     "en": "Participants, subjects, and chronological activity.",
     "de": "Teilnehmende, Fächer und chronologische Aktivität."
   },
+  "admin.referenceDate.title": {
+    "en": "Reference date",
+    "de": "Referenzdatum"
+  },
+  "admin.referenceDate.description": {
+    "en": "Missing submissions are counted from this date.",
+    "de": "Fehlende Einreichungen werden ab diesem Datum gezählt."
+  },
+  "admin.referenceDate.current": {
+    "en": "Current date",
+    "de": "Aktuelles Datum"
+  },
+  "admin.referenceDate.input": {
+    "en": "Reference date",
+    "de": "Referenzdatum"
+  },
+  "admin.referenceDate.save": {
+    "en": "Save date",
+    "de": "Datum speichern"
+  },
+  "admin.referenceDate.saving": {
+    "en": "Saving...",
+    "de": "Speichert..."
+  },
+  "admin.referenceDate.saved": {
+    "en": "Reference date saved.",
+    "de": "Referenzdatum gespeichert."
+  },
+  "admin.referenceDate.saveFailed": {
+    "en": "Could not save the reference date.",
+    "de": "Referenzdatum konnte nicht gespeichert werden."
+  },
   "admin.refresh": {
     "en": "Refresh",
     "de": "Aktualisieren"

@@ -615,6 +615,14 @@
     "en": "Weekly",
     "de": "W\u00f6chentlich"
   },
+  "admin.participantRole.student": {
+    "en": "Student",
+    "de": "Student:in"
+  },
+  "admin.participantRole.faculty": {
+    "en": "Faculty",
+    "de": "Dozierende"
+  },
   "admin.logItems.count": {
     "en": "{{count}} log items",
     "de": "{{count}} Protokolleinträge"
@@ -730,6 +738,18 @@
   "admin.participant.entryModeWeek": {
     "en": "Weekly",
     "de": "W\u00f6chentlich"
+  },
+  "admin.participant.participantRole": {
+    "en": "Role",
+    "de": "Rolle"
+  },
+  "admin.participant.participantRoleStudent": {
+    "en": "Student",
+    "de": "Student:in"
+  },
+  "admin.participant.participantRoleFaculty": {
+    "en": "Faculty",
+    "de": "Dozierende"
   },
   "admin.participant.created": {
     "en": "Participant created.",

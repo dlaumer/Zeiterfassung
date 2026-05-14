@@ -34,11 +34,12 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
   }
 
   const participantEntryMode = participant.get("entryMode") || ""
+  const participantRole = participant.get("type") || (participantEntryMode === "week" ? "faculty" : "student")
   const exportPeriodType = ["day", "week"].includes(requestedPeriodType)
     ? requestedPeriodType
     : (["day", "week"].includes(participantEntryMode) ? participantEntryMode : "")
-  const includeCommuteTime = exportPeriodType !== "week"
-  const includeStructuralChanges = exportPeriodType !== "day"
+  const includeCommuteTime = participantRole === "student"
+  const includeStructuralChanges = participantRole === "faculty"
   const submissionFilterParts = ["participant = {:participantId}"]
   const submissionFilterParams = { participantId }
 
@@ -98,10 +99,9 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
   function getExportColumnName(workloadType, itemType, submission) {
     const key = workloadType.get("key")
     const credits = String(workloadType.get("credits") || 0)
-    const periodType = submission ? submission.get("periodType") || "" : ""
     const prefix = itemType === "study" ? "S" : "U"
 
-    if (periodType === "week") {
+    if (participantRole === "faculty") {
       return `U_${key}_${credits}`
     }
 
@@ -188,13 +188,13 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
       minutesToHours(submission.get("generalAdminTime")),
     ]
 
-    if (includeCommuteTime) {
-      row.push(periodType === "week" ? "" : minutesToHours(submission.get("commuteTime")))
-    }
+  if (includeCommuteTime) {
+      row.push(minutesToHours(submission.get("commuteTime")))
+  }
 
-    if (includeStructuralChanges) {
-      row.push(periodType === "week" ? minutesToHours(submission.get("structuralChanges")) : "")
-    }
+  if (includeStructuralChanges) {
+      row.push(minutesToHours(submission.get("structuralChanges")))
+  }
 
     row.push(
       submission.get("comment") || "",

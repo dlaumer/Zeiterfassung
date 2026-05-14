@@ -45,6 +45,7 @@ interface DailyEntryModalProps {
   subjects: Subject[];
   defaultCommuteTime?: number;
   entryMode?: 'day' | 'week';
+  participantRole?: 'student' | 'faculty';
 }
 
 const DEFAULT_TIME_SLIDER_MAX = 5;
@@ -121,7 +122,7 @@ function EditablePercentageDisplay({ value, onChange }: EditablePercentageDispla
   );
 }
 
-export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day' }: DailyEntryModalProps) {
+export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student' }: DailyEntryModalProps) {
   const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
@@ -139,6 +140,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const reEntryMode = existingEntry ? 'add' : null;
   const isAddMode = reEntryMode === 'add' && !!existingEntry;
   const isWeekly = entryMode === 'week';
+  const isFaculty = participantRole === 'faculty';
   const dateLocale = getDateLocale(language);
   const periodEnd = endOfWeek(date, { weekStartsOn: 1 });
   const periodLabel = isWeekly
@@ -149,15 +151,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     setCourses([]);
     setSubjectTimes(subjects.map(s => ({ subjectId: s.id, classTime: 0, selfStudyTime: 0 })));
     setReliability(existingEntry?.reliability ?? 0);
-    const nextAdminEffort = isWeekly ? 0 : existingEntry?.adminEffort ?? 0;
-    const nextCommuteTime = isWeekly ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime;
+    const nextAdminEffort = isFaculty ? 0 : existingEntry?.adminEffort ?? 0;
+    const nextCommuteTime = isFaculty ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime;
     setAdminEffort(nextAdminEffort);
     setCommuteTime(nextCommuteTime);
     setStructuralChanges(0);
     setAdminEffortSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextAdminEffort));
     setCommuteTimeSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextCommuteTime));
     setComment(existingEntry?.comment ?? '');
-  }, [existingEntry, subjects, defaultCommuteTime, isWeekly]);
+  }, [existingEntry, subjects, defaultCommuteTime, isFaculty]);
 
   const handleSubjectClassTimeChange = (subjectId: string, time: number) => {
     setSubjectTimes(prev => {
@@ -184,8 +186,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   };
 
   const handleAdminEffortManualChange = (time: number) => {
-    if (isWeekly) {
-      setAdminEffort(Math.min(time, weeklyWorkloadTotal));
+    if (isFaculty) {
+      setAdminEffort(Math.min(time, facultyWorkloadTotal));
       return;
     }
 
@@ -199,15 +201,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   };
 
   const handleStructuralChangesManualChange = (time: number) => {
-    setStructuralChanges(Math.min(time, weeklyWorkloadTotal));
+    setStructuralChanges(Math.min(time, facultyWorkloadTotal));
   };
 
   const handleAdminEffortPercentageChange = (percentage: number) => {
-    setAdminEffort((weeklyWorkloadTotal * percentage) / 100);
+    setAdminEffort((facultyWorkloadTotal * percentage) / 100);
   };
 
   const handleStructuralChangesPercentageChange = (percentage: number) => {
-    setStructuralChanges((weeklyWorkloadTotal * percentage) / 100);
+    setStructuralChanges((facultyWorkloadTotal * percentage) / 100);
   };
 
   const handleSkipDay = async () => {
@@ -235,33 +237,33 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     }
   };
 
-  const weeklyWorkloadTotal = subjectTimes.reduce((sum, { classTime }) => sum + Math.max(0, classTime || 0), 0);
-  const adminEffortMax = isWeekly ? weeklyWorkloadTotal : adminEffortSliderMax;
-  const adminEffortPercentage = weeklyWorkloadTotal > 0
-    ? Math.round((adminEffort / weeklyWorkloadTotal) * 100)
+  const facultyWorkloadTotal = subjectTimes.reduce((sum, { classTime }) => sum + Math.max(0, classTime || 0), 0);
+  const adminEffortMax = isFaculty ? facultyWorkloadTotal : adminEffortSliderMax;
+  const adminEffortPercentage = facultyWorkloadTotal > 0
+    ? Math.round((adminEffort / facultyWorkloadTotal) * 100)
     : 0;
-  const structuralChangesPercentage = weeklyWorkloadTotal > 0
-    ? Math.round((structuralChanges / weeklyWorkloadTotal) * 100)
+  const structuralChangesPercentage = facultyWorkloadTotal > 0
+    ? Math.round((structuralChanges / facultyWorkloadTotal) * 100)
     : 0;
-  const shouldShowWeeklyExtraSliders = isWeekly && weeklyWorkloadTotal > 0;
-  const shouldShowAdminEffort = !isWeekly || shouldShowWeeklyExtraSliders;
+  const shouldShowFacultyExtraSliders = isFaculty && facultyWorkloadTotal > 0;
+  const shouldShowAdminEffort = !isFaculty || shouldShowFacultyExtraSliders;
 
   useEffect(() => {
-    if (isWeekly && adminEffort > weeklyWorkloadTotal) {
-      setAdminEffort(weeklyWorkloadTotal);
+    if (isFaculty && adminEffort > facultyWorkloadTotal) {
+      setAdminEffort(facultyWorkloadTotal);
     }
-    if (isWeekly && structuralChanges > weeklyWorkloadTotal) {
-      setStructuralChanges(weeklyWorkloadTotal);
+    if (isFaculty && structuralChanges > facultyWorkloadTotal) {
+      setStructuralChanges(facultyWorkloadTotal);
     }
-  }, [adminEffort, isWeekly, structuralChanges, weeklyWorkloadTotal]);
+  }, [adminEffort, isFaculty, structuralChanges, facultyWorkloadTotal]);
 
   const hasEnteredSubjectTime = subjectTimes.some(
     ({ classTime, selfStudyTime }) => classTime > 0 || selfStudyTime > 0
   );
   const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 0);
-  const hasChangedAdminEffort = adminEffort !== (isWeekly ? 0 : existingEntry?.adminEffort ?? 0);
-  const hasChangedCommuteTime = !isWeekly && commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
-  const hasChangedStructuralChanges = isWeekly && structuralChanges > 0;
+  const hasChangedAdminEffort = adminEffort !== (isFaculty ? 0 : existingEntry?.adminEffort ?? 0);
+  const hasChangedCommuteTime = !isFaculty && commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
+  const hasChangedStructuralChanges = isFaculty && structuralChanges > 0;
   const hasChangedComment = comment !== (existingEntry?.comment ?? '');
   const hasComment = existingEntry ? hasChangedComment : comment.trim().length > 0;
   const hasAddendumChanges =
@@ -369,7 +371,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             💡 <strong>{t('dailyEntry.tip')}</strong>
             <p>{t('dailyEntry.tipDescription1')}</p> 
             <p>{t('dailyEntry.tipDescription2')}</p>
-            {isWeekly && (
+            {isFaculty && (
               <p>
                 <a
                   href={categoryGuideUrl}
@@ -385,7 +387,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
         </div>
 
         <div className="space-y-4 mb-6">
-          <h4 className="font-medium text-gray-800">{isWeekly ? t('weeklyEntry.categories') : t('dailyEntry.subjects')}</h4>
+          <h4 className="font-medium text-gray-800">{isFaculty ? t('weeklyEntry.categories') : t('dailyEntry.subjects')}</h4>
 
           {subjects.length === 0 ? (
             <div className="text-center py-8 bg-amber-50 rounded-xl">
@@ -422,14 +424,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                     subjectName={getSubjectDisplayName(subject, language)}
                     subjectColor={subject.color}
                     classTime={subjectTime?.classTime || 0}
-                    selfStudyTime={isWeekly ? 0 : subjectTime?.selfStudyTime || 0}
+                    selfStudyTime={isFaculty ? 0 : subjectTime?.selfStudyTime || 0}
                     onClassTimeChange={(time) => handleSubjectClassTimeChange(subject.id, time)}
                     onSelfStudyTimeChange={(time) => handleSubjectSelfStudyTimeChange(subject.id, time)}
                     classStatusTag={classStatusTag}
-                    studyStatusTag={isWeekly ? null : studyStatusTag}
+                    studyStatusTag={isFaculty ? null : studyStatusTag}
                     isFaded={isFaded}
                     isAdditionalHours={reEntryMode === 'add'}
-                    singleTimeLabel={isWeekly ? t('weeklyEntry.hours') : undefined}
+                    singleTimeLabel={isFaculty ? t('weeklyEntry.hours') : undefined}
                   />
                 );
               })}
@@ -482,10 +484,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 <EditableTimeDisplay
                   value={adminEffort}
                   onChange={handleAdminEffortManualChange}
-                  max={isWeekly ? weeklyWorkloadTotal : DEFAULT_TIME_SLIDER_MAX}
-                  clampToMax={isWeekly}
+                  max={isFaculty ? facultyWorkloadTotal : DEFAULT_TIME_SLIDER_MAX}
+                  clampToMax={isFaculty}
                 />
-                {isWeekly && (
+                {isFaculty && (
                   <EditablePercentageDisplay
                     value={adminEffortPercentage}
                     onChange={handleAdminEffortPercentageChange}
@@ -513,7 +515,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             </Slider>
           </div>}
 
-          {!isWeekly && <div className="space-y-2">
+          {!isFaculty && <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <span className="flex items-center gap-1 text-gray-500">
@@ -554,7 +556,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             </Slider>
           </div>}
 
-          {shouldShowWeeklyExtraSliders && <div className="space-y-2">
+          {shouldShowFacultyExtraSliders && <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 {t('weeklyEntry.structuralChanges')}
@@ -563,7 +565,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 <EditableTimeDisplay
                   value={structuralChanges}
                   onChange={handleStructuralChangesManualChange}
-                  max={weeklyWorkloadTotal}
+                  max={facultyWorkloadTotal}
                   clampToMax
                 />
                 <EditablePercentageDisplay
@@ -574,20 +576,20 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             </div>
             <Slider
               value={[structuralChanges]}
-              onValueChange={(value) => setStructuralChanges(Math.min(value[0], weeklyWorkloadTotal))}
-              max={weeklyWorkloadTotal}
+              onValueChange={(value) => setStructuralChanges(Math.min(value[0], facultyWorkloadTotal))}
+              max={facultyWorkloadTotal}
               step={0.25}
               className="relative flex items-center select-none touch-none w-full h-5"
             >
               <div className="relative flex-1 h-2 bg-gray-200 rounded-full">
                 <div
                   className="absolute h-full bg-indigo-500 rounded-full transition-all"
-                  style={{ width: `${weeklyWorkloadTotal > 0 ? (structuralChanges / weeklyWorkloadTotal) * 100 : 0}%` }}
+                  style={{ width: `${facultyWorkloadTotal > 0 ? (structuralChanges / facultyWorkloadTotal) * 100 : 0}%` }}
                 />
               </div>
               <div
                 className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{ position: 'absolute', left: `calc(${weeklyWorkloadTotal > 0 ? (structuralChanges / weeklyWorkloadTotal) * 100 : 0}% - 10px)` }}
+                style={{ position: 'absolute', left: `calc(${facultyWorkloadTotal > 0 ? (structuralChanges / facultyWorkloadTotal) * 100 : 0}% - 10px)` }}
               />
             </Slider>
           </div>}

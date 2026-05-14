@@ -93,11 +93,12 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
     }
 
     const participantEntryMode = participant.get("entryMode") || ""
+    const participantRole = participant.get("type") || (participantEntryMode === "week" ? "faculty" : "student")
     const exportPeriodType = ["day", "week"].includes(requestedPeriodType)
         ? requestedPeriodType
         : (["day", "week"].includes(participantEntryMode) ? participantEntryMode : "")
-    const includeCommuteTime = exportPeriodType !== "week"
-    const includeStructuralChanges = exportPeriodType !== "day"
+    const includeCommuteTime = participantRole === "student"
+    const includeStructuralChanges = participantRole === "faculty"
     const submissionFilterParts = [
         "participant = {:participantId}",
         'submissionMode != "deleted"',
@@ -159,10 +160,9 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
     function getExportColumnName(workloadType, itemType, submission) {
         const key = workloadType.get("key")
         const credits = String(workloadType.get("credits") || 0)
-        const periodType = submission ? submission.get("periodType") || "" : ""
         const prefix = itemType === "study" ? "S" : "U"
 
-        if (periodType === "week") {
+        if (participantRole === "faculty") {
             return `U_${key}_${credits}`
         }
 
@@ -311,11 +311,11 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         ]
 
         if (includeCommuteTime) {
-            row.push(periodType === "week" ? "" : minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)))
+            row.push(minutesToHours(pickLatestFieldValue(effectiveSubmissions, "commuteTime", 0)))
         }
 
         if (includeStructuralChanges) {
-            row.push(periodType === "week" ? minutesToHours(pickLatestFieldValue(effectiveSubmissions, "structuralChanges", 0)) : "")
+            row.push(minutesToHours(pickLatestFieldValue(effectiveSubmissions, "structuralChanges", 0)))
         }
 
         row.push(

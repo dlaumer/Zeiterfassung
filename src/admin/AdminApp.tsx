@@ -50,6 +50,8 @@ interface AdminParticipant {
   name: string;
   email: string;
   entryMode: string;
+  type?: string;
+  participantRole: string;
   created: string;
   updated: string;
   subjectCount: number;
@@ -87,6 +89,7 @@ interface AdminEvent {
   happenedAt: string;
   participantId: string;
   participantName: string;
+  participantRole?: string;
   participantEmail?: string;
   sentByEmail?: string;
   submissionId: string;
@@ -506,6 +509,7 @@ function AdminContent() {
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
   const [newParticipantEntryMode, setNewParticipantEntryMode] = useState<'day' | 'week'>('day');
+  const [newParticipantRole, setNewParticipantRole] = useState<'student' | 'faculty'>('student');
   const [newSubjectNumber, setNewSubjectNumber] = useState('');
   const [newSubjectKey, setNewSubjectKey] = useState('');
   const [newSubjectLabel, setNewSubjectLabel] = useState('');
@@ -669,6 +673,7 @@ function AdminContent() {
     setNewParticipantName('');
     setNewParticipantEmail('');
     setNewParticipantEntryMode('day');
+    setNewParticipantRole('student');
   }
 
   function resetSubjectForm() {
@@ -694,6 +699,7 @@ function AdminContent() {
           name: newParticipantName,
           email: newParticipantEmail,
           entryMode: newParticipantEntryMode,
+          type: newParticipantRole,
         },
       });
 
@@ -1162,6 +1168,9 @@ function AdminContent() {
                             <span className="shrink-0 text-xs font-medium text-gray-500">
                               {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
                             </span>
+                            <span className="shrink-0 text-xs font-medium text-gray-500">
+                              {participant.participantRole === 'faculty' ? t('admin.participantRole.faculty') : t('admin.participantRole.student')}
+                            </span>
                           </div>
                           <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
                         </div>
@@ -1280,7 +1289,7 @@ function AdminContent() {
                               <span>{t('admin.metric.workload', { value: formatMinutes(event.totalMinutes, t) })}</span>
                               <span>{t('admin.metric.admin', { value: formatMinutes(event.generalAdminTime, t) })}</span>
                               <span>
-                                {event.periodType === 'week'
+                                {event.participantRole === 'faculty'
                                   ? t('admin.metric.structuralChanges', {
                                       value: formatMinutes(event.structuralChanges, t),
                                     })
@@ -1439,6 +1448,18 @@ function AdminContent() {
               >
                 <option value="day">{t('admin.participant.entryModeDay')}</option>
                 <option value="week">{t('admin.participant.entryModeWeek')}</option>
+              </select>
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.participant.participantRole')}
+              <select
+                value={newParticipantRole}
+                onChange={(event) => setNewParticipantRole(event.target.value as 'student' | 'faculty')}
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              >
+                <option value="student">{t('admin.participant.participantRoleStudent')}</option>
+                <option value="faculty">{t('admin.participant.participantRoleFaculty')}</option>
               </select>
             </label>
 

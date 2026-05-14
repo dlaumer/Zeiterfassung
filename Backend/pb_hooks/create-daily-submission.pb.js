@@ -156,6 +156,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             if ((participant.get("entryMode") || "day") !== "week") {
                 throw new Error("Participant does not use weekly submissions")
             }
+            const participantRole = participant.get("type") || "faculty"
 
             const periodStart = startOfWeekMonday(targetDate)
             const periodEnd = endOfWeekSunday(periodStart)
@@ -199,29 +200,82 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
-            submissionRecord.set("commuteTime", commuteMinutes)
-            submissionRecord.set("structuralChanges", structuralChangesMinutes)
+            submissionRecord.set("commuteTime", participantRole === "student" ? commuteMinutes : 0)
+            submissionRecord.set("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0)
 
             txApp.save(submissionRecord)
 
             const itemCollection = txApp.findCollectionByNameOrId("submission_items")
 
-            for (const item of categoryTimes) {
-                const categoryKey = String(item.categoryId || "").trim()
-                const category = ensureWeeklyCategory(txApp, categoryKey)
-                const minutes = Math.max(0, Number(item.minutes || 0))
+            if (participantRole === "faculty") {
+                for (const item of categoryTimes) {
+                    const categoryKey = String(item.categoryId || "").trim()
+                    const category = ensureWeeklyCategory(txApp, categoryKey)
+                    const minutes = Math.max(0, Number(item.minutes || 0))
 
-                if (!category || minutes <= 0) {
-                    continue
+                    if (!category || minutes <= 0) {
+                        continue
+                    }
+
+                    const categoryItem = new Record(itemCollection)
+                    categoryItem.set("submission", submissionRecord.id)
+                    categoryItem.set("workloadType", category.id)
+                    categoryItem.set("durationMinutes", minutes)
+                    categoryItem.set("type", "class")
+                    txApp.save(categoryItem)
+                    createdItemCount++
+                }
+            }
+
+            if (participantRole === "student") {
+                const enrollmentRecords = txApp.findRecordsByFilter(
+                    "participant_subjects",
+                    "participant = {:participantId}",
+                    "",
+                    1000,
+                    0,
+                    { participantId }
+                )
+
+                const allowedSubjectIds = {}
+                for (const enrollment of enrollmentRecords) {
+                    const subjectId = String(enrollment.get("subject") || "")
+                    if (!subjectId) continue
+
+                    const subject = txApp.findRecordById("subjects", subjectId)
+                    if (subject && subject.get("entryMode") === "day") {
+                        allowedSubjectIds[subjectId] = true
+                    }
                 }
 
-                const categoryItem = new Record(itemCollection)
-                categoryItem.set("submission", submissionRecord.id)
-                categoryItem.set("workloadType", category.id)
-                categoryItem.set("durationMinutes", minutes)
-                categoryItem.set("type", "class")
-                txApp.save(categoryItem)
-                createdItemCount++
+                const subjectTimes = Array.isArray(body.subjectTimes) ? body.subjectTimes : []
+                for (const item of subjectTimes) {
+                    const subjectId = String(item.subjectId || "")
+                    if (!subjectId || !allowedSubjectIds[subjectId]) continue
+
+                    const classMinutes = Math.max(0, Number(item.classMinutes || 0))
+                    const studyMinutes = Math.max(0, Number(item.studyMinutes || 0))
+
+                    if (classMinutes > 0) {
+                        const classItem = new Record(itemCollection)
+                        classItem.set("submission", submissionRecord.id)
+                        classItem.set("workloadType", subjectId)
+                        classItem.set("durationMinutes", classMinutes)
+                        classItem.set("type", "class")
+                        txApp.save(classItem)
+                        createdItemCount++
+                    }
+
+                    if (studyMinutes > 0) {
+                        const studyItem = new Record(itemCollection)
+                        studyItem.set("submission", submissionRecord.id)
+                        studyItem.set("workloadType", subjectId)
+                        studyItem.set("durationMinutes", studyMinutes)
+                        studyItem.set("type", "study")
+                        txApp.save(studyItem)
+                        createdItemCount++
+                    }
+                }
             }
 
             createdSubmissionId = submissionRecord.id
@@ -424,6 +478,55 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         return d
     }
 
+    function ensureFacultyCategory(txApp, categoryKey) {
+        const categories = {
+            weekly_preparation: {
+                labelEn: "Preparation",
+                labelDe: "Vorbereitung",
+            },
+            weekly_contact_time: {
+                labelEn: "Contact time",
+                labelDe: "Kontaktzeit",
+            },
+            weekly_follow_up: {
+                labelEn: "Follow-up",
+                labelDe: "Nachbereitung",
+            },
+        }
+
+        const category = categories[categoryKey]
+        if (!category) {
+            return null
+        }
+
+        try {
+            const existing = txApp.findFirstRecordByFilter(
+                "subjects",
+                "key = {:categoryKey}",
+                { categoryKey }
+            )
+            if (existing) {
+                if (existing.get("entryMode") !== "week") {
+                    existing.set("entryMode", "week")
+                    txApp.save(existing)
+                }
+                return existing
+            }
+        } catch (error) {
+            // Create the reserved category below if it does not exist yet.
+        }
+
+        const collection = txApp.findCollectionByNameOrId("subjects")
+        const record = new Record(collection)
+        record.set("key", categoryKey)
+        record.set("label_en", category.labelEn)
+        record.set("label_de", category.labelDe)
+        record.set("credits", 0)
+        record.set("entryMode", "week")
+        txApp.save(record)
+        return record
+    }
+
     const body = e.requestInfo().body || {}
 
     const participantId = String(body.participantId || "").trim()
@@ -432,7 +535,9 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
     const reliability = Number(body.reliability || 0)
     const adminEffortMinutes = Math.max(0, Number(body.adminEffortMinutes || 0))
     const commuteMinutes = Math.max(0, Number(body.commuteMinutes || 0))
+    const structuralChangesMinutes = Math.max(0, Number(body.structuralChangesMinutes || 0))
     const subjectTimes = Array.isArray(body.subjectTimes) ? body.subjectTimes : []
+    const categoryTimes = Array.isArray(body.categoryTimes) ? body.categoryTimes : []
 
     if (!participantId) {
         return e.json(400, { error: "Missing participantId" })
@@ -461,6 +566,10 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             if (!participant) {
                 throw new Error("Participant not found")
             }
+            if ((participant.get("entryMode") || "day") !== "day") {
+                throw new Error("Participant does not use daily submissions")
+            }
+            const participantRole = participant.get("type") || "student"
 
             const dayStart = startOfDay(targetDate)
             const dayEnd = endOfDay(targetDate)
@@ -490,14 +599,14 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             const replacesSubmissionId =
                 submissionMode === "appendum" ? String(existingDaySubmissions[0].id || "") : ""
 
-            const enrollmentRecords = txApp.findRecordsByFilter(
+            const enrollmentRecords = participantRole === "student" ? txApp.findRecordsByFilter(
                 "participant_subjects",
                 "participant = {:participantId}",
                 "",
                 1000,
                 0,
                 { participantId }
-            )
+            ) : []
 
             const allowedSubjectIds = {}
             for (const enrollment of enrollmentRecords) {
@@ -525,38 +634,61 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
-            submissionRecord.set("commuteTime", commuteMinutes)
+            submissionRecord.set("commuteTime", participantRole === "student" ? commuteMinutes : 0)
+            submissionRecord.set("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0)
 
             txApp.save(submissionRecord)
 
             const itemCollection = txApp.findCollectionByNameOrId("submission_items")
 
-            for (const item of subjectTimes) {
-                const subjectId = String(item.subjectId || "")
-                if (!subjectId || !allowedSubjectIds[subjectId]) {
-                    continue
+            if (participantRole === "student") {
+                for (const item of subjectTimes) {
+                    const subjectId = String(item.subjectId || "")
+                    if (!subjectId || !allowedSubjectIds[subjectId]) {
+                        continue
+                    }
+
+                    const classMinutes = Math.max(0, Number(item.classMinutes || 0))
+                    const studyMinutes = Math.max(0, Number(item.studyMinutes || 0))
+
+                    if (classMinutes > 0) {
+                        const classItem = new Record(itemCollection)
+                        classItem.set("submission", submissionRecord.id)
+                        classItem.set("workloadType", subjectId)
+                        classItem.set("durationMinutes", classMinutes)
+                        classItem.set("type", "class")
+                        txApp.save(classItem)
+                        createdItemCount++
+                    }
+
+                    if (studyMinutes > 0) {
+                        const studyItem = new Record(itemCollection)
+                        studyItem.set("submission", submissionRecord.id)
+                        studyItem.set("workloadType", subjectId)
+                        studyItem.set("durationMinutes", studyMinutes)
+                        studyItem.set("type", "study")
+                        txApp.save(studyItem)
+                        createdItemCount++
+                    }
                 }
+            }
 
-                const classMinutes = Math.max(0, Number(item.classMinutes || 0))
-                const studyMinutes = Math.max(0, Number(item.studyMinutes || 0))
+            if (participantRole === "faculty") {
+                for (const item of categoryTimes) {
+                    const categoryKey = String(item.categoryId || "").trim()
+                    const category = ensureFacultyCategory(txApp, categoryKey)
+                    const minutes = Math.max(0, Number(item.minutes || 0))
 
-                if (classMinutes > 0) {
-                    const classItem = new Record(itemCollection)
-                    classItem.set("submission", submissionRecord.id)
-                    classItem.set("workloadType", subjectId)
-                    classItem.set("durationMinutes", classMinutes)
-                    classItem.set("type", "class")
-                    txApp.save(classItem)
-                    createdItemCount++
-                }
+                    if (!category || minutes <= 0) {
+                        continue
+                    }
 
-                if (studyMinutes > 0) {
-                    const studyItem = new Record(itemCollection)
-                    studyItem.set("submission", submissionRecord.id)
-                    studyItem.set("workloadType", subjectId)
-                    studyItem.set("durationMinutes", studyMinutes)
-                    studyItem.set("type", "study")
-                    txApp.save(studyItem)
+                    const categoryItem = new Record(itemCollection)
+                    categoryItem.set("submission", submissionRecord.id)
+                    categoryItem.set("workloadType", category.id)
+                    categoryItem.set("durationMinutes", minutes)
+                    categoryItem.set("type", "class")
+                    txApp.save(categoryItem)
                     createdItemCount++
                 }
             }

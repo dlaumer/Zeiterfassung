@@ -259,6 +259,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     }
 
     const entryMode = participant.get("entryMode") || "day" // "day" | "week"
+    const participantRole = participant.get("type") || (entryMode === "week" ? "faculty" : "student")
     const now = new Date()
 
     const todayStart = startOfDay(now)
@@ -317,19 +318,21 @@ routerAdd("GET", "/api/workload-status", (e) => {
         )
     }
 
-    const subjects = $app.findRecordsByFilter(
-        "subjects",
-        entryMode === "week" ? 'entryMode = "week"' : 'entryMode = "day"',
-        "key",
-        1000,
-        0
-    )
+    const subjects = $app.findRecordsByFilter("subjects", "", "key", 1000, 0)
 
     const subjectById = {}
     for (const subject of subjects) {
+        const subjectEntryMode = subject.get("entryMode") || "day"
+        const subjectKey = subject.get("key") || ""
+        if (participantRole === "faculty") {
+            if (!["weekly_preparation", "weekly_contact_time", "weekly_follow_up"].includes(subjectKey)) continue
+        } else if (subjectEntryMode !== "day") {
+            continue
+        }
+
         subjectById[subject.id] = {
             id: subject.id,
-            key: subject.get("key") || "",
+            key: subjectKey,
             labelEn: subject.get("label_en") || "",
             labelDe: subject.get("label_de") || "",
         }
@@ -505,6 +508,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
         participant: {
             id: participant.id,
             entryMode: entryMode,
+            type: participantRole,
+            participantRole: participantRole,
         },
 
         currentPeriod: currentPeriod,

@@ -211,6 +211,8 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             name: adminStringValue(participant, "name"),
             email: adminStringValue(participant, "email"),
             entryMode: adminStringValue(participant, "entryMode") || "day",
+            type: adminStringValue(participant, "type") || ((adminStringValue(participant, "entryMode") || "day") === "week" ? "faculty" : "student"),
+            participantRole: adminStringValue(participant, "type") || ((adminStringValue(participant, "entryMode") || "day") === "week" ? "faculty" : "student"),
             created: adminDateValue(participant, "created"),
             updated: adminDateValue(participant, "updated"),
         }
@@ -318,6 +320,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             happenedAt: submittedAt,
             participantId: participantId,
             participantName: adminFindParticipantName(participantById, participantId),
+            participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
             submissionId: submission.id,
             periodType: adminStringValue(submission, "periodType"),
             periodStart: adminDateValue(submission, "periodStart"),
@@ -341,6 +344,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
                 happenedAt: deletedAt,
                 participantId: participantId,
                 participantName: adminFindParticipantName(participantById, participantId),
+                participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
                 submissionId: submission.id,
                 periodType: adminStringValue(submission, "periodType"),
                 periodStart: adminDateValue(submission, "periodStart"),
@@ -373,6 +377,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             happenedAt: happenedAt,
             participantId: participantId,
             participantName: adminStringValue(eventRecord, "participantName") || adminFindParticipantName(participantById, participantId),
+            participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
             submissionId: adminStringValue(eventRecord, "submissionId"),
             periodType: adminStringValue(eventRecord, "periodType"),
             periodStart: adminDateValue(eventRecord, "periodStart"),
@@ -406,6 +411,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             happenedAt: happenedAt,
             participantId: participantId,
             participantName: adminStringValue(reminderRecord, "participantName") || adminFindParticipantName(participantById, participantId),
+            participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
             participantEmail: participantEmail,
             sentByEmail: sentByEmail,
             submissionId: "",
@@ -479,6 +485,7 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     const name = String(body.name || "").trim()
     const email = String(body.email || "").trim()
     const entryMode = String(body.entryMode || "day").trim() === "week" ? "week" : "day"
+    const participantRole = String(body.type || body.participantRole || "student").trim() === "faculty" ? "faculty" : "student"
 
     if (!name) {
         return e.json(400, { error: "Missing participant name" })
@@ -490,6 +497,7 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     participant.set("name", name)
     participant.set("email", email)
     participant.set("entryMode", entryMode)
+    participant.set("type", participantRole)
 
     $app.save(participant)
 

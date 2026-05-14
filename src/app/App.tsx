@@ -43,12 +43,17 @@ interface SaveDailyEntryPayload {
   date: string;
   reliability: number;
   adminEffortMinutes: number;
-  commuteMinutes: number;
+  commuteMinutes?: number;
+  structuralChangesMinutes?: number;
   comment: string;
-  subjectTimes: {
+  subjectTimes?: {
     subjectId: string;
     classMinutes: number;
     studyMinutes: number;
+  }[];
+  categoryTimes?: {
+    categoryId: string;
+    minutes: number;
   }[];
 }
 
@@ -57,12 +62,17 @@ interface SaveWeeklyEntryPayload {
   weekStart: string;
   reliability: number;
   adminEffortMinutes: number;
-  commuteMinutes: number;
-  structuralChangesMinutes: number;
+  commuteMinutes?: number;
+  structuralChangesMinutes?: number;
   comment: string;
-  categoryTimes: {
+  categoryTimes?: {
     categoryId: string;
     minutes: number;
+  }[];
+  subjectTimes?: {
+    subjectId: string;
+    classMinutes: number;
+    studyMinutes: number;
   }[];
 }
 
@@ -94,6 +104,8 @@ interface WorkloadStatusResponse {
   participant?: {
     id: string;
     entryMode: 'day' | 'week' | string;
+    type?: 'student' | 'faculty' | string;
+    participantRole?: 'student' | 'faculty' | string;
   };
   referenceDate?: string;
   submissionHistory: WorkloadStatusHistoryEntry[];
@@ -255,6 +267,7 @@ interface AppContentProps {
 
 type ParticipantStatus = 'loading' | 'valid' | 'invalid';
 type EntryMode = 'day' | 'week';
+type ParticipantRole = 'student' | 'faculty';
 
 function ContactInfoButton() {
   const { t } = useI18n();
@@ -337,6 +350,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
   const [participantName, setParticipantName] = useState<string>('');
   const [entryMode, setEntryMode] = useState<EntryMode>('day');
+  const [participantRole, setParticipantRole] = useState<ParticipantRole>('student');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
   const [missingSubmissionDates, setMissingSubmissionDates] = useState<Set<string>>(new Set());
@@ -351,6 +365,7 @@ function AppContent({ participantId }: AppContentProps) {
           setParticipantStatus('invalid');
           setParticipantName('');
           setEntryMode('day');
+          setParticipantRole('student');
         }
         return;
       }
@@ -364,6 +379,7 @@ function AppContent({ participantId }: AppContentProps) {
 
         setParticipantName(participant.name ?? '');
         setEntryMode(participant.entryMode === 'week' ? 'week' : 'day');
+        setParticipantRole(participant.type === 'faculty' ? 'faculty' : 'student');
         setParticipantStatus('valid');
       } catch (error) {
         console.error('Participant lookup failed:', error);
@@ -375,6 +391,7 @@ function AppContent({ participantId }: AppContentProps) {
         setParticipantStatus('invalid');
         setParticipantName('');
         setEntryMode('day');
+        setParticipantRole('student');
       }
     }
 
@@ -452,7 +469,7 @@ function AppContent({ participantId }: AppContentProps) {
 
       return subjectsWithUniqueColors;
     }
-    if (!participantId || participantStatus !== 'valid' || entryMode === 'week') {
+    if (!participantId || participantStatus !== 'valid' || participantRole !== 'student') {
       setSubjects([]);
       return;
     }
@@ -463,7 +480,7 @@ function AppContent({ participantId }: AppContentProps) {
         setSubjects(subjects);
       })
       .catch(console.error);
-  }, [participantId, participantStatus, entryMode]);
+  }, [participantId, participantStatus, participantRole]);
 
   useEffect(() => {
     let isMounted = true;
@@ -478,8 +495,10 @@ function AppContent({ participantId }: AppContentProps) {
       }
 
       const responseEntryMode = response.participant?.entryMode === 'week' ? 'week' : 'day';
+      const responseParticipantRole = (response.participant?.type ?? response.participant?.participantRole) === 'faculty' ? 'faculty' : 'student';
       const history = response.submissionHistory ?? [];
       setEntryMode(responseEntryMode);
+      setParticipantRole(responseParticipantRole);
       setSubmissionHistory(history);
       setMissingSubmissionDates(
         new Set(
@@ -498,7 +517,7 @@ function AppContent({ participantId }: AppContentProps) {
             date: item.periodDate,
             courses: [],
             subjectTimes: item.subjects.map((subject) => ({
-              subjectId: responseEntryMode === 'week' ? subject.key : subject.id,
+              subjectId: responseParticipantRole === 'faculty' ? subject.key : subject.id,
               classTime: 0,
               selfStudyTime: 0,
               hasClassEntry: !!subject.hasClassEntry,
@@ -549,30 +568,42 @@ function AppContent({ participantId }: AppContentProps) {
         weekStart: entry.date,
         reliability: entry.skipped ? 0 : entry.reliability,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
-        commuteMinutes: 0,
-        structuralChangesMinutes: entry.skipped ? 0 : Math.round((entry.structuralChanges ?? 0) * 60),
+        commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
+        structuralChangesMinutes: participantRole === 'faculty' && !entry.skipped ? Math.round((entry.structuralChanges ?? 0) * 60) : 0,
         comment: entry.comment ?? '',
-        categoryTimes: entry.skipped
+        ...(participantRole === 'faculty' ? { categoryTimes: entry.skipped
           ? []
           : entry.subjectTimes.map((subjectTime) => ({
             categoryId: subjectTime.subjectId,
             minutes: Math.round((subjectTime.classTime ?? 0) * 60),
-          })),
+          })) } : { subjectTimes: entry.skipped
+            ? []
+            : entry.subjectTimes.map((subjectTime) => ({
+              subjectId: subjectTime.subjectId,
+              classMinutes: Math.round((subjectTime.classTime ?? 0) * 60),
+              studyMinutes: Math.round((subjectTime.selfStudyTime ?? 0) * 60),
+            })) }),
       }
       : {
         participantId,
         date: entry.date,
         reliability: entry.skipped ? 0 : entry.reliability,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
-        commuteMinutes: entry.skipped ? 0 : Math.round(entry.commuteTime * 60),
+        commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
+        structuralChangesMinutes: participantRole === 'faculty' && !entry.skipped ? Math.round((entry.structuralChanges ?? 0) * 60) : 0,
         comment: entry.comment ?? '',
-        subjectTimes: entry.skipped
+        ...(participantRole === 'faculty' ? { categoryTimes: entry.skipped
+          ? []
+          : entry.subjectTimes.map((subjectTime) => ({
+            categoryId: subjectTime.subjectId,
+            minutes: Math.round((subjectTime.classTime ?? 0) * 60),
+          })) } : { subjectTimes: entry.skipped
           ? []
           : entry.subjectTimes.map((subjectTime) => ({
             subjectId: subjectTime.subjectId,
             classMinutes: Math.round((subjectTime.classTime ?? 0) * 60),
             studyMinutes: Math.round((subjectTime.selfStudyTime ?? 0) * 60),
-          })),
+          })) }),
       };
 
     await pb.send(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
@@ -725,7 +756,7 @@ function AppContent({ participantId }: AppContentProps) {
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
-  const activeSubjects = entryMode === 'week' ? WEEKLY_CATEGORIES : subjects;
+  const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : subjects;
 
   if (participantStatus === 'loading') {
     return (
@@ -784,7 +815,7 @@ function AppContent({ participantId }: AppContentProps) {
           </div>
 
           <div className="min-w-0 min-h-0">
-            {entryMode === 'week' ? (
+            {participantRole === 'faculty' ? (
               <WeeklyCategoryPanel categories={WEEKLY_CATEGORIES} />
             ) : (
               <CourseManagement
@@ -811,6 +842,7 @@ function AppContent({ participantId }: AppContentProps) {
           subjects={activeSubjects}
           defaultCommuteTime={defaultCommuteTime}
           entryMode={entryMode}
+          participantRole={participantRole}
         />
       )}
 

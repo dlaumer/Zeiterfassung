@@ -54,10 +54,19 @@ interface AdminParticipant {
   participantRole: string;
   created: string;
   updated: string;
+  subjects: AdminParticipantSubject[];
   subjectCount: number;
   submissionCount: number;
   missingCount: number;
   lastActivityAt: string;
+}
+
+interface AdminParticipantSubject {
+  id: string;
+  number: string;
+  key: string;
+  labelEn: string;
+  labelDe: string;
 }
 
 interface AdminSubject {
@@ -123,6 +132,7 @@ interface SubjectImportRow {
 
 type AdminMobileTab = 'log' | 'participants' | 'subjects';
 type AdminEntryModeFilter = 'all' | 'day' | 'week';
+type AdminRoleFilter = 'all' | 'student' | 'faculty';
 
 const emptyOverview: AdminOverview = {
   participants: [],
@@ -233,6 +243,11 @@ function getSubjectName(labelEn: string, labelDe: string, language: Language, fa
 
 function formatSubjectCredits(credits: number, language: Language) {
   return `${credits} ${language === 'de' ? 'KP' : 'CP'}`;
+}
+
+function getAdminSubjectDisplayName(subject: AdminParticipantSubject | AdminSubject, language: Language) {
+  const fallback = 'key' in subject ? subject.key : subject.id;
+  return getSubjectName(subject.labelEn, subject.labelDe, language, fallback);
 }
 
 function normalizeImportCell(value: unknown) {
@@ -501,6 +516,7 @@ function AdminContent() {
   const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('participants');
   const [selectedLogDate, setSelectedLogDate] = useState('');
   const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
+  const [selectedRole, setSelectedRole] = useState<AdminRoleFilter>('all');
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [showReferenceDateDialog, setShowReferenceDateDialog] = useState(false);
@@ -510,6 +526,7 @@ function AdminContent() {
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
   const [newParticipantEntryMode, setNewParticipantEntryMode] = useState<'day' | 'week'>('day');
   const [newParticipantRole, setNewParticipantRole] = useState<'student' | 'faculty'>('student');
+  const [newParticipantSubjectId, setNewParticipantSubjectId] = useState('');
   const [newSubjectNumber, setNewSubjectNumber] = useState('');
   const [newSubjectKey, setNewSubjectKey] = useState('');
   const [newSubjectLabel, setNewSubjectLabel] = useState('');
@@ -674,6 +691,7 @@ function AdminContent() {
     setNewParticipantEmail('');
     setNewParticipantEntryMode('day');
     setNewParticipantRole('student');
+    setNewParticipantSubjectId('');
   }
 
   function resetSubjectForm() {
@@ -700,6 +718,7 @@ function AdminContent() {
           email: newParticipantEmail,
           entryMode: newParticipantEntryMode,
           type: newParticipantRole,
+          subjectId: newParticipantRole === 'faculty' ? newParticipantSubjectId : '',
         },
       });
 
@@ -854,7 +873,9 @@ function AdminContent() {
     return overview.participants
       .filter((participant) => {
         const matchesEntryMode = selectedEntryMode === 'all' || participant.entryMode === selectedEntryMode;
-        if (!matchesEntryMode) {
+        const participantRole = participant.participantRole === 'faculty' ? 'faculty' : 'student';
+        const matchesRole = selectedRole === 'all' || participantRole === selectedRole;
+        if (!matchesEntryMode || !matchesRole) {
           return false;
         }
 
@@ -862,7 +883,12 @@ function AdminContent() {
           return true;
         }
 
-        return [participant.name, participant.email, participant.id].join(' ').toLowerCase().includes(normalizedQuery);
+        return [
+          participant.name,
+          participant.email,
+          participant.id,
+          ...(participant.subjects ?? []).map((subject) => `${subject.number} ${subject.key} ${subject.labelEn} ${subject.labelDe}`),
+        ].join(' ').toLowerCase().includes(normalizedQuery);
       })
       .sort((a, b) => {
         if (b.missingCount !== a.missingCount) {
@@ -875,7 +901,7 @@ function AdminContent() {
 
         return (a.name || a.id).localeCompare(b.name || b.id);
       });
-  }, [overview.participants, query, selectedEntryMode]);
+  }, [overview.participants, query, selectedEntryMode, selectedRole]);
 
   const filteredSubjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -896,8 +922,10 @@ function AdminContent() {
     return overview.events.filter((event) => {
       const matchesEntryMode =
         selectedEntryMode === 'all' || event.kind === 'reminder' || event.periodType === selectedEntryMode;
+      const eventRole = event.participantRole === 'faculty' ? 'faculty' : 'student';
+      const matchesRole = selectedRole === 'all' || eventRole === selectedRole;
 
-      if (!matchesEntryMode) {
+      if (!matchesEntryMode || !matchesRole) {
         return false;
       }
 
@@ -920,7 +948,7 @@ function AdminContent() {
         .toLowerCase()
         .includes(normalizedQuery);
     });
-  }, [overview.events, query, selectedEntryMode]);
+  }, [overview.events, query, selectedEntryMode, selectedRole]);
 
   const displayedEvents = useMemo(() => {
     if (!selectedLogDate) {
@@ -1021,11 +1049,13 @@ function AdminContent() {
                     type="button"
                     title={
                       selectedLogDate || selectedEntryMode !== 'all'
+                      || selectedRole !== 'all'
                         ? t('admin.filters.active')
                         : t('admin.filters.title')
                     }
                     className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border bg-white text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 ${
                       selectedLogDate || selectedEntryMode !== 'all'
+                      || selectedRole !== 'all'
                         ? 'border-emerald-500 bg-emerald-100 text-emerald-800 ring-2 ring-emerald-200'
                         : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                     }`}
@@ -1065,6 +1095,30 @@ function AdminContent() {
                     </div>
 
                     <div className="grid gap-2">
+                      <div className="text-sm font-semibold">{t('admin.filters.roleTitle')}</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['all', 'student', 'faculty'] as const).map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => setSelectedRole(role)}
+                            className={`inline-flex h-10 items-center justify-center rounded-md border px-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 ${
+                              selectedRole === role
+                                ? 'border-gray-950 bg-gray-950 text-white'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {role === 'all'
+                              ? t('admin.filters.mode.all')
+                              : role === 'student'
+                                ? t('admin.participantRole.student')
+                                : t('admin.participantRole.faculty')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
                       <div className="text-sm font-semibold">{t('admin.log.dateFilterTitle')}</div>
                       <div className="text-xs text-gray-500">{t('admin.log.dateFilterDescription')}</div>
                       <input
@@ -1080,8 +1134,9 @@ function AdminContent() {
                       onClick={() => {
                         setSelectedLogDate('');
                         setSelectedEntryMode('all');
+                        setSelectedRole('all');
                       }}
-                      disabled={!selectedLogDate && selectedEntryMode === 'all'}
+                      disabled={!selectedLogDate && selectedEntryMode === 'all' && selectedRole === 'all'}
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <X className="h-4 w-4" />
@@ -1173,6 +1228,19 @@ function AdminContent() {
                             </span>
                           </div>
                           <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
+                          {participant.participantRole === 'faculty' && (participant.subjects ?? []).length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {participant.subjects.map((subject) => (
+                                <span
+                                  key={subject.id}
+                                  className="max-w-full truncate rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
+                                  title={getAdminSubjectDisplayName(subject, language)}
+                                >
+                                  {getAdminSubjectDisplayName(subject, language)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 text-xs text-gray-600 md:flex">
@@ -1455,13 +1523,39 @@ function AdminContent() {
               {t('admin.participant.participantRole')}
               <select
                 value={newParticipantRole}
-                onChange={(event) => setNewParticipantRole(event.target.value as 'student' | 'faculty')}
+                onChange={(event) => {
+                  const nextRole = event.target.value as 'student' | 'faculty';
+                  setNewParticipantRole(nextRole);
+                  if (nextRole === 'student') {
+                    setNewParticipantSubjectId('');
+                  }
+                }}
                 className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
               >
                 <option value="student">{t('admin.participant.participantRoleStudent')}</option>
                 <option value="faculty">{t('admin.participant.participantRoleFaculty')}</option>
               </select>
             </label>
+
+            {newParticipantRole === 'faculty' && (
+              <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+                {t('admin.participant.subject')}
+                <select
+                  value={newParticipantSubjectId}
+                  onChange={(event) => setNewParticipantSubjectId(event.target.value)}
+                  required
+                  className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                >
+                  <option value="">{t('admin.participant.subjectPlaceholder')}</option>
+                  {overview.subjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {getAdminSubjectDisplayName(subject, language)}
+                      {subject.number ? ` (${subject.number})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <DialogFooter>
               <button

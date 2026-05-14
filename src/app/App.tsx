@@ -339,7 +339,7 @@ function WeeklyCategoryPanel({ categories }: { categories: Subject[] }) {
 function AppContent({ participantId }: AppContentProps) {
   const pb = new PocketBase('https://api.methric.ch');
 
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
@@ -469,7 +469,7 @@ function AppContent({ participantId }: AppContentProps) {
 
       return subjectsWithUniqueColors;
     }
-    if (!participantId || participantStatus !== 'valid' || participantRole !== 'student') {
+    if (!participantId || participantStatus !== 'valid') {
       setSubjects([]);
       return;
     }
@@ -757,6 +757,12 @@ function AppContent({ participantId }: AppContentProps) {
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
   const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : subjects;
+  const participantSubjectLabel = participantRole === 'faculty'
+    ? subjects
+      .map((subject) => getSubjectDisplayName(subject, language))
+      .filter(Boolean)
+      .join(', ')
+    : '';
 
   if (participantStatus === 'loading') {
     return (
@@ -788,6 +794,9 @@ function AppContent({ participantId }: AppContentProps) {
               {participantName && (
                 <span className="line-clamp-2 min-w-0 overflow-hidden text-sm font-semibold leading-tight text-gray-600 md:text-base">
                   {participantName}
+                  {participantSubjectLabel && (
+                    <span className="font-medium text-gray-500"> - {participantSubjectLabel}</span>
+                  )}
                 </span>
               )}
             </div>

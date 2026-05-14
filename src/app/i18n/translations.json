@@ -408,12 +408,16 @@
     "de": "Filter aktiv"
   },
   "admin.filters.description": {
-    "en": "Filter the log by day and limit the log and participants by entry mode.",
-    "de": "Filtere das Protokoll nach Tag und begrenze Protokoll und Teilnehmende nach Eintragsart."
+    "en": "Filter the log by day and limit the log and participants by entry mode or role.",
+    "de": "Filtere das Protokoll nach Tag und begrenze Protokoll und Teilnehmende nach Eintragsart oder Rolle."
   },
   "admin.filters.entryModeTitle": {
     "en": "Entry mode",
     "de": "Eintragsart"
+  },
+  "admin.filters.roleTitle": {
+    "en": "Role",
+    "de": "Rolle"
   },
   "admin.filters.mode.all": {
     "en": "All",
@@ -750,6 +754,14 @@
   "admin.participant.participantRoleFaculty": {
     "en": "Faculty",
     "de": "Dozierende"
+  },
+  "admin.participant.subject": {
+    "en": "Subject",
+    "de": "Fach"
+  },
+  "admin.participant.subjectPlaceholder": {
+    "en": "Select subject",
+    "de": "Fach ausw\u00e4hlen"
   },
   "admin.participant.created": {
     "en": "Participant created.",

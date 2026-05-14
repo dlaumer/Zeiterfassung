@@ -204,6 +204,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
 
     const participantById = {}
     const participantStatsById = {}
+    const participantSubjectsById = {}
     const validSubmittedPeriodKeysByParticipant = {}
     for (const participant of participants) {
         participantById[participant.id] = {
@@ -223,6 +224,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             lastActivityAt: "",
         }
         validSubmittedPeriodKeysByParticipant[participant.id] = {}
+        participantSubjectsById[participant.id] = []
     }
 
     const subjectById = {}
@@ -250,6 +252,10 @@ routerAdd("GET", "/api/admin/overview", (e) => {
 
         if (participantStatsById[participantId]) {
             participantStatsById[participantId].subjectCount++
+        }
+
+        if (participantSubjectsById[participantId] && subjectById[subjectId]) {
+            participantSubjectsById[participantId].push(subjectById[subjectId])
         }
 
         if (subjectStatsById[subjectId]) {
@@ -443,6 +449,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         participants: Object.keys(participantById).map((id) => ({
             ...participantById[id],
             ...participantStatsById[id],
+            subjects: participantSubjectsById[id] || [],
         })),
         subjects: Object.keys(subjectById).map((id) => ({
             ...subjectById[id],
@@ -486,6 +493,7 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     const email = String(body.email || "").trim()
     const entryMode = String(body.entryMode || "day").trim() === "week" ? "week" : "day"
     const participantRole = String(body.type || body.participantRole || "student").trim() === "faculty" ? "faculty" : "student"
+    const subjectId = String(body.subjectId || body.subject || "").trim()
 
     if (!name) {
         return e.json(400, { error: "Missing participant name" })
@@ -500,6 +508,31 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     participant.set("type", participantRole)
 
     $app.save(participant)
+
+    if (participantRole === "faculty") {
+        if (!subjectId) {
+            $app.delete(participant)
+            return e.json(400, { error: "Missing faculty subject" })
+        }
+
+        let subject = null
+        try {
+            subject = $app.findRecordById("subjects", subjectId)
+        } catch (error) {
+            subject = null
+        }
+
+        if (!subject || adminStringValue(subject, "entryMode") !== "day") {
+            $app.delete(participant)
+            return e.json(400, { error: "Invalid faculty subject" })
+        }
+
+        const participantSubjectCollection = $app.findCollectionByNameOrId("participant_subjects")
+        const participantSubject = new Record(participantSubjectCollection)
+        participantSubject.set("participant", participant.id)
+        participantSubject.set("subject", subjectId)
+        $app.save(participantSubject)
+    }
 
     return e.json(200, {
         ok: true,

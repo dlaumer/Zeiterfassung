@@ -370,11 +370,12 @@ function getFilenameFromDisposition(disposition: string | null, fallback: string
   return match?.[1] || fallback;
 }
 
-async function downloadAdminCsv(endpoint: string, participantId: string, fallbackFilename: string, periodType?: string) {
+async function downloadAdminFile(endpoint: string, query: Record<string, string>, fallbackFilename: string) {
   const url = new URL(endpoint, pocketBaseUrl);
-  url.searchParams.set('participantId', participantId);
-  if (periodType === 'day' || periodType === 'week') {
-    url.searchParams.set('periodType', periodType);
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
   }
 
   const response = await fetch(url.toString(), {
@@ -396,6 +397,17 @@ async function downloadAdminCsv(endpoint: string, participantId: string, fallbac
   link.click();
   link.remove();
   URL.revokeObjectURL(objectUrl);
+}
+
+async function downloadAdminCsv(endpoint: string, participantId: string, fallbackFilename: string, periodType?: string) {
+  await downloadAdminFile(
+    endpoint,
+    {
+      participantId,
+      ...(periodType === 'day' || periodType === 'week' ? { periodType } : {}),
+    },
+    fallbackFilename,
+  );
 }
 
 interface ParticipantActionMenuProps {
@@ -469,10 +481,11 @@ function ParticipantActionMenu({
 
 interface SubjectActionMenuProps {
   subject: AdminSubject;
+  onExportData: (subject: AdminSubject) => void;
   onRemove: (subject: AdminSubject) => void;
 }
 
-function SubjectActionMenu({ subject, onRemove }: SubjectActionMenuProps) {
+function SubjectActionMenu({ subject, onExportData, onRemove }: SubjectActionMenuProps) {
   const { t } = useI18n();
 
   return (
@@ -487,6 +500,11 @@ function SubjectActionMenu({ subject, onRemove }: SubjectActionMenuProps) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48 border-gray-200 bg-white text-gray-900">
+        <DropdownMenuItem onSelect={() => onExportData(subject)} className="cursor-pointer">
+          <Download className="h-4 w-4" />
+          {t('admin.subject.downloadData')}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-gray-100" />
         <DropdownMenuItem
           onSelect={() => onRemove(subject)}
           className="cursor-pointer text-red-700 focus:bg-red-50 focus:text-red-700"
@@ -630,6 +648,20 @@ function AdminContent() {
     } catch (error) {
       console.error('Clean participant export failed:', error);
       showActionMessage('error', t('admin.participant.exportFailed'));
+    }
+  }
+
+  async function handleExportSubjectData(subject: AdminSubject) {
+    try {
+      await downloadAdminFile(
+        '/api/export-subject-data',
+        { subjectId: subject.id },
+        `subject_${subject.key || subject.id}_data.zip`,
+      );
+      showActionMessage('success', t('admin.subject.exportStarted'));
+    } catch (error) {
+      console.error('Subject export failed:', error);
+      showActionMessage('error', t('admin.subject.exportFailed'));
     }
   }
 
@@ -1460,7 +1492,11 @@ function AdminContent() {
                         </div>
                       </div>
                       <div className="shrink-0">
-                        <SubjectActionMenu subject={subject} onRemove={setSubjectToRemove} />
+                        <SubjectActionMenu
+                          subject={subject}
+                          onExportData={handleExportSubjectData}
+                          onRemove={setSubjectToRemove}
+                        />
                       </div>
                     </div>
                   ))}

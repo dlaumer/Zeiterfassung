@@ -843,6 +843,18 @@
     "en": "Delete subject",
     "de": "Fach l\u00f6schen"
   },
+  "admin.subject.downloadData": {
+    "en": "Download data",
+    "de": "Daten herunterladen"
+  },
+  "admin.subject.exportStarted": {
+    "en": "Subject data download started.",
+    "de": "Download der Fachdaten gestartet."
+  },
+  "admin.subject.exportFailed": {
+    "en": "Could not export subject data.",
+    "de": "Fachdaten konnten nicht exportiert werden."
+  },
   "admin.subject.removed": {
     "en": "Subject deleted.",
     "de": "Fach wurde gel\u00f6scht."

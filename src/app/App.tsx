@@ -261,6 +261,17 @@ function mergeDailyEntries(existingEntry: DailyEntry, addendum: DailyEntry): Dai
   };
 }
 
+function shouldMarkDeletedPeriodMissing(date: string, entryMode: EntryMode) {
+  if (entryMode === 'week') {
+    return true;
+  }
+
+  const parsedDate = new Date(`${date}T00:00:00`);
+  const day = parsedDate.getDay();
+
+  return day >= 1 && day <= 5;
+}
+
 interface AppContentProps {
   participantId: string | null;
 }
@@ -627,6 +638,12 @@ function AppContent({ participantId }: AppContentProps) {
       return newEntries;
     });
 
+    setMissingSubmissionDates((previousDates) => {
+      const nextDates = new Set(previousDates);
+      nextDates.delete(entry.date);
+      return nextDates;
+    });
+
     setShowEntryModal(false);
     setShowViewModal(false);
   };
@@ -652,6 +669,14 @@ function AppContent({ participantId }: AppContentProps) {
     const newEntries = new Map(entries);
     newEntries.delete(date);
     setEntries(newEntries);
+
+    if (shouldMarkDeletedPeriodMissing(date, entryMode)) {
+      setMissingSubmissionDates((previousDates) => {
+        const nextDates = new Set(previousDates);
+        nextDates.add(date);
+        return nextDates;
+      });
+    }
 
     const entriesObj = Object.fromEntries(newEntries);
     //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));

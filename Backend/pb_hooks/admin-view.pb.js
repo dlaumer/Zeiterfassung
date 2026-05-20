@@ -160,6 +160,31 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         return adminCountWeekdaysInclusive(parsedReferenceDate, today)
     }
 
+    function adminIsWeekdayDate(date) {
+        const weekday = date.getUTCDay()
+        return weekday !== 0 && weekday !== 6
+    }
+
+    function adminIsExpectedSubmittedPeriod(participant, periodType, periodStart, referenceDate) {
+        const parsedPeriodStart = adminParseDateOnly(periodStart)
+        const parsedReferenceDate = adminParseDateOnly(referenceDate)
+
+        if (!participant || !parsedPeriodStart || !parsedReferenceDate) {
+            return false
+        }
+
+        if (periodType !== participant.entryMode) {
+            return false
+        }
+
+        if (participant.entryMode === "week") {
+            const referenceWeek = adminParseDateOnly(adminStartOfWeekMonday(referenceDate))
+            return !!referenceWeek && parsedPeriodStart.getTime() >= referenceWeek.getTime()
+        }
+
+        return parsedPeriodStart.getTime() >= parsedReferenceDate.getTime() && adminIsWeekdayDate(parsedPeriodStart)
+    }
+
     function adminCreateDeletionEvent(app, deletedSubmission, participantName) {
         const collection = app.findCollectionByNameOrId("admin_activity_events")
         const eventRecord = new Record(collection)
@@ -304,7 +329,12 @@ routerAdd("GET", "/api/admin/overview", (e) => {
                 }
 
                 const periodKey = adminStringValue(submission, "periodType") + ":" + adminPeriodDate(adminDateValue(submission, "periodStart"))
-                if (periodKey !== ":") {
+                if (periodKey !== ":" && adminIsExpectedSubmittedPeriod(
+                    participantById[participantId],
+                    adminStringValue(submission, "periodType"),
+                    adminDateValue(submission, "periodStart"),
+                    referenceDate
+                )) {
                     validSubmittedPeriodKeysByParticipant[participantId][periodKey] = true
                 }
             }

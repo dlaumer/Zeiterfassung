@@ -177,7 +177,6 @@ export function SubjectTimeInput({
             }}
           />
         </Slider>
-        <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>
       </div>}
     </div>
 

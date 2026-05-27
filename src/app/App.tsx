@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ViewEntryModal } from './components/ViewEntryModal';
-import { CourseManagement, Subject, getSubjectDisplayName } from './components/CourseManagement';
+import { CourseManagement, Subject, compareSubjectsByDisplayName, getSubjectDisplayName } from './components/CourseManagement';
 import { format } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import { LanguageSelector } from './i18n/LanguageSelector';
@@ -319,13 +319,14 @@ function ContactInfoButton() {
   );
 }
 
-function WeeklyCategoryPanel({ categories }: { categories: Subject[] }) {
+function WeeklyCategoryPanel({ categories, title }: { categories: Subject[]; title?: string }) {
   const { t, language } = useI18n();
+  const categoryTitle = title || "";
 
   return (
     <div className="h-full min-h-0 bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col">
       <div className="flex items-center justify-between mb-4 shrink-0">
-        <h3 className="font-semibold text-gray-900">{t('weeklyEntry.categories')}</h3>
+        <h3 className="font-semibold text-gray-900">{categoryTitle}</h3>
       </div>
       <div className="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
         {categories.map((category) => (
@@ -781,9 +782,10 @@ function AppContent({ participantId }: AppContentProps) {
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
-  const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : subjects;
+  const sortedSubjects = [...subjects].sort(compareSubjectsByDisplayName(language));
+  const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects;
   const participantSubjectLabel = participantRole === 'faculty'
-    ? subjects
+    ? sortedSubjects
       .map((subject) => getSubjectDisplayName(subject, language))
       .filter(Boolean)
       .join(', ')
@@ -819,9 +821,6 @@ function AppContent({ participantId }: AppContentProps) {
               {participantName && (
                 <span className="line-clamp-2 min-w-0 overflow-hidden text-sm font-semibold leading-tight text-gray-600 md:text-base">
                   {participantName}
-                  {participantSubjectLabel && (
-                    <span className="font-medium text-gray-500"> - {participantSubjectLabel}</span>
-                  )}
                 </span>
               )}
             </div>
@@ -850,10 +849,10 @@ function AppContent({ participantId }: AppContentProps) {
 
           <div className="min-w-0 min-h-0">
             {participantRole === 'faculty' ? (
-              <WeeklyCategoryPanel categories={WEEKLY_CATEGORIES} />
+              <WeeklyCategoryPanel categories={WEEKLY_CATEGORIES} title={participantSubjectLabel} />
             ) : (
               <CourseManagement
-                subjects={subjects}
+                subjects={sortedSubjects}
                 onAddSubject={handleAddSubject}
                 onRemoveSubject={handleRemoveSubject}
                 availableSubjects={availableSubjects}
@@ -877,6 +876,7 @@ function AppContent({ participantId }: AppContentProps) {
           defaultCommuteTime={defaultCommuteTime}
           entryMode={entryMode}
           participantRole={participantRole}
+          participantSubjectLabel={participantSubjectLabel}
         />
       )}
 

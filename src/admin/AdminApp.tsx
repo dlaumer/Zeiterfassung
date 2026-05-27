@@ -93,7 +93,7 @@ interface AdminEventItem {
 
 interface AdminEvent {
   id: string;
-  kind: 'submission' | 'deletion' | 'reminder' | string;
+  kind: 'submission' | 'deletion' | 'reminder' | 'invitation' | string;
   eventType: string;
   happenedAt: string;
   participantId: string;
@@ -202,6 +202,10 @@ function formatMinutes(minutes: number, t: (id: string, params?: Record<string, 
 }
 
 function getEventLabel(eventType: string, t: (id: string) => string) {
+  if (eventType === 'invitation') {
+    return t('admin.event.invitation');
+  }
+
   if (eventType === 'reminder') {
     return t('admin.event.reminder');
   }
@@ -248,6 +252,16 @@ function formatSubjectCredits(credits: number, language: Language) {
 function getAdminSubjectDisplayName(subject: AdminParticipantSubject | AdminSubject, language: Language) {
   const fallback = 'key' in subject ? subject.key : subject.id;
   return getSubjectName(subject.labelEn, subject.labelDe, language, fallback);
+}
+
+function compareAdminSubjectsByDisplayName(language: Language) {
+  const locale = getIntlLocale(language);
+
+  return (a: AdminParticipantSubject | AdminSubject, b: AdminParticipantSubject | AdminSubject) => (
+    getAdminSubjectDisplayName(a, language).localeCompare(getAdminSubjectDisplayName(b, language), locale, { sensitivity: 'base' }) ||
+    (a.number ?? '').localeCompare(b.number ?? '', locale, { sensitivity: 'base' }) ||
+    a.key.localeCompare(b.key, locale, { sensitivity: 'base' })
+  );
 }
 
 function normalizeImportCell(value: unknown) {
@@ -317,6 +331,10 @@ function getAdminItemLabel(
 }
 
 function eventBadgeClasses(kind: string, eventType: string) {
+  if (kind === 'invitation' || eventType === 'invitation') {
+    return 'border-cyan-200 bg-cyan-50 text-cyan-700';
+  }
+
   if (kind === 'reminder' || eventType === 'reminder') {
     return 'border-violet-200 bg-violet-50 text-violet-700';
   }
@@ -413,6 +431,7 @@ async function downloadAdminCsv(endpoint: string, participantId: string, fallbac
 interface ParticipantActionMenuProps {
   participant: AdminParticipant;
   onCopyLink: (participantId: string) => void;
+  onSendInvitation: (participant: AdminParticipant) => void;
   onSendReminder: (participant: AdminParticipant) => void;
   onExportAll: (participant: AdminParticipant) => void;
   onExportClean: (participant: AdminParticipant) => void;
@@ -422,6 +441,7 @@ interface ParticipantActionMenuProps {
 function ParticipantActionMenu({
   participant,
   onCopyLink,
+  onSendInvitation,
   onSendReminder,
   onExportAll,
   onExportClean,
@@ -452,6 +472,10 @@ function ParticipantActionMenu({
         >
           <Copy className="h-4 w-4" />
           {t('admin.participant.getLink')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onSendInvitation(participant)} className="cursor-pointer">
+          <Mail className="h-4 w-4" />
+          {t('admin.participant.sendInvitation')}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSendReminder(participant)} className="cursor-pointer">
           <Mail className="h-4 w-4" />
@@ -674,9 +698,26 @@ function AdminContent() {
         },
       });
       showActionMessage('success', t('admin.participant.reminderSent', { email: participant.email || participant.name }));
+      await loadOverview();
     } catch (error) {
       console.error('Participant reminder failed:', error);
       showActionMessage('error', t('admin.participant.reminderFailed'));
+    }
+  }
+
+  async function handleSendParticipantInvitation(participant: AdminParticipant) {
+    try {
+      await pb.send('/api/admin/participant/invitation', {
+        method: 'POST',
+        body: {
+          participantId: participant.id,
+        },
+      });
+      showActionMessage('success', t('admin.participant.invitationSent', { email: participant.email || participant.name }));
+      await loadOverview();
+    } catch (error) {
+      console.error('Participant invitation failed:', error);
+      showActionMessage('error', t('admin.participant.invitationFailed'));
     }
   }
 
@@ -937,23 +978,25 @@ function AdminContent() {
 
   const filteredSubjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
+    const sortedSubjects = [...overview.subjects].sort(compareAdminSubjectsByDisplayName(language));
+
     if (!normalizedQuery) {
-      return overview.subjects;
+      return sortedSubjects;
     }
 
-    return overview.subjects.filter((subject) =>
+    return sortedSubjects.filter((subject) =>
       [subject.number, subject.key, subject.labelEn, subject.labelDe, subject.id]
         .join(' ')
         .toLowerCase()
         .includes(normalizedQuery),
     );
-  }, [overview.subjects, query]);
+  }, [overview.subjects, query, language]);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return overview.events.filter((event) => {
       const matchesEntryMode =
-        selectedEntryMode === 'all' || event.kind === 'reminder' || event.periodType === selectedEntryMode;
+        selectedEntryMode === 'all' || event.kind === 'reminder' || event.kind === 'invitation' || event.periodType === selectedEntryMode;
       const eventRole = event.participantRole === 'faculty' ? 'faculty' : 'student';
       const matchesRole = selectedRole === 'all' || eventRole === selectedRole;
 
@@ -1262,7 +1305,7 @@ function AdminContent() {
                           <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
                           {participant.participantRole === 'faculty' && (participant.subjects ?? []).length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1.5">
-                              {participant.subjects.map((subject) => (
+                              {[...participant.subjects].sort(compareAdminSubjectsByDisplayName(language)).map((subject) => (
                                 <span
                                   key={subject.id}
                                   className="max-w-full truncate rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
@@ -1316,6 +1359,7 @@ function AdminContent() {
                       <ParticipantActionMenu
                         participant={participant}
                         onCopyLink={handleCopyParticipantLink}
+                        onSendInvitation={handleSendParticipantInvitation}
                         onSendReminder={handleSendParticipantReminder}
                         onExportAll={handleExportAllParticipantData}
                         onExportClean={handleExportCleanParticipantData}
@@ -1358,7 +1402,7 @@ function AdminContent() {
                             event.eventType,
                           )}`}
                         >
-                          {event.kind === 'reminder' && <Mail className="mr-1 h-3.5 w-3.5" />}
+                          {(event.kind === 'reminder' || event.kind === 'invitation') && <Mail className="mr-1 h-3.5 w-3.5" />}
                           {(event.kind === 'deletion' || event.eventType === 'deleted') && <Trash2 className="mr-1 h-3.5 w-3.5" />}
                           {getEventLabel(event.eventType, t)}
                         </span>
@@ -1366,7 +1410,7 @@ function AdminContent() {
                           {event.participantName || event.participantId || t('admin.unknownParticipant')}
                         </span>
                         <span className="shrink-0 text-xs text-gray-400">
-                          {event.kind === 'reminder' ? t('admin.participant.label') : event.periodType || t('admin.period')}
+                          {event.kind === 'reminder' || event.kind === 'invitation' ? t('admin.participant.label') : event.periodType || t('admin.period')}
                         </span>
                       </div>
 
@@ -1377,7 +1421,7 @@ function AdminContent() {
                         <div className="mt-1 leading-tight">{formatPeriodLabel(event, language, t)}</div>
                       </div>
 
-                      {event.kind !== 'reminder' && (
+                      {event.kind !== 'reminder' && event.kind !== 'invitation' && (
                         <details className="group mt-2">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 [&::-webkit-details-marker]:hidden">
                             <ChevronDown className="h-3.5 w-3.5 text-gray-500 transition-transform group-open:rotate-180" />
@@ -1583,7 +1627,7 @@ function AdminContent() {
                   className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
                 >
                   <option value="">{t('admin.participant.subjectPlaceholder')}</option>
-                  {overview.subjects.map((subject) => (
+                  {[...overview.subjects].sort(compareAdminSubjectsByDisplayName(language)).map((subject) => (
                     <option key={subject.id} value={subject.id}>
                       {getAdminSubjectDisplayName(subject, language)}
                       {subject.number ? ` (${subject.number})` : ''}

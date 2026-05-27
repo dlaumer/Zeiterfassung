@@ -16,6 +16,18 @@ export interface Subject {
 export const getSubjectDisplayName = (subject: Subject, language: 'en' | 'de') =>
   language === 'de' ? subject.labelDe : subject.labelEn;
 
+export const compareSubjectsByDisplayName = (language: 'en' | 'de') => (a: Subject, b: Subject) => {
+  const locale = language === 'de' ? 'de-CH' : 'en';
+  const aName = getSubjectDisplayName(a, language) || a.key || a.number || a.id;
+  const bName = getSubjectDisplayName(b, language) || b.key || b.number || b.id;
+
+  return (
+    aName.localeCompare(bName, locale, { sensitivity: 'base' }) ||
+    (a.number ?? '').localeCompare(b.number ?? '', locale, { sensitivity: 'base' }) ||
+    a.key.localeCompare(b.key, locale, { sensitivity: 'base' })
+  );
+};
+
 const formatSubjectCredits = (credits: number, language: 'en' | 'de') => `${credits} ${language === 'de' ? 'KP' : 'CP'}`;
 
 interface CourseManagementProps {
@@ -41,9 +53,9 @@ export function CourseManagement({
     setSearchQuery('');
   };
 
-  const availableToAdd = availableSubjects.filter(
-    availableSubject => !subjects.find(subject => subject.id === availableSubject.id)
-  );
+  const availableToAdd = availableSubjects
+    .filter(availableSubject => !subjects.find(subject => subject.id === availableSubject.id))
+    .sort(compareSubjectsByDisplayName(language));
 
   const filteredSubjects = availableToAdd.filter(subject =>
     [getSubjectDisplayName(subject, language), subject.number ?? '', subject.key]
@@ -179,7 +191,7 @@ export function CourseManagement({
         </div>
       ) : subjects.length > 0 ? (
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-          {subjects.map(subject => (
+          {[...subjects].sort(compareSubjectsByDisplayName(language)).map(subject => (
             <div
               key={subject.id}
               className="group flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"

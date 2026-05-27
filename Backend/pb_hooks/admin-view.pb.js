@@ -1,46 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-function adminRecordValue(record, fieldName, fallback) {
-    const value = record.get(fieldName)
-    return value === null || value === undefined ? fallback : value
-}
-
-function adminStringValue(record, fieldName) {
-    return String(adminRecordValue(record, fieldName, "") || "")
-}
-
-function adminNumberValue(record, fieldName) {
-    return Number(adminRecordValue(record, fieldName, 0) || 0)
-}
-
-function adminDateValue(record, fieldName) {
-    return String(adminRecordValue(record, fieldName, "") || "")
-}
-
-function adminCreateDeletionEvent(app, deletedSubmission, participantName) {
-    const collection = app.findCollectionByNameOrId("admin_activity_events")
-    const eventRecord = new Record(collection)
-
-    eventRecord.set("kind", "deletion")
-    eventRecord.set("participant", adminStringValue(deletedSubmission, "participant"))
-    eventRecord.set("participantName", participantName)
-    eventRecord.set("submissionId", deletedSubmission.id)
-    eventRecord.set("periodType", adminStringValue(deletedSubmission, "periodType"))
-    eventRecord.set("periodStart", adminDateValue(deletedSubmission, "periodStart"))
-    eventRecord.set("periodEnd", adminDateValue(deletedSubmission, "periodEnd"))
-    eventRecord.set("submissionMode", adminStringValue(deletedSubmission, "submissionMode"))
-    eventRecord.set("comment", adminStringValue(deletedSubmission, "comment"))
-    eventRecord.set("dataRating", adminNumberValue(deletedSubmission, "dataRating"))
-    eventRecord.set("generalAdminTime", adminNumberValue(deletedSubmission, "generalAdminTime"))
-    eventRecord.set("commuteTime", adminNumberValue(deletedSubmission, "commuteTime"))
-    eventRecord.set("structuralChanges", adminNumberValue(deletedSubmission, "structuralChanges"))
-
-    app.save(eventRecord)
-}
 
 routerAdd("GET", "/api/admin/overview", (e) => {
-
-
     function adminRecordValue(record, fieldName, fallback) {
         const value = record.get(fieldName)
         return value === null || value === undefined ? fallback : value
@@ -435,6 +396,9 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         const happenedAt = adminDateValue(reminderRecord, "created")
         const participantEmail = adminStringValue(reminderRecord, "participantEmail")
         const sentByEmail = adminStringValue(reminderRecord, "sentByEmail")
+        const subject = adminStringValue(reminderRecord, "subject")
+        const normalizedSubject = subject.toLowerCase()
+        const eventType = normalizedSubject.indexOf("invitation") === -1 && normalizedSubject.indexOf("einladung") === -1 ? "reminder" : "invitation"
 
         if (participantStatsById[participantId] && (!participantStatsById[participantId].lastActivityAt || String(happenedAt).localeCompare(participantStatsById[participantId].lastActivityAt) > 0)) {
             participantStatsById[participantId].lastActivityAt = happenedAt
@@ -442,8 +406,8 @@ routerAdd("GET", "/api/admin/overview", (e) => {
 
         events.push({
             id: "admin-reminder:" + reminderRecord.id,
-            kind: "reminder",
-            eventType: "reminder",
+            kind: eventType,
+            eventType: eventType,
             happenedAt: happenedAt,
             participantId: participantId,
             participantName: adminStringValue(reminderRecord, "participantName") || adminFindParticipantName(participantById, participantId),
@@ -517,6 +481,15 @@ routerAdd("POST", "/api/admin/reference-date", (e) => {
 }, $apis.requireAuth("admins"))
 
 routerAdd("POST", "/api/admin/participants", (e) => {
+    function adminRecordValue(record, fieldName, fallback) {
+        const value = record.get(fieldName)
+        return value === null || value === undefined ? fallback : value
+    }
+
+    function adminStringValue(record, fieldName) {
+        return String(adminRecordValue(record, fieldName, "") || "")
+    }
+
     const body = e.requestInfo().body || {}
 
     const name = String(body.name || "").trim()
@@ -529,19 +502,8 @@ routerAdd("POST", "/api/admin/participants", (e) => {
         return e.json(400, { error: "Missing participant name" })
     }
 
-    const collection = $app.findCollectionByNameOrId("participants")
-    const participant = new Record(collection)
-
-    participant.set("name", name)
-    participant.set("email", email)
-    participant.set("entryMode", entryMode)
-    participant.set("type", participantRole)
-
-    $app.save(participant)
-
     if (participantRole === "faculty") {
         if (!subjectId) {
-            $app.delete(participant)
             return e.json(400, { error: "Missing faculty subject" })
         }
 
@@ -552,21 +514,44 @@ routerAdd("POST", "/api/admin/participants", (e) => {
             subject = null
         }
 
-        if (!subject || adminStringValue(subject, "entryMode") !== "day") {
-            $app.delete(participant)
+        const subjectEntryMode = subject ? (adminStringValue(subject, "entryMode") || "day") : ""
+        if (!subject || subjectEntryMode !== "day") {
             return e.json(400, { error: "Invalid faculty subject" })
         }
+    }
 
-        const participantSubjectCollection = $app.findCollectionByNameOrId("participant_subjects")
-        const participantSubject = new Record(participantSubjectCollection)
-        participantSubject.set("participant", participant.id)
-        participantSubject.set("subject", subjectId)
-        $app.save(participantSubject)
+    let participantId = ""
+    try {
+        $app.runInTransaction((txApp) => {
+            const collection = txApp.findCollectionByNameOrId("participants")
+            const participant = new Record(collection)
+
+            participant.set("name", name)
+            participant.set("email", email)
+            participant.set("entryMode", entryMode)
+            participant.set("type", participantRole)
+
+            txApp.save(participant)
+            participantId = participant.id
+
+            if (participantRole !== "faculty") {
+                return
+            }
+
+            const participantSubjectCollection = txApp.findCollectionByNameOrId("participant_subjects")
+            const participantSubject = new Record(participantSubjectCollection)
+            participantSubject.set("participant", participant.id)
+            participantSubject.set("subject", subjectId)
+            txApp.save(participantSubject)
+        })
+    } catch (error) {
+        console.error("Failed to create admin participant:", error)
+        return e.json(400, { error: "Failed to create participant" })
     }
 
     return e.json(200, {
         ok: true,
-        participantId: participant.id,
+        participantId: participantId,
     })
 }, $apis.requireAuth("admins"))
 
@@ -606,6 +591,44 @@ routerAdd("POST", "/api/admin/subjects", (e) => {
 }, $apis.requireAuth("admins"))
 
 onRecordAfterDeleteSuccess((e) => {
+    function adminRecordValue(record, fieldName, fallback) {
+        const value = record.get(fieldName)
+        return value === null || value === undefined ? fallback : value
+    }
+
+    function adminStringValue(record, fieldName) {
+        return String(adminRecordValue(record, fieldName, "") || "")
+    }
+
+    function adminNumberValue(record, fieldName) {
+        return Number(adminRecordValue(record, fieldName, 0) || 0)
+    }
+
+    function adminDateValue(record, fieldName) {
+        return String(adminRecordValue(record, fieldName, "") || "")
+    }
+
+    function adminCreateDeletionEvent(app, deletedSubmission, participantName) {
+        const collection = app.findCollectionByNameOrId("admin_activity_events")
+        const eventRecord = new Record(collection)
+
+        eventRecord.set("kind", "deletion")
+        eventRecord.set("participant", adminStringValue(deletedSubmission, "participant"))
+        eventRecord.set("participantName", participantName)
+        eventRecord.set("submissionId", deletedSubmission.id)
+        eventRecord.set("periodType", adminStringValue(deletedSubmission, "periodType"))
+        eventRecord.set("periodStart", adminDateValue(deletedSubmission, "periodStart"))
+        eventRecord.set("periodEnd", adminDateValue(deletedSubmission, "periodEnd"))
+        eventRecord.set("submissionMode", adminStringValue(deletedSubmission, "submissionMode"))
+        eventRecord.set("comment", adminStringValue(deletedSubmission, "comment"))
+        eventRecord.set("dataRating", adminNumberValue(deletedSubmission, "dataRating"))
+        eventRecord.set("generalAdminTime", adminNumberValue(deletedSubmission, "generalAdminTime"))
+        eventRecord.set("commuteTime", adminNumberValue(deletedSubmission, "commuteTime"))
+        eventRecord.set("structuralChanges", adminNumberValue(deletedSubmission, "structuralChanges"))
+
+        app.save(eventRecord)
+    }
+
     const record = e.record
     if (!record) {
         return

@@ -46,6 +46,7 @@ interface DailyEntryModalProps {
   defaultCommuteTime?: number;
   entryMode?: 'day' | 'week';
   participantRole?: 'student' | 'faculty';
+  participantSubjectLabel?: string;
 }
 
 const DEFAULT_TIME_SLIDER_MAX = 5;
@@ -122,7 +123,7 @@ function EditablePercentageDisplay({ value, onChange }: EditablePercentageDispla
   );
 }
 
-export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student' }: DailyEntryModalProps) {
+export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student', participantSubjectLabel }: DailyEntryModalProps) {
   const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
@@ -141,6 +142,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const isAddMode = reEntryMode === 'add' && !!existingEntry;
   const isWeekly = entryMode === 'week';
   const isFaculty = participantRole === 'faculty';
+  const categoriesTitle = isFaculty && participantSubjectLabel
+    ? participantSubjectLabel
+    : ""
   const dateLocale = getDateLocale(language);
   const periodEnd = endOfWeek(date, { weekStartsOn: 1 });
   const periodLabel = isWeekly
@@ -387,7 +391,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
         </div>
 
         <div className="space-y-4 mb-6">
-          <h4 className="font-medium text-gray-800">{isFaculty ? t('weeklyEntry.categories') : t('dailyEntry.subjects')}</h4>
+          <h4 className="font-medium text-gray-800">{isFaculty ? categoriesTitle : t('dailyEntry.subjects')}</h4>
 
           {subjects.length === 0 ? (
             <div className="text-center py-8 bg-amber-50 rounded-xl">

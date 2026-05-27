@@ -499,6 +499,10 @@
     "en": "Reminder sent",
     "de": "Erinnerung gesendet"
   },
+  "admin.event.invitation": {
+    "en": "Invitation sent",
+    "de": "Einladung gesendet"
+  },
   "admin.event.activity": {
     "en": "Activity",
     "de": "Aktivität"
@@ -647,6 +651,10 @@
     "en": "Send Reminder",
     "de": "Erinnerung senden"
   },
+  "admin.participant.sendInvitation": {
+    "en": "Send invitation",
+    "de": "Einladung senden"
+  },
   "admin.participant.exportAll": {
     "en": "Export all data",
     "de": "Alle Daten exportieren"
@@ -694,6 +702,14 @@
   "admin.participant.reminderFailed": {
     "en": "Could not send the reminder email.",
     "de": "Die Erinnerungs-E-Mail konnte nicht gesendet werden."
+  },
+  "admin.participant.invitationSent": {
+    "en": "Invitation email sent to {{email}}.",
+    "de": "Einladungs-E-Mail wurde an {{email}} gesendet."
+  },
+  "admin.participant.invitationFailed": {
+    "en": "Could not send the invitation email.",
+    "de": "Die Einladungs-E-Mail konnte nicht gesendet werden."
   },
   "admin.participant.removed": {
     "en": "Participant removed.",

@@ -50,6 +50,7 @@ interface DailyEntryModalProps {
 }
 
 const DEFAULT_TIME_SLIDER_MAX = 5;
+const WEEKLY_TIME_SLIDER_MAX = 41;
 
 interface EditablePercentageDisplayProps {
   value: number;
@@ -137,6 +138,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showReliabilityError, setShowReliabilityError] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const reEntryMode = existingEntry ? 'add' : null;
   const isAddMode = reEntryMode === 'add' && !!existingEntry;
@@ -223,7 +225,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       date: format(date, 'yyyy-MM-dd'),
       courses: [],
       subjectTimes: [],
-      reliability: 0,
+      reliability: 5,
       adminEffort: 0,
       commuteTime: 0,
       structuralChanges: 0,
@@ -264,6 +266,12 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const hasEnteredSubjectTime = subjectTimes.some(
     ({ classTime, selfStudyTime }) => classTime > 0 || selfStudyTime > 0
   );
+  const hasEnteredHours =
+    courses.some((course) => course.hours > 0) ||
+    hasEnteredSubjectTime ||
+    adminEffort > 0 ||
+    commuteTime > 0 ||
+    structuralChanges > 0;
   const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 0);
   const hasChangedAdminEffort = adminEffort !== (isFaculty ? 0 : existingEntry?.adminEffort ?? 0);
   const hasChangedCommuteTime = !isFaculty && commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
@@ -297,6 +305,14 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
 
   const handleSubmit = async () => {
     setSaveError(null);
+    setShowReliabilityError(false);
+
+    if (hasEnteredHours && reliability <= 0) {
+      setShowReliabilityError(true);
+      setSaveError(t('dailyEntry.reliabilityRequired'));
+      return;
+    }
+
     setIsSaving(true);
     const entry: DailyEntry = {
       date: format(date, 'yyyy-MM-dd'),
@@ -436,6 +452,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                     isFaded={isFaded}
                     isAdditionalHours={reEntryMode === 'add'}
                     singleTimeLabel={isFaculty ? t('weeklyEntry.hours') : undefined}
+                    timeSliderMax={isWeekly ? WEEKLY_TIME_SLIDER_MAX : undefined}
                   />
                 );
               })}
@@ -458,7 +475,13 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 {[1, 2, 3, 4, 5].map(rating => (
                   <button
                     key={rating}
-                    onClick={() => setReliability(rating)}
+                    type="button"
+                    aria-label={`${t('dailyEntry.reliability')}: ${rating}/5`}
+                    onClick={() => {
+                      setReliability(rating);
+                      setShowReliabilityError(false);
+                      setSaveError(null);
+                    }}
                     className="transition-colors"
                   >
                     <Star
@@ -472,7 +495,19 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 ))}
               </div>
             </div>
+            {showReliabilityError && (
+              <p className="text-sm font-medium text-red-600">
+                {t('dailyEntry.reliabilityRequired')}
+              </p>
+            )}
           </div>
+
+          {shouldShowFacultyExtraSliders && (
+            <div className="space-y-1 bg-blue-50 rounded-lg p-3 text-xs text-blue-800">
+              <p>{t('weeklyEntry.facultyAllocationInfo')}</p>
+              <p className="italic">{t('weeklyEntry.facultyAllocationNote')}</p>
+            </div>
+          )}
 
           {shouldShowAdminEffort && <div className="space-y-2">
             <div className="flex items-center justify-between">

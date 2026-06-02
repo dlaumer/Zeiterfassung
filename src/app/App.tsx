@@ -36,6 +36,7 @@ interface DailyEntry {
   structuralChanges?: number;
   comment: string;
   skipped: boolean;
+  submittedAt?: string;
 }
 
 interface SaveDailyEntryPayload {
@@ -97,6 +98,7 @@ interface WorkloadStatusHistoryEntry {
   dataRating?: number;
   comment?: string;
   comments?: string[];
+  submittedAt?: string;
   subjects: WorkloadStatusSubject[];
 }
 
@@ -541,6 +543,7 @@ function AppContent({ participantId }: AppContentProps) {
             structuralChanges: Number(item.structuralChanges ?? 0) / 60,
             comment: getNewestComment(item),
             skipped: false,
+            submittedAt: item.submittedAt,
           });
         });
 
@@ -578,7 +581,7 @@ function AppContent({ participantId }: AppContentProps) {
       ? {
         participantId,
         weekStart: entry.date,
-        reliability: entry.skipped ? 0 : entry.reliability,
+        reliability: entry.skipped ? 5 : entry.reliability,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
         commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
         structuralChangesMinutes: participantRole === 'faculty' && !entry.skipped ? Math.round((entry.structuralChanges ?? 0) * 60) : 0,
@@ -599,7 +602,7 @@ function AppContent({ participantId }: AppContentProps) {
       : {
         participantId,
         date: entry.date,
-        reliability: entry.skipped ? 0 : entry.reliability,
+        reliability: entry.skipped ? 5 : entry.reliability,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
         commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
         structuralChangesMinutes: participantRole === 'faculty' && !entry.skipped ? Math.round((entry.structuralChanges ?? 0) * 60) : 0,

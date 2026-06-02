@@ -23,6 +23,70 @@
     "en": "If you have questions about the data entry, please contact:",
     "de": "Bei Fragen zur Dateneingabe wenden Sie sich bitte an:"
   },
+  "landing.adminLogin": {
+    "en": "Admin login",
+    "de": "Admin-Login"
+  },
+  "landing.eyebrow": {
+    "en": "Workload tracking for teaching and learning",
+    "de": "Workload Tracking für Lehre und Lernen"
+  },
+  "landing.title": {
+    "en": "Understanding workload with clear, reliable data.",
+    "de": "Lehr- und Lernaufwand mit klaren, verlässlichen Daten verstehen."
+  },
+  "landing.description": {
+    "en": "mETHric is a tool for the systematic collection and analysis of workload in teaching and learning. It creates transparency on the time spent by faculty and students and provides an evidence-based foundation for the pedagogical development of teaching formats as well as the aligned design and coordination of curricula. The application is flexible and can be used across different contexts beyond individual projects.",
+    "de": "mETHric ist ein Tool zur systematischen Erfassung und Analyse von Workload in Lehre und Studium. Es schafft Transparenz über den Zeitaufwand von Dozierenden und Studierenden und liefert eine evidenzbasierte Grundlage für die didaktische Weiterentwicklung von Lehrformaten sowie die abgestimmte Gestaltung und Koordination von Curricula. Die Anwendung ist flexibel und über einzelne Projekte hinaus in unterschiedlichen Kontexten einsetzbar."
+  },
+  "landing.contactCta": {
+    "en": "Contact Katharina Sperger",
+    "de": "Katharina Sperger kontaktieren"
+  },
+  "landing.newsCta": {
+    "en": "Latest news",
+    "de": "Neuigkeiten"
+  },
+  "landing.contactTitle": {
+    "en": "Contact",
+    "de": "Kontakt"
+  },
+  "landing.contactDescription": {
+    "en": "For questions about the project or data entry, please contact Katharina Sperger.",
+    "de": "Bei Fragen zum Projekt oder zur Datenerfassung wenden Sie sich bitte an Katharina Sperger."
+  },
+  "landing.newsTitle": {
+    "en": "News",
+    "de": "Neuigkeiten"
+  },
+  "landing.newsStuKoDate": {
+    "en": "May 7, 2026",
+    "de": "07.05.2026"
+  },
+  "landing.newsStuKoText": {
+    "en": "Presentation of mETHric as part of the “Faculty and Student Workload” project at the Conference of the Directors of Study (StuKo) on May 7, 2026.",
+    "de": "Präsentation von mETHric im Rahmen des Projekts “Faculty and Student Workload” im Rahmen der Studienkonferenz (StuKo) vom 07.05.2026."
+  },
+  "landing.newsSlidesLink": {
+    "en": "View slides",
+    "de": "Slides ansehen"
+  },
+  "landing.newsInnovedumText": {
+    "en": "Details about the Innovedum project for which mETHric was developed:",
+    "de": "Details zum Innovedum-Projekt, für welches mETHric entwickelt wurde:"
+  },
+  "landing.newsInnovedumLink": {
+    "en": "Open Innovedum project",
+    "de": "Innovedum-Projekt öffnen"
+  },
+  "landing.noNewsTitle": {
+    "en": "No news yet",
+    "de": "Noch keine Neuigkeiten"
+  },
+  "landing.noNewsDescription": {
+    "en": "Updates about the mETHric project will appear here as soon as there is something new to share.",
+    "de": "Aktuelle Hinweise zum mETHric-Projekt erscheinen hier, sobald es etwas Neues zu berichten gibt."
+  },
   "app.title": {
     "en": "Workload Tracker",
     "de": "Lernaufwand-Tracker"
@@ -40,8 +104,8 @@
     "de": "Starte, indem du auf einen Tag im Kalender klickst und deine Lernzeit einträgst."
   },
   "app.empty.hint": {
-    "en": "Track courses, admin work, commute time, and more to understand your daily workload better.",
-    "de": "Erfasse Fächer, Verwaltungsaufwand, Pendelzeit und mehr, um deinen täglichen Aufwand besser zu verstehen."
+    "en": "Track modules, admin work, commute time, and more to understand your daily workload better.",
+    "de": "Erfasse Module, Verwaltungsaufwand, Pendelzeit und mehr, um deinen täglichen Aufwand besser zu verstehen."
   },
   "calendar.week.mon": {
     "en": "Mon",
@@ -72,44 +136,44 @@
     "de": "So"
   },
   "courseManagement.title": {
-    "en": "Course Management",
-    "de": "Fächerverwaltung"
+    "en": "Module Management",
+    "de": "Modulverwaltung"
   },
   "common.add": {
     "en": "Add",
     "de": "Hinzufügen"
   },
   "courseManagement.none": {
-    "en": "No subjects added yet",
-    "de": "Noch keine Fächer hinzugefügt"
+    "en": "No modules added yet",
+    "de": "Noch keine Module hinzugefügt"
   },
   "courseManagement.first": {
-    "en": "Add Your First Subject",
-    "de": "Erstes Fach hinzufügen"
+    "en": "Add Your First Module",
+    "de": "Erstes Modul hinzufügen"
   },
   "courseManagement.maxReached": {
-    "en": "Maximum of 12 subjects reached",
-    "de": "Maximum von 12 Fächern erreicht"
+    "en": "Maximum of 12 modules reached",
+    "de": "Maximum von 12 Modulen erreicht"
   },
   "courseManagement.selectToAdd": {
-    "en": "Select a subject to add:",
-    "de": "Wähle ein Fach zum Hinzufügen:"
+    "en": "Select a module to add:",
+    "de": "Wähle ein Modul zum Hinzufügen:"
   },
   "courseManagement.search": {
-    "en": "Search subjects...",
-    "de": "Fächer suchen..."
+    "en": "Search modules...",
+    "de": "Module suchen..."
   },
   "courseManagement.noFound": {
-    "en": "No subjects found",
-    "de": "Keine Fächer gefunden"
+    "en": "No modules found",
+    "de": "Keine Module gefunden"
   },
   "common.cancel": {
     "en": "Cancel",
     "de": "Abbrechen"
   },
   "courseManagement.allAdded": {
-    "en": "All available subjects have been added",
-    "de": "Alle verfügbaren Fächer wurden hinzugefügt"
+    "en": "All available modules have been added",
+    "de": "Alle verfügbaren Module wurden hinzugefügt"
   },
   "common.close": {
     "en": "Close",
@@ -160,12 +224,12 @@
     "de": "Falls du mehr als das Slider-Maximum brauchst, gib den Wert direkt ein."
   },
   "dailyEntry.subjects": {
-    "en": "Subjects",
-    "de": "Fächer"
+    "en": "Modules",
+    "de": "Module"
   },
   "dailyEntry.noSubjectsHelp": {
-    "en": "Please add subjects in the Course Management panel first",
-    "de": "Bitte füge zuerst Fächer im Verwaltungsbereich hinzu"
+    "en": "Please add modules in the Module Management panel first",
+    "de": "Bitte füge zuerst Module im Verwaltungsbereich hinzu"
   },
   "dailyEntry.filledBefore": {
     "en": "Already filled",
@@ -203,6 +267,10 @@
     "en": "Saving failed. Please try again.",
     "de": "Speichern fehlgeschlagen. Bitte erneut versuchen."
   },
+  "dailyEntry.reliabilityRequired": {
+    "en": "Please enter data reliability.",
+    "de": "Bitte Datenzuverl\u00e4ssigkeit erfassen."
+  },
   "weeklyEntry.title": {
     "en": "Weekly Workload Entry",
     "de": "Wöchentlicher Aufwandseintrag"
@@ -218,6 +286,14 @@
   "weeklyEntry.structuralChanges": {
     "en": "Structural Changes",
     "de": "Structural Changes"
+  },
+  "weeklyEntry.facultyAllocationInfo": {
+    "en": "What share of the specified total workload (in hours or %) falls into the following two areas of work?",
+    "de": "Welcher Anteil des angegebenen Gesamtaufwands (in h bzw. %) entfällt auf die folgenden beiden Arbeitsbereiche?"
+  },
+  "weeklyEntry.facultyAllocationNote": {
+    "en": "Note: Structural changes can also be administrative in nature; in that case, please adjust both sliders accordingly.",
+    "de": "Hinweis: Strukturelle Änderungen können auch administrativer Natur sein, bitte dann beide Regler entsprechend einstellen."
   },
   "weeklyEntry.categoryGuide": {
     "en": "Open categorization guide (PDF)",
@@ -252,10 +328,18 @@
     "de": "Daten bereits eingetragen"
   },
   "viewEntry.existsInfo": {
+    "en": "Data already entered on {{date}} at {{time}}. You can add additional hours to the existing entry or delete all data for this day.",
+    "de": "Daten bereits am {{date}} um {{time}} eingetragen. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für den Tag löschen."
+  },
+  "viewEntry.existsInfoFallback": {
     "en": "This day already has workload data recorded. You can add additional hours to the existing entry or delete all data for this day.",
     "de": "Für diesen Tag sind bereits Daten vorhanden. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für den Tag löschen."
   },
   "viewEntry.weekExistsInfo": {
+    "en": "Data already entered on {{date}} at {{time}}. You can add additional hours to the existing entry or delete all data for this week.",
+    "de": "Daten bereits am {{date}} um {{time}} eingetragen. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für die Woche löschen."
+  },
+  "viewEntry.weekExistsInfoFallback": {
     "en": "This week already has workload data recorded. You can add additional hours to the existing entry or delete all data for this week.",
     "de": "Für diese Woche sind bereits Daten vorhanden. Du kannst zusätzliche Stunden hinzufügen oder alle Daten für die Woche löschen."
   },
@@ -272,16 +356,16 @@
     "de": "1 Lektion ≙ 1h"
   },
   "subject.removeTitle": {
-    "en": "Remove Subject?",
-    "de": "Fach entfernen?"
+    "en": "Remove Module?",
+    "de": "Modul entfernen?"
   },
   "subject.removeInfo": {
-    "en": "You have entered data for this subject. Removing it will clear the entered values. Are you sure?",
-    "de": "Für dieses Fach wurden Daten eingetragen. Beim Entfernen gehen die Werte verloren. Bist du sicher?"
+    "en": "You have entered data for this module. Removing it will clear the entered values. Are you sure?",
+    "de": "Für dieses Modul wurden Daten eingetragen. Beim Entfernen gehen die Werte verloren. Bist du sicher?"
   },
   "subject.removeConfirm": {
-    "en": "Are you sure that you want to remove that subject?",
-    "de": "Bist du sicher, dass du dieses Fach entfernen möchtest?"
+    "en": "Are you sure that you want to remove that module?",
+    "de": "Bist du sicher, dass du dieses Modul entfernen möchtest?"
   },
   "dailyEntry.closeConfirm": {
     "en": "If you close now, any unsaved changes in this entry will be lost.",
@@ -316,8 +400,8 @@
     "de": "Tägliche Einreichung"
   },
   "history.noSubjects": {
-    "en": "No subjects in this submission.",
-    "de": "Keine Fächer in dieser Einreichung."
+    "en": "No modules in this submission.",
+    "de": "Keine Module in dieser Einreichung."
   },
   "admin.login.title": {
     "en": "Admin Login",
@@ -352,8 +436,8 @@
     "de": "Admin"
   },
   "admin.subtitle": {
-    "en": "Participants, subjects, and chronological activity.",
-    "de": "Teilnehmende, Fächer und chronologische Aktivität."
+    "en": "Participants, modules, and chronological activity.",
+    "de": "Teilnehmende, Module und chronologische Aktivität."
   },
   "admin.referenceDate.title": {
     "en": "Reference date",
@@ -396,8 +480,8 @@
     "de": "Abmelden"
   },
   "admin.searchPlaceholder": {
-    "en": "Search participants, subjects, or activity",
-    "de": "Teilnehmende, Fächer oder Aktivitäten suchen"
+    "en": "Search participants, modules, or activity",
+    "de": "Teilnehmende, Module oder Aktivitäten suchen"
   },
   "admin.filters.title": {
     "en": "Filters",
@@ -564,8 +648,8 @@
     "de": "Gesendet von: {{email}}"
   },
   "admin.subject.fallback": {
-    "en": "Subject",
-    "de": "Fach"
+    "en": "Module",
+    "de": "Modul"
   },
   "admin.time.fallback": {
     "en": "time",
@@ -588,24 +672,24 @@
     "de": "Teilnehmende Person"
   },
   "admin.subjects.title": {
-    "en": "Subjects",
-    "de": "Fächer"
+    "en": "Modules",
+    "de": "Module"
   },
   "admin.subjects.none": {
-    "en": "No subjects found.",
-    "de": "Keine Fächer gefunden."
+    "en": "No modules found.",
+    "de": "Keine Module gefunden."
   },
   "admin.subjects.count": {
-    "en": "{{count}} subjects",
-    "de": "{{count}} Fächer"
+    "en": "{{count}} modules",
+    "de": "{{count}} Module"
   },
   "admin.subject.label": {
     "en": "Label",
     "de": "Bezeichnung"
   },
   "admin.subjectActions": {
-    "en": "Subject actions",
-    "de": "Aktionen f\u00fcr Fach"
+    "en": "Module actions",
+    "de": "Aktionen f\u00fcr Modul"
   },
   "admin.submissions.count": {
     "en": "{{count}} submissions",
@@ -644,8 +728,8 @@
     "de": "Aktionen für Teilnehmende"
   },
   "admin.participant.getLink": {
-    "en": "Get Link",
-    "de": "Link kopieren"
+    "en": "Open Link",
+    "de": "Link öffnen"
   },
   "admin.participant.sendReminder": {
     "en": "Send Reminder",
@@ -667,25 +751,13 @@
     "en": "Remove participant",
     "de": "Teilnehmende Person entfernen"
   },
-  "admin.participant.linkCopied": {
-    "en": "Participant link copied to clipboard.",
-    "de": "Link wurde in die Zwischenablage kopiert."
+  "admin.participant.linkOpened": {
+    "en": "Participant link opened.",
+    "de": "Link wurde geöffnet."
   },
-  "admin.participant.linkCopyFailed": {
-    "en": "Could not copy the participant link.",
-    "de": "Link konnte nicht kopiert werden."
-  },
-  "admin.participant.manualCopyTitle": {
-    "en": "Copy link manually",
-    "de": "Link manuell kopieren"
-  },
-  "admin.participant.manualCopyDescription": {
-    "en": "Your browser did not allow automatic clipboard access. Copy the participant link from the field below.",
-    "de": "Dein Browser hat keinen automatischen Zugriff auf die Zwischenablage erlaubt. Kopiere den Teilnehmenden-Link aus dem Feld unten."
-  },
-  "admin.participant.manualCopyLabel": {
-    "en": "Participant link",
-    "de": "Teilnehmenden-Link"
+  "admin.participant.linkOpenFailed": {
+    "en": "Could not open the participant link.",
+    "de": "Link konnte nicht geöffnet werden."
   },
   "admin.participant.exportStarted": {
     "en": "Export download started.",
@@ -772,12 +844,12 @@
     "de": "Dozierende"
   },
   "admin.participant.subject": {
-    "en": "Subject",
-    "de": "Fach"
+    "en": "Module",
+    "de": "Modul"
   },
   "admin.participant.subjectPlaceholder": {
-    "en": "Select subject",
-    "de": "Fach ausw\u00e4hlen"
+    "en": "Select module",
+    "de": "Modul ausw\u00e4hlen"
   },
   "admin.participant.created": {
     "en": "Participant created.",
@@ -788,20 +860,20 @@
     "de": "Teilnehmende Person konnte nicht erstellt werden."
   },
   "admin.subject.add": {
-    "en": "Add subject",
-    "de": "Fach hinzuf\u00fcgen"
+    "en": "Add module",
+    "de": "Modul hinzuf\u00fcgen"
   },
   "admin.subject.addTitle": {
-    "en": "Add subject",
-    "de": "Fach hinzuf\u00fcgen"
+    "en": "Add module",
+    "de": "Modul hinzuf\u00fcgen"
   },
   "admin.subject.addDescription": {
-    "en": "Create a subject that can later be assigned to participants.",
-    "de": "Erstelle ein Fach, das sp\u00e4ter Teilnehmenden zugewiesen werden kann."
+    "en": "Create a module that can later be assigned to participants.",
+    "de": "Erstelle ein Modul, das sp\u00e4ter Teilnehmenden zugewiesen werden kann."
   },
   "admin.subject.importTitle": {
-    "en": "Import subject list",
-    "de": "F\u00e4cherliste importieren"
+    "en": "Import module list",
+    "de": "Modulliste importieren"
   },
   "admin.subject.importDescription": {
     "en": "Upload an Excel file with Key, module label, ECTS, and optional LE number. The module label is used for English and German.",
@@ -816,16 +888,16 @@
     "de": "Importiere..."
   },
   "admin.subject.imported": {
-    "en": "{{count}} subjects imported.",
-    "de": "{{count}} F\u00e4cher importiert."
+    "en": "{{count}} modules imported.",
+    "de": "{{count}} Module importiert."
   },
   "admin.subject.importNone": {
-    "en": "No new subjects found in this file.",
-    "de": "Keine neuen F\u00e4cher in dieser Datei gefunden."
+    "en": "No new modules found in this file.",
+    "de": "Keine neuen Module in dieser Datei gefunden."
   },
   "admin.subject.importFailed": {
-    "en": "Could not import the subject list.",
-    "de": "F\u00e4cherliste konnte nicht importiert werden."
+    "en": "Could not import the module list.",
+    "de": "Modulliste konnte nicht importiert werden."
   },
   "admin.subject.key": {
     "en": "Key",
@@ -848,44 +920,44 @@
     "de": "Credits"
   },
   "admin.subject.created": {
-    "en": "Subject created.",
-    "de": "Fach wurde erstellt."
+    "en": "Module created.",
+    "de": "Modul wurde erstellt."
   },
   "admin.subject.createFailed": {
-    "en": "Could not create the subject.",
-    "de": "Fach konnte nicht erstellt werden."
+    "en": "Could not create the module.",
+    "de": "Modul konnte nicht erstellt werden."
   },
   "admin.subject.remove": {
-    "en": "Delete subject",
-    "de": "Fach l\u00f6schen"
+    "en": "Delete module",
+    "de": "Modul l\u00f6schen"
   },
   "admin.subject.downloadData": {
     "en": "Download data",
     "de": "Daten herunterladen"
   },
   "admin.subject.exportStarted": {
-    "en": "Subject data download started.",
-    "de": "Download der Fachdaten gestartet."
+    "en": "Module data download started.",
+    "de": "Download der Moduldaten gestartet."
   },
   "admin.subject.exportFailed": {
-    "en": "Could not export subject data.",
-    "de": "Fachdaten konnten nicht exportiert werden."
+    "en": "Could not export module data.",
+    "de": "Moduldaten konnten nicht exportiert werden."
   },
   "admin.subject.removed": {
-    "en": "Subject deleted.",
-    "de": "Fach wurde gel\u00f6scht."
+    "en": "Module deleted.",
+    "de": "Modul wurde gel\u00f6scht."
   },
   "admin.subject.removeFailed": {
-    "en": "Could not delete the subject. It may still be used by submitted data.",
-    "de": "Fach konnte nicht gel\u00f6scht werden. Es wird m\u00f6glicherweise noch von eingereichten Daten verwendet."
+    "en": "Could not delete the module. It may still be used by submitted data.",
+    "de": "Modul konnte nicht gel\u00f6scht werden. Es wird m\u00f6glicherweise noch von eingereichten Daten verwendet."
   },
   "admin.subject.removeTitle": {
-    "en": "Delete subject?",
-    "de": "Fach l\u00f6schen?"
+    "en": "Delete module?",
+    "de": "Modul l\u00f6schen?"
   },
   "admin.subject.removeDescription": {
-    "en": "This will permanently delete {{name}} and remove it from participant subject lists. Submitted data will block deletion.",
-    "de": "{{name}} wird dauerhaft gel\u00f6scht und aus den F\u00e4cherlisten der Teilnehmenden entfernt. Eingereichte Daten blockieren die L\u00f6schung."
+    "en": "This will permanently delete {{name}} and remove it from participant module lists. Submitted data will block deletion.",
+    "de": "{{name}} wird dauerhaft gel\u00f6scht und aus den Modullisten der Teilnehmenden entfernt. Eingereichte Daten blockieren die L\u00f6schung."
   },
   "admin.create": {
     "en": "Create",

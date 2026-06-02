@@ -41,6 +41,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   ];
 
   const today = new Date();
+  const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
 
   const handlePrevMonth = () => {
     onDateChange(subMonths(currentDate, 1));
@@ -140,6 +141,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
           const weekKey = format(weekStart, 'yyyy-MM-dd');
           const isCurrentMonth = isSameMonth(weekStart, currentDate) || isSameMonth(weekEnd, currentDate);
           const isSelected = selectedDate && isSameDay(weekStart, selectedDate);
+          const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
           const hasEntryWeek = hasEntry(weekStart);
           const isMissingWeek = isMissingSubmissionDay(weekStart);
           const subjectColors = getSubjectColorsForDate(weekStart);
@@ -152,13 +154,20 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                 h-full min-h-0 rounded-lg md:rounded-xl px-2.5 py-1.5 text-[10px] font-medium transition-all relative sm:text-xs md:px-3.5 md:py-2.5 md:text-sm
                 ${!isCurrentMonth ? 'text-gray-300 hover:bg-gray-50' : 'hover:bg-gray-50'}
                 ${hasEntryWeek ? 'bg-gray-200 text-gray-700' : ''}
-                ${!hasEntryWeek && isMissingWeek ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
-                ${!isSelected && !hasEntryWeek ? 'text-gray-700' : ''}
+                ${!hasEntryWeek && isMissingWeek && !isCurrentWeek ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
+                ${!isSelected && !hasEntryWeek && !isCurrentWeek ? 'text-gray-700' : ''}
               `}
             >
               <div className="h-full flex items-center justify-between gap-3">
                 <div className="text-left">
-                  <div className="truncate font-semibold leading-tight">{format(weekStart, 'd MMM', { locale: dateLocale })} - {format(weekEnd, 'd MMM', { locale: dateLocale })}</div>
+                  <div
+                    className={`
+                      inline-block max-w-full truncate font-semibold leading-tight
+                      ${isCurrentWeek ? 'rounded-full bg-indigo-500 px-2 py-0.5 text-white' : ''}
+                    `}
+                  >
+                    {format(weekStart, 'd MMM', { locale: dateLocale })} - {format(weekEnd, 'd MMM', { locale: dateLocale })}
+                  </div>
                   <div className="truncate text-[9px] leading-tight text-gray-500 sm:text-[11px] md:text-xs">{t('history.week')}</div>
                 </div>
                 <div className="min-w-8 flex justify-end overflow-hidden md:min-w-12">
@@ -187,7 +196,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                 h-full min-h-0 rounded-lg md:rounded-xl px-1 py-1 text-xs md:text-sm font-medium transition-all relative
                 ${!isCurrentMonth ? 'text-gray-300 hover:bg-gray-50' : 'hover:bg-gray-50'}
                 ${hasEntryDay ? 'bg-gray-200 text-gray-700' : ''}
-                ${!hasEntryDay && isMissingDay ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
+                ${!hasEntryDay && isMissingDay && !isToday ? 'bg-red-50 text-gray-700 hover:bg-red-100/70' : ''}
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
               `}
             >

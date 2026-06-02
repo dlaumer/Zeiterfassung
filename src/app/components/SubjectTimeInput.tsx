@@ -17,6 +17,7 @@ interface SubjectTimeInputProps {
   onRemove?: () => void;
   isAdditionalHours?: boolean;
   singleTimeLabel?: string;
+  timeSliderMax?: number;
 }
 
 export function SubjectTimeInput({
@@ -31,7 +32,8 @@ export function SubjectTimeInput({
   isFaded = false,
   onRemove,
   isAdditionalHours = false,
-  singleTimeLabel
+  singleTimeLabel,
+  timeSliderMax = 8
 }: SubjectTimeInputProps) {
   const { t } = useI18n();
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
@@ -103,15 +105,15 @@ export function SubjectTimeInput({
           <EditableTimeDisplay
             value={classTime}
             onChange={onClassTimeChange}
-            max={24}
+            max={Math.max(24, timeSliderMax)}
             prefix={isAdditionalHours && classHasExistingEntry && classTime > 0 ? '+' : ''}
             displayClassName={isAdditionalHours && classHasExistingEntry && classTime > 0 ? 'text-green-600' : ''}
           />
         </div>
         <Slider
-          value={[Math.min(classTime, 8)]}
+          value={[Math.min(classTime, timeSliderMax)]}
           onValueChange={(value) => onClassTimeChange(value[0])}
-          max={8}
+          max={timeSliderMax}
           step={0.25}
           className="relative flex items-center select-none touch-none w-full h-5"
         >
@@ -120,7 +122,7 @@ export function SubjectTimeInput({
               className="absolute h-full rounded-full transition-all"
               style={{
                 backgroundColor: subjectColor,
-                width: `${(Math.min(classTime, 8) / 8) * 100}%`
+                width: `${(Math.min(classTime, timeSliderMax) / timeSliderMax) * 100}%`
               }}
             />
           </div>
@@ -129,7 +131,7 @@ export function SubjectTimeInput({
             style={{
               borderColor: subjectColor,
               position: 'absolute',
-              left: `calc(${(Math.min(classTime, 8) / 8) * 100}% - 10px)`
+              left: `calc(${(Math.min(classTime, timeSliderMax) / timeSliderMax) * 100}% - 10px)`
             }}
           />
         </Slider>
@@ -145,15 +147,15 @@ export function SubjectTimeInput({
           <EditableTimeDisplay
             value={selfStudyTime}
             onChange={onSelfStudyTimeChange}
-            max={24}
+            max={Math.max(24, timeSliderMax)}
             prefix={isAdditionalHours && studyHasExistingEntry && selfStudyTime > 0 ? '+' : ''}
             displayClassName={isAdditionalHours && studyHasExistingEntry && selfStudyTime > 0 ? 'text-green-600' : ''}
           />
         </div>
         <Slider
-          value={[Math.min(selfStudyTime, 8)]}
+          value={[Math.min(selfStudyTime, timeSliderMax)]}
           onValueChange={(value) => onSelfStudyTimeChange(value[0])}
-          max={8}
+          max={timeSliderMax}
           step={0.25}
           className="relative flex items-center select-none touch-none w-full h-5"
         >
@@ -163,7 +165,7 @@ export function SubjectTimeInput({
               style={{
                 backgroundColor: subjectColor,
                 opacity: 0.35,
-                width: `${(Math.min(selfStudyTime, 8) / 8) * 100}%`
+                width: `${(Math.min(selfStudyTime, timeSliderMax) / timeSliderMax) * 100}%`
               }}
             />
           </div>
@@ -173,7 +175,7 @@ export function SubjectTimeInput({
               borderColor: subjectColor,
               opacity: 0.65,
               position: 'absolute',
-              left: `calc(${(Math.min(selfStudyTime, 8) / 8) * 100}% - 10px)`
+              left: `calc(${(Math.min(selfStudyTime, timeSliderMax) / timeSliderMax) * 100}% - 10px)`
             }}
           />
         </Slider>

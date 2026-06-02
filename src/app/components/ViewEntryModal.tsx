@@ -25,6 +25,7 @@ interface DailyEntry {
   commuteTime: number;
   comment: string;
   skipped: boolean;
+  submittedAt?: string;
 }
 
 interface ViewEntryModalProps {
@@ -37,10 +38,30 @@ interface ViewEntryModalProps {
   entryMode?: 'day' | 'week';
 }
 
+function parseSubmittedAt(value?: string): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value.replace(' ', 'T'));
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload, entryMode = 'day' }: ViewEntryModalProps) {
   const { t, language } = useI18n();
   const isWeekly = entryMode === 'week';
   const dateLocale = getDateLocale(language);
+  const submittedAt = parseSubmittedAt(entry.submittedAt);
+  const submittedDate = submittedAt ? format(submittedAt, 'dd.MM.yyyy', { locale: dateLocale }) : '';
+  const submittedTime = submittedAt ? format(submittedAt, 'HH:mm', { locale: dateLocale }) : '';
+  const existsInfoText = submittedAt
+    ? isWeekly
+      ? t('viewEntry.weekExistsInfo', { date: submittedDate, time: submittedTime })
+      : t('viewEntry.existsInfo', { date: submittedDate, time: submittedTime })
+    : isWeekly
+      ? t('viewEntry.weekExistsInfoFallback')
+      : t('viewEntry.existsInfoFallback');
   const periodEnd = endOfWeek(date, { weekStartsOn: 1 });
   const periodLabel = isWeekly
     ? `${format(date, 'MMMM d, yyyy', { locale: dateLocale })} - ${format(periodEnd, 'MMMM d, yyyy', { locale: dateLocale })}`
@@ -97,7 +118,7 @@ export function ViewEntryModal({ entry, date, onClose, onDelete, onAddWorkload, 
         </div>
 
         <div className="bg-blue-50 rounded-xl p-4 mb-6">
-          <p className="text-sm text-blue-800">{isWeekly ? t('viewEntry.weekExistsInfo') : t('viewEntry.existsInfo')}</p>
+          <p className="text-sm text-blue-800">{existsInfoText}</p>
         </div>
 
         <div className="flex flex-col gap-3">

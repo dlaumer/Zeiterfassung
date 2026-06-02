@@ -454,6 +454,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             dataRating: representativeDataRating,
             comment: representativeComment,
             comments: comments,
+            submittedAt: representative.get("submittedAt") || "",
             submissionIds: effectiveSubmissions.map((s) => s.id),
             baseSubmissionId: baseSubmission ? baseSubmission.id : "",
             appendumSubmissionIds: appendumSubmissions.map((s) => s.id),

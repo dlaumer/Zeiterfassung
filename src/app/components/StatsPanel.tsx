@@ -40,10 +40,10 @@ export function StatsPanel({ totalHours, averagePerDay, daysTracked, courseAvera
           </div>
         </div>
 
-        {/* Course Averages */}
+        {/* Module Averages */}
         {Object.keys(courseAverages).length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Average Time per Course</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Average Time per Module</h4>
             <div className="space-y-2">
               {Object.entries(courseAverages)
                 .sort((a, b) => b[1] - a[1])

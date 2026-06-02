@@ -5,8 +5,8 @@ import {
   CalendarDays,
   ChevronDown,
   Clock3,
-  Copy,
   Download,
+  ExternalLink,
   Filter,
   LogOut,
   Mail,
@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from '../app/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '../app/components/ui/popover';
+import { Tabs, TabsList, TabsTrigger } from '../app/components/ui/tabs';
 
 const pocketBaseUrl = 'https://api.methric.ch';
 const pb = new PocketBase(`${pocketBaseUrl}/`);
@@ -132,6 +133,7 @@ interface SubjectImportRow {
 
 type AdminMobileTab = 'log' | 'participants' | 'subjects';
 type AdminEntryModeFilter = 'all' | 'day' | 'week';
+type AdminParticipantEntryModeTab = 'day' | 'week';
 type AdminRoleFilter = 'all' | 'student' | 'faculty';
 
 const emptyOverview: AdminOverview = {
@@ -354,33 +356,68 @@ function eventBadgeClasses(kind: string, eventType: string) {
   return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 }
 
-function participantMissingToneClasses(missingCount: number) {
-  if (missingCount >= 10) {
+function getAdjustedMissingCount(missingCount: number) {
+  return Math.max(0, missingCount - 1);
+}
+
+function participantMissingLevel(missingCount: number, entryMode: string) {
+  if (missingCount === 0) {
+    return 'none';
+  }
+
+  if (entryMode === 'week') {
+    return missingCount >= 2 ? 'red' : 'amber';
+  }
+
+  if (missingCount >= 11) {
+    return 'red';
+  }
+
+  if (missingCount >= 6) {
+    return 'amber';
+  }
+
+  return 'blue';
+}
+
+function participantMissingToneClasses(missingCount: number, entryMode: string) {
+  const level = participantMissingLevel(missingCount, entryMode);
+
+  if (level === 'red') {
     return 'border-l-red-500 bg-red-50/55';
   }
 
-  if (missingCount >= 5) {
+  if (level === 'amber') {
     return 'border-l-amber-500 bg-amber-50/55';
   }
 
-  if (missingCount >= 1) {
+  if (level === 'blue') {
     return 'border-l-sky-500 bg-sky-50/55';
   }
 
   return 'border-l-emerald-500 bg-emerald-50/50';
 }
 
-function getParticipantLink(participantId: string) {
-  return `${window.location.origin}/${participantId}/`;
-}
+function participantMissingBadgeClasses(missingCount: number, entryMode: string) {
+  const level = participantMissingLevel(missingCount, entryMode);
 
-async function copyTextToClipboard(text: string) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return true;
+  if (level === 'red') {
+    return 'bg-red-100 text-red-700';
   }
 
-  return false;
+  if (level === 'amber') {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  if (level === 'blue') {
+    return 'bg-sky-100 text-sky-700';
+  }
+
+  return 'bg-emerald-100 text-emerald-700';
+}
+
+function getParticipantLink(participantId: string) {
+  return `${window.location.origin}/${participantId}/`;
 }
 
 function getFilenameFromDisposition(disposition: string | null, fallback: string) {
@@ -430,7 +467,7 @@ async function downloadAdminCsv(endpoint: string, participantId: string, fallbac
 
 interface ParticipantActionMenuProps {
   participant: AdminParticipant;
-  onCopyLink: (participantId: string) => void;
+  onOpenLink: (participantId: string) => void;
   onSendInvitation: (participant: AdminParticipant) => void;
   onSendReminder: (participant: AdminParticipant) => void;
   onExportAll: (participant: AdminParticipant) => void;
@@ -440,7 +477,7 @@ interface ParticipantActionMenuProps {
 
 function ParticipantActionMenu({
   participant,
-  onCopyLink,
+  onOpenLink,
   onSendInvitation,
   onSendReminder,
   onExportAll,
@@ -448,9 +485,9 @@ function ParticipantActionMenu({
   onRemove,
 }: ParticipantActionMenuProps) {
   const { t } = useI18n();
-  const handleCopyPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+  const handleOpenPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
-    onCopyLink(participant.id);
+    onOpenLink(participant.id);
   };
 
   return (
@@ -466,11 +503,11 @@ function ParticipantActionMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48 border-gray-200 bg-white text-gray-900">
         <DropdownMenuItem
-          onPointerDown={handleCopyPointerDown}
+          onPointerDown={handleOpenPointerDown}
           onSelect={(event) => event.preventDefault()}
           className="cursor-pointer"
         >
-          <Copy className="h-4 w-4" />
+          <ExternalLink className="h-4 w-4" />
           {t('admin.participant.getLink')}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSendInvitation(participant)} className="cursor-pointer">
@@ -552,10 +589,10 @@ function AdminContent() {
   const [loginStatus, setLoginStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [actionStatus, setActionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [actionMessage, setActionMessage] = useState('');
-  const [manualCopyText, setManualCopyText] = useState('');
   const [participantToRemove, setParticipantToRemove] = useState<AdminParticipant | null>(null);
   const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('participants');
+  const [activeParticipantEntryMode, setActiveParticipantEntryMode] = useState<AdminParticipantEntryModeTab>('day');
   const [selectedLogDate, setSelectedLogDate] = useState('');
   const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
   const [selectedRole, setSelectedRole] = useState<AdminRoleFilter>('all');
@@ -626,21 +663,17 @@ function AdminContent() {
     setActionMessage(message);
   }
 
-  async function handleCopyParticipantLink(participantId: string) {
+  function handleOpenParticipantLink(participantId: string) {
     const participantLink = getParticipantLink(participantId);
+    const participantWindow = window.open(participantLink, '_blank');
 
-    try {
-      const didCopy = await copyTextToClipboard(participantLink);
-      if (didCopy) {
-        showActionMessage('success', t('admin.participant.linkCopied'));
-        return;
-      }
-
-      setManualCopyText(participantLink);
-    } catch (error) {
-      console.error('Participant link copy failed:', error);
-      setManualCopyText(participantLink);
+    if (participantWindow) {
+      participantWindow.opener = null;
+      showActionMessage('success', t('admin.participant.linkOpened'));
+      return;
     }
+
+    showActionMessage('error', t('admin.participant.linkOpenFailed'));
   }
 
   async function handleExportAllParticipantData(participant: AdminParticipant) {
@@ -941,14 +974,13 @@ function AdminContent() {
     };
   }, [actionMessage]);
 
-  const filteredParticipants = useMemo(() => {
+  const participantListCandidates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return overview.participants
       .filter((participant) => {
-        const matchesEntryMode = selectedEntryMode === 'all' || participant.entryMode === selectedEntryMode;
         const participantRole = participant.participantRole === 'faculty' ? 'faculty' : 'student';
         const matchesRole = selectedRole === 'all' || participantRole === selectedRole;
-        if (!matchesEntryMode || !matchesRole) {
+        if (!matchesRole) {
           return false;
         }
 
@@ -964,8 +996,11 @@ function AdminContent() {
         ].join(' ').toLowerCase().includes(normalizedQuery);
       })
       .sort((a, b) => {
-        if (b.missingCount !== a.missingCount) {
-          return b.missingCount - a.missingCount;
+        const adjustedMissingA = getAdjustedMissingCount(a.missingCount);
+        const adjustedMissingB = getAdjustedMissingCount(b.missingCount);
+
+        if (adjustedMissingB !== adjustedMissingA) {
+          return adjustedMissingB - adjustedMissingA;
         }
 
         if (a.entryMode !== b.entryMode) {
@@ -974,7 +1009,21 @@ function AdminContent() {
 
         return (a.name || a.id).localeCompare(b.name || b.id);
       });
-  }, [overview.participants, query, selectedEntryMode, selectedRole]);
+  }, [overview.participants, query, selectedRole]);
+
+  const participantCountsByEntryMode = useMemo(() => ({
+    day: participantListCandidates.filter((participant) => participant.entryMode !== 'week').length,
+    week: participantListCandidates.filter((participant) => participant.entryMode === 'week').length,
+  }), [participantListCandidates]);
+
+  const filteredParticipants = useMemo(
+    () => participantListCandidates.filter((participant) =>
+      activeParticipantEntryMode === 'week'
+        ? participant.entryMode === 'week'
+        : participant.entryMode !== 'week',
+    ),
+    [activeParticipantEntryMode, participantListCandidates],
+  );
 
   const filteredSubjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -1098,16 +1147,16 @@ function AdminContent() {
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-gray-950">
       <header className="shrink-0 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div className="flex shrink-0 items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 md:flex-nowrap md:gap-4">
+            <div className="flex min-w-0 shrink items-center gap-3">
               <img
                 src={logoMethric}
                 alt={t('admin.title')}
-                className="h-11 w-auto object-contain"
+                className="h-10 max-w-full object-contain md:h-11"
               />
             </div>
 
-            <div className="order-3 flex w-full max-w-xl gap-2 md:order-2 md:flex-1">
+            <div className="order-3 flex w-full gap-2 md:order-2 md:max-w-xl md:flex-1">
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
@@ -1222,25 +1271,29 @@ function AdminContent() {
               </Popover>
             </div>
 
-            <div className="order-2 grid w-full shrink-0 grid-cols-3 gap-2 md:order-3 md:w-auto md:flex md:flex-nowrap md:items-center">
+            <div className="order-2 ml-auto flex w-auto shrink-0 items-center gap-2 md:order-3">
               <div className="min-w-0">
                 <LanguageSelector />
               </div>
               <button
                 type="button"
                 onClick={loadOverview}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:w-auto"
+                title={t('admin.refresh')}
+                aria-label={t('admin.refresh')}
+                className="inline-flex h-9 w-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:h-10 md:w-auto md:px-3"
               >
                 <RefreshCw className="h-4 w-4" />
-                <span className="truncate">{t('admin.refresh')}</span>
+                <span className="hidden truncate md:inline">{t('admin.refresh')}</span>
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:w-auto"
+                title={t('admin.logout')}
+                aria-label={t('admin.logout')}
+                className="inline-flex h-9 w-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:h-10 md:w-auto md:px-3"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="truncate">{t('admin.logout')}</span>
+                <span className="hidden truncate md:inline">{t('admin.logout')}</span>
               </button>
             </div>
           </div>
@@ -1277,15 +1330,49 @@ function AdminContent() {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="shrink-0 border-b border-gray-100 p-2">
+              <Tabs
+                value={activeParticipantEntryMode}
+                onValueChange={(value) => setActiveParticipantEntryMode(value as AdminParticipantEntryModeTab)}
+              >
+                <TabsList className="grid h-10 w-full grid-cols-2 rounded-md bg-gray-100 p-1">
+                  {(['week', 'day'] as const).map((mode) => (
+                    <TabsTrigger
+                      key={mode}
+                      value={mode}
+                      className="rounded-md text-sm font-semibold text-gray-600 data-[state=active]:bg-white data-[state=active]:text-gray-950 data-[state=active]:shadow-sm"
+                    >
+                      <span className="truncate">
+                        {mode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
+                      </span>
+                      <span
+                        className={`ml-1 rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                          activeParticipantEntryMode === mode
+                            ? 'bg-gray-900 text-white'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {participantCountsByEntryMode[mode]}
+                      </span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
             {filteredParticipants.length === 0 ? (
               <div className="p-4 text-sm text-gray-500">{t('admin.participants.none')}</div>
             ) : (
               <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
-                {filteredParticipants.map((participant) => (
+                {filteredParticipants.map((participant) => {
+                  const adjustedMissingCount = getAdjustedMissingCount(participant.missingCount);
+                  const missingBadgeClasses = participantMissingBadgeClasses(adjustedMissingCount, participant.entryMode);
+
+                  return (
                   <div
                     key={participant.id}
                     className={`flex min-w-0 items-start justify-between gap-3 overflow-hidden border-l-4 p-4 transition-colors ${participantMissingToneClasses(
-                      participant.missingCount,
+                      adjustedMissingCount,
+                      participant.entryMode,
                     )}`}
                   >
                     <div className="min-w-0 flex-1">
@@ -1322,17 +1409,9 @@ function AdminContent() {
                           <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
                           <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
                           <span
-                            className={`rounded-full px-2 py-0.5 font-semibold ${
-                              participant.missingCount >= 10
-                                ? 'bg-red-100 text-red-700'
-                                : participant.missingCount >= 5
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : participant.missingCount >= 1
-                                    ? 'bg-sky-100 text-sky-700'
-                                    : 'bg-emerald-100 text-emerald-700'
-                            }`}
+                            className={`rounded-full px-2 py-0.5 font-semibold ${missingBadgeClasses}`}
                           >
-                            {t('admin.missing.count', { count: participant.missingCount })}
+                            {t('admin.missing.count', { count: adjustedMissingCount })}
                           </span>
                         </div>
                       </div>
@@ -1341,24 +1420,16 @@ function AdminContent() {
                         <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
                         <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
                         <span
-                          className={`rounded-full px-2 py-0.5 font-semibold ${
-                            participant.missingCount >= 10
-                              ? 'bg-red-100 text-red-700'
-                              : participant.missingCount >= 5
-                                ? 'bg-amber-100 text-amber-800'
-                                : participant.missingCount >= 1
-                                  ? 'bg-sky-100 text-sky-700'
-                                  : 'bg-emerald-100 text-emerald-700'
-                          }`}
+                          className={`rounded-full px-2 py-0.5 font-semibold ${missingBadgeClasses}`}
                         >
-                          {t('admin.missing.count', { count: participant.missingCount })}
+                          {t('admin.missing.count', { count: adjustedMissingCount })}
                         </span>
                       </div>
                     </div>
                     <div className="shrink-0">
                       <ParticipantActionMenu
                         participant={participant}
-                        onCopyLink={handleCopyParticipantLink}
+                        onOpenLink={handleOpenParticipantLink}
                         onSendInvitation={handleSendParticipantInvitation}
                         onSendReminder={handleSendParticipantReminder}
                         onExportAll={handleExportAllParticipantData}
@@ -1367,7 +1438,8 @@ function AdminContent() {
                       />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1811,37 +1883,6 @@ function AdminContent() {
               </button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={manualCopyText !== ''} onOpenChange={(isOpen) => !isOpen && setManualCopyText('')}>
-        <DialogContent className="bg-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('admin.participant.manualCopyTitle')}</DialogTitle>
-            <DialogDescription>{t('admin.participant.manualCopyDescription')}</DialogDescription>
-          </DialogHeader>
-
-          <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
-            {t('admin.participant.manualCopyLabel')}
-            <input
-              readOnly
-              autoFocus
-              value={manualCopyText}
-              onFocus={(event) => event.currentTarget.select()}
-              onClick={(event) => event.currentTarget.select()}
-              className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-            />
-          </label>
-
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setManualCopyText('')}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
-            >
-              {t('common.close')}
-            </button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -1,7 +1,8 @@
 {
   "apiKey": "re_your_resend_api_key",
-  "senderName": "Methric Team",
+  "senderName": "mETHric Team",
   "senderAddress": "noreply@methric.ch",
   "replyTo": "noreply@methric.ch",
-  "appUrl": "https://methric.ch"
+  "appUrl": "https://methric.ch",
+  "categoryGuideUrl": "https://methric.ch/assets/KategorisierungZeiterfassung-CsWCFA54.pdf"
 }

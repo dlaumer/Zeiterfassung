@@ -187,6 +187,10 @@
     "en": "Keep Editing",
     "de": "Weiter bearbeiten"
   },
+  "common.continue": {
+    "en": "Continue",
+    "de": "Weiter"
+  },
   "dailyEntry.saved": {
     "en": "Entry Saved!",
     "de": "Eintrag gespeichert!"
@@ -210,6 +214,62 @@
   "dailyEntry.skip": {
     "en": "Skip",
     "de": "Überspringen"
+  },
+  "dailyEntry.missingBeforeTitle": {
+    "en": "Earlier entries are still missing",
+    "de": "Frühere Einträge fehlen noch"
+  },
+  "dailyEntry.missingBeforeMainStudentDaySingular": {
+    "en": "There is still 1 earlier red day in the calendar. Please fill in the missing day if possible.",
+    "de": "Im Kalender gibt es noch 1 früheren roten Tag. Bitte fülle den fehlenden Tag nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainStudentDayPlural": {
+    "en": "There are still {{count}} earlier red days in the calendar. Please fill in the missing days if possible.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Tage. Bitte fülle die fehlenden Tage nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainStudentWeekSingular": {
+    "en": "There is still 1 earlier red week in the calendar. Please fill in the missing week if possible.",
+    "de": "Im Kalender gibt es noch 1 frühere rote Woche. Bitte fülle die fehlende Woche nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainStudentWeekPlural": {
+    "en": "There are still {{count}} earlier red weeks in the calendar. Please fill in the missing weeks if possible.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Wochen. Bitte fülle die fehlenden Wochen nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainFacultyDaySingular": {
+    "en": "There is still 1 earlier red day in the calendar. Please fill in the missing day if possible.",
+    "de": "Im Kalender gibt es noch 1 früheren roten Tag. Bitte füllen Sie den fehlenden Tag nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainFacultyDayPlural": {
+    "en": "There are still {{count}} earlier red days in the calendar. Please fill in the missing days if possible.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Tage. Bitte füllen Sie die fehlenden Tage nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainFacultyWeekSingular": {
+    "en": "There is still 1 earlier red week in the calendar. Please fill in the missing week if possible.",
+    "de": "Im Kalender gibt es noch 1 frühere rote Woche. Bitte füllen Sie die fehlende Woche nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeMainFacultyWeekPlural": {
+    "en": "There are still {{count}} earlier red weeks in the calendar. Please fill in the missing weeks if possible.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Wochen. Bitte füllen Sie die fehlenden Wochen nach Möglichkeit aus."
+  },
+  "dailyEntry.missingBeforeSkipStudentDay": {
+    "en": "Days on which you did not work for your studies can be included by clicking \"Skip\".",
+    "de": "Tage, an denen du nicht fürs Studium gearbeitet hast, kannst du durch einen Klick auf \"Überspringen\" in die Auswertung aufnehmen."
+  },
+  "dailyEntry.missingBeforeSkipStudentWeek": {
+    "en": "Weeks on which you did not work for your studies can be included by clicking \"Skip\".",
+    "de": "Wochen, in denen du nicht fürs Studium gearbeitet hast, kannst du durch einen Klick auf \"Überspringen\" in die Auswertung aufnehmen."
+  },
+  "dailyEntry.missingBeforeSkipFacultyDay": {
+    "en": "Days during which you had no teaching duties for this module can be included by clicking \"Skip\".",
+    "de": "Tage, an denen Sie keine Lehraufgaben für dieses Modul übernommen haben, können Sie durch einen Klick auf \"Überspringen\" in die Auswertung aufnehmen."
+  },
+  "dailyEntry.missingBeforeSkipFacultyWeek": {
+    "en": "Weeks during which you had no teaching duties for this module can be included by clicking \"Skip\".",
+    "de": "Wochen, in denen Sie keine Lehraufgaben für dieses Modul übernommen haben, können Sie durch einen Klick auf \"Überspringen\" in die Auswertung aufnehmen."
+  },
+  "dailyEntry.missingBeforeSkipLocation": {
+    "en": "After you continue, the Skip button is in the top right of the entry window.",
+    "de": "Nach dem Fortfahren befindet sich der Button \"Überspringen\" oben rechts im Eingabefenster."
   },
   "dailyEntry.tip": {
     "en": "Tips:",
@@ -503,6 +563,10 @@
     "en": "Role",
     "de": "Rolle"
   },
+  "admin.filters.showInactive": {
+    "en": "Show inactive",
+    "de": "Inaktive anzeigen"
+  },
   "admin.filters.mode.all": {
     "en": "All",
     "de": "Alle"
@@ -667,6 +731,26 @@
     "en": "{{count}} participants",
     "de": "{{count}} Teilnehmende"
   },
+  "admin.participants.sortBy": {
+    "en": "Sort participants by",
+    "de": "Teilnehmende sortieren nach"
+  },
+  "admin.participants.sort.missing": {
+    "en": "Missing submissions",
+    "de": "Fehlende Einreichungen"
+  },
+  "admin.participants.sort.created": {
+    "en": "Created",
+    "de": "Erstellt"
+  },
+  "admin.participants.sort.firstName": {
+    "en": "First name",
+    "de": "Vorname"
+  },
+  "admin.participants.sort.lastName": {
+    "en": "Last name",
+    "de": "Nachname"
+  },
   "admin.participant.label": {
     "en": "Participant",
     "de": "Teilnehmende Person"
@@ -747,6 +831,10 @@
     "en": "Export clean data",
     "de": "Bereinigte Daten exportieren"
   },
+  "admin.participant.edit": {
+    "en": "Edit participant",
+    "de": "Teilnehmende Person bearbeiten"
+  },
   "admin.participant.remove": {
     "en": "Remove participant",
     "de": "Teilnehmende Person entfernen"
@@ -811,6 +899,14 @@
     "en": "Create a participant record for the public time tracking flow.",
     "de": "Erstelle einen Datensatz f\u00fcr die \u00f6ffentliche Zeiterfassung."
   },
+  "admin.participant.editTitle": {
+    "en": "Edit participant",
+    "de": "Teilnehmende Person bearbeiten"
+  },
+  "admin.participant.editDescription": {
+    "en": "Update this participant record for the public time tracking flow.",
+    "de": "Aktualisiere diesen Datensatz f\u00fcr die \u00f6ffentliche Zeiterfassung."
+  },
   "admin.participant.name": {
     "en": "Name",
     "de": "Name"
@@ -818,6 +914,22 @@
   "admin.participant.email": {
     "en": "Email",
     "de": "E-Mail"
+  },
+  "admin.participant.comment": {
+    "en": "Comment",
+    "de": "Kommentar"
+  },
+  "admin.participant.referenceDate": {
+    "en": "Reference date",
+    "de": "Referenzdatum"
+  },
+  "admin.participant.inactive": {
+    "en": "Inactive",
+    "de": "Inaktiv"
+  },
+  "admin.participant.inactiveBadge": {
+    "en": "Inactive",
+    "de": "Inaktiv"
   },
   "admin.participant.entryMode": {
     "en": "Entry mode",
@@ -843,6 +955,42 @@
     "en": "Faculty",
     "de": "Dozierende"
   },
+  "admin.participant.facultyRole": {
+    "en": "Faculty role",
+    "de": "Dozierendenrolle"
+  },
+  "admin.participant.facultyRolePlaceholder": {
+    "en": "Select faculty role",
+    "de": "Dozierendenrolle auswählen"
+  },
+  "admin.participant.facultyRoleOption.professor": {
+    "en": "Professor",
+    "de": "Professor:in"
+  },
+  "admin.participant.facultyRoleOption.lecturer": {
+    "en": "Lecturer",
+    "de": "Dozent:in"
+  },
+  "admin.participant.facultyRoleOption.seniorScientist": {
+    "en": "Senior Scientist",
+    "de": "Senior Scientist"
+  },
+  "admin.participant.facultyRoleOption.teachingAssistant": {
+    "en": "Teaching Assistant / Teaching Coordinator",
+    "de": "Lehrassistent:in / -koordinator:in"
+  },
+  "admin.participant.facultyRoleOption.doctoralCandidate": {
+    "en": "Doctoral Candidate",
+    "de": "Doktorand:in"
+  },
+  "admin.participant.facultyRoleOption.studentAssistant": {
+    "en": "Student Assistant",
+    "de": "Hilfsassistent:in"
+  },
+  "admin.participant.facultyRoleOption.externalGuestLecturer": {
+    "en": "External Guest Lecturer",
+    "de": "Externe:r Gastdozent:in"
+  },
   "admin.participant.subject": {
     "en": "Module",
     "de": "Modul"
@@ -858,6 +1006,14 @@
   "admin.participant.createFailed": {
     "en": "Could not create the participant.",
     "de": "Teilnehmende Person konnte nicht erstellt werden."
+  },
+  "admin.participant.updated": {
+    "en": "Participant updated.",
+    "de": "Teilnehmende Person wurde aktualisiert."
+  },
+  "admin.participant.updateFailed": {
+    "en": "Could not update the participant.",
+    "de": "Teilnehmende Person konnte nicht aktualisiert werden."
   },
   "admin.subject.add": {
     "en": "Add module",
@@ -966,6 +1122,14 @@
   "admin.creating": {
     "en": "Creating...",
     "de": "Wird erstellt..."
+  },
+  "admin.save": {
+    "en": "Save",
+    "de": "Speichern"
+  },
+  "admin.saving": {
+    "en": "Saving...",
+    "de": "Wird gespeichert..."
   },
   "admin.hoursDetails": {
     "en": "Hours details",

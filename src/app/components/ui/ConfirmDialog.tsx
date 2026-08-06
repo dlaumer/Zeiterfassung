@@ -1,9 +1,10 @@
 import { AlertTriangle } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel: string;
   cancelLabel: string;
   onConfirm: () => void | Promise<void>;
@@ -49,7 +50,7 @@ export function ConfirmDialog({
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 leading-tight">{title}</h3>
-            <p className="text-sm text-gray-600 mt-1">{description}</p>
+            <div className="text-sm text-gray-600 mt-1">{description}</div>
           </div>
         </div>
 

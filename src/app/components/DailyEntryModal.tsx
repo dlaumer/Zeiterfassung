@@ -266,12 +266,9 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const hasEnteredSubjectTime = subjectTimes.some(
     ({ classTime, selfStudyTime }) => classTime > 0 || selfStudyTime > 0
   );
-  const hasEnteredHours =
+  const hasEnteredCourseLikeWorkload =
     courses.some((course) => course.hours > 0) ||
-    hasEnteredSubjectTime ||
-    adminEffort > 0 ||
-    commuteTime > 0 ||
-    structuralChanges > 0;
+    hasEnteredSubjectTime;
   const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 0);
   const hasChangedAdminEffort = adminEffort !== (isFaculty ? 0 : existingEntry?.adminEffort ?? 0);
   const hasChangedCommuteTime = !isFaculty && commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
@@ -307,11 +304,15 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     setSaveError(null);
     setShowReliabilityError(false);
 
-    if (hasEnteredHours && reliability <= 0) {
+    if (reliability <= 0) {
       setShowReliabilityError(true);
       setSaveError(t('dailyEntry.reliabilityRequired'));
       return;
     }
+
+    const submittedComment = !hasEnteredCourseLikeWorkload && comment.trim().length === 0
+      ? t('dailyEntry.skippedTag')
+      : comment;
 
     setIsSaving(true);
     const entry: DailyEntry = {
@@ -322,7 +323,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       adminEffort,
       commuteTime,
       structuralChanges,
-      comment,
+      comment: submittedComment,
       skipped: false
     };
 
@@ -654,7 +655,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
           )}
           <button
             onClick={handleSubmit}
-            disabled={isSaving || (isAddMode && !hasAddendumChanges)}
+            disabled={isSaving}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isSaving ? `${t('dailyEntry.submit')}...` : t('dailyEntry.submit')}

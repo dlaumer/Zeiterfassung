@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type Po
 import PocketBase from 'pocketbase';
 import {
   BookOpen,
-  CalendarDays,
   ChevronDown,
   Clock3,
   Download,
@@ -11,11 +10,12 @@ import {
   LogOut,
   Mail,
   MoreHorizontal,
+  Pencil,
   Plus,
   RefreshCw,
-  Save,
   Search,
   Shield,
+  ArrowUpAZ,
   Trash2,
   Upload,
   Users,
@@ -50,6 +50,10 @@ interface AdminParticipant {
   id: string;
   name: string;
   email: string;
+  comment?: string;
+  role?: string;
+  referenceDate?: string;
+  inactive?: boolean;
   entryMode: string;
   type?: string;
   participantRole: string;
@@ -100,6 +104,7 @@ interface AdminEvent {
   participantId: string;
   participantName: string;
   participantRole?: string;
+  participantInactive?: boolean;
   participantEmail?: string;
   sentByEmail?: string;
   submissionId: string;
@@ -121,7 +126,6 @@ interface AdminOverview {
   participants: AdminParticipant[];
   subjects: AdminSubject[];
   events: AdminEvent[];
-  referenceDate: string;
 }
 
 interface SubjectImportRow {
@@ -135,12 +139,22 @@ type AdminMobileTab = 'log' | 'participants' | 'subjects';
 type AdminEntryModeFilter = 'all' | 'day' | 'week';
 type AdminParticipantEntryModeTab = 'day' | 'week';
 type AdminRoleFilter = 'all' | 'student' | 'faculty';
+type AdminParticipantSort = 'missing' | 'created' | 'firstName' | 'lastName';
+
+const facultyRoleOptions = [
+  { value: 'professor', translationKey: 'professor' },
+  { value: 'lecturer', translationKey: 'lecturer' },
+  { value: 'senior scientist', translationKey: 'seniorScientist' },
+  { value: 'teaching assistant', translationKey: 'teachingAssistant' },
+  { value: 'doctoral candidate', translationKey: 'doctoralCandidate' },
+  { value: 'student assistant', translationKey: 'studentAssistant' },
+  { value: 'external guest lecturer', translationKey: 'externalGuestLecturer' },
+] as const;
 
 const emptyOverview: AdminOverview = {
   participants: [],
   subjects: [],
   events: [],
-  referenceDate: '',
 };
 
 function getIntlLocale(language: Language) {
@@ -176,6 +190,14 @@ function formatDate(value: string, language: Language, t: (id: string) => string
   return new Intl.DateTimeFormat(getIntlLocale(language), {
     dateStyle: 'medium',
   }).format(date);
+}
+
+function getTodayDateInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getDateInputValue(value: string) {
+  return value ? value.slice(0, 10) : '';
 }
 
 function formatPeriodLabel(event: AdminEvent, language: Language, t: (id: string) => string) {
@@ -360,6 +382,68 @@ function getAdjustedMissingCount(missingCount: number) {
   return Math.max(0, missingCount - 1);
 }
 
+function normalizeParticipantName(participant: AdminParticipant) {
+  return (participant.name || participant.id).trim();
+}
+
+function getParticipantFirstName(participant: AdminParticipant) {
+  const nameParts = normalizeParticipantName(participant).split(/\s+/).filter(Boolean);
+  return nameParts[0] || normalizeParticipantName(participant);
+}
+
+function getParticipantLastName(participant: AdminParticipant) {
+  const nameParts = normalizeParticipantName(participant).split(/\s+/).filter(Boolean);
+  return nameParts.length > 1 ? nameParts[nameParts.length - 1] : normalizeParticipantName(participant);
+}
+
+function getParticipantCreatedTime(participant: AdminParticipant) {
+  if (!participant.created) {
+    return 0;
+  }
+
+  const created = new Date(participant.created.replace(' ', 'T')).getTime();
+  return Number.isNaN(created) ? 0 : created;
+}
+
+function compareParticipantsByName(a: AdminParticipant, b: AdminParticipant, language: Language) {
+  const locale = getIntlLocale(language);
+  return normalizeParticipantName(a).localeCompare(normalizeParticipantName(b), locale, { sensitivity: 'base' }) ||
+    a.id.localeCompare(b.id, locale, { sensitivity: 'base' });
+}
+
+function compareParticipants(a: AdminParticipant, b: AdminParticipant, sortBy: AdminParticipantSort, language: Language) {
+  const locale = getIntlLocale(language);
+
+  if (sortBy === 'created') {
+    const createdDiff = getParticipantCreatedTime(b) - getParticipantCreatedTime(a);
+    return createdDiff || compareParticipantsByName(a, b, language);
+  }
+
+  if (sortBy === 'firstName') {
+    return getParticipantFirstName(a).localeCompare(getParticipantFirstName(b), locale, { sensitivity: 'base' }) ||
+      compareParticipantsByName(a, b, language);
+  }
+
+  if (sortBy === 'lastName') {
+    return getParticipantLastName(a).localeCompare(getParticipantLastName(b), locale, { sensitivity: 'base' }) ||
+      getParticipantFirstName(a).localeCompare(getParticipantFirstName(b), locale, { sensitivity: 'base' }) ||
+      compareParticipantsByName(a, b, language);
+  }
+
+  const adjustedMissingA = getAdjustedMissingCount(a.missingCount);
+  const adjustedMissingB = getAdjustedMissingCount(b.missingCount);
+
+  if (adjustedMissingB !== adjustedMissingA) {
+    return adjustedMissingB - adjustedMissingA;
+  }
+
+  if (a.entryMode !== b.entryMode) {
+    return a.entryMode === 'day' ? -1 : 1;
+  }
+
+  return compareParticipantsByName(a, b, language);
+}
+
 function participantMissingLevel(missingCount: number, entryMode: string) {
   if (missingCount === 0) {
     return 'none';
@@ -472,6 +556,7 @@ interface ParticipantActionMenuProps {
   onSendReminder: (participant: AdminParticipant) => void;
   onExportAll: (participant: AdminParticipant) => void;
   onExportClean: (participant: AdminParticipant) => void;
+  onEdit: (participant: AdminParticipant) => void;
   onRemove: (participant: AdminParticipant) => void;
 }
 
@@ -482,6 +567,7 @@ function ParticipantActionMenu({
   onSendReminder,
   onExportAll,
   onExportClean,
+  onEdit,
   onRemove,
 }: ParticipantActionMenuProps) {
   const { t } = useI18n();
@@ -525,6 +611,10 @@ function ParticipantActionMenu({
         <DropdownMenuItem onSelect={() => onExportClean(participant)} className="cursor-pointer">
           <Download className="h-4 w-4" />
           {t('admin.participant.exportClean')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(participant)} className="cursor-pointer">
+          <Pencil className="h-4 w-4" />
+          {t('admin.participant.edit')}
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-gray-100" />
         <DropdownMenuItem
@@ -596,22 +686,26 @@ function AdminContent() {
   const [selectedLogDate, setSelectedLogDate] = useState('');
   const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
   const [selectedRole, setSelectedRole] = useState<AdminRoleFilter>('all');
+  const [participantSort, setParticipantSort] = useState<AdminParticipantSort>('missing');
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
-  const [showReferenceDateDialog, setShowReferenceDateDialog] = useState(false);
+  const [participantToEdit, setParticipantToEdit] = useState<AdminParticipant | null>(null);
   const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
   const [subjectImportStatus, setSubjectImportStatus] = useState<'idle' | 'loading'>('idle');
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
+  const [newParticipantComment, setNewParticipantComment] = useState('');
   const [newParticipantEntryMode, setNewParticipantEntryMode] = useState<'day' | 'week'>('day');
   const [newParticipantRole, setNewParticipantRole] = useState<'student' | 'faculty'>('student');
   const [newParticipantSubjectId, setNewParticipantSubjectId] = useState('');
+  const [newParticipantFacultyRole, setNewParticipantFacultyRole] = useState('');
+  const [newParticipantReferenceDate, setNewParticipantReferenceDate] = useState(getTodayDateInputValue());
+  const [newParticipantInactive, setNewParticipantInactive] = useState(false);
+  const [showInactiveParticipants, setShowInactiveParticipants] = useState(false);
   const [newSubjectNumber, setNewSubjectNumber] = useState('');
   const [newSubjectKey, setNewSubjectKey] = useState('');
   const [newSubjectLabel, setNewSubjectLabel] = useState('');
   const [newSubjectCredits, setNewSubjectCredits] = useState('0');
-  const [referenceDateInput, setReferenceDateInput] = useState('');
-  const [referenceDateStatus, setReferenceDateStatus] = useState<'idle' | 'loading'>('idle');
 
   const isAdminAuthenticated = pb.authStore.isValid && authRecord?.collectionName === 'admins';
 
@@ -627,12 +721,10 @@ function AdminContent() {
     try {
       const result = await pb.send<AdminOverview>('/api/admin/overview');
       setOverview(result);
-      setReferenceDateInput(result.referenceDate || '');
       setStatus('ready');
     } catch (error) {
       console.error('Admin overview lookup failed:', error);
       setOverview(emptyOverview);
-      setReferenceDateInput('');
       setStatus('error');
     }
   }
@@ -795,9 +887,14 @@ function AdminContent() {
   function resetParticipantForm() {
     setNewParticipantName('');
     setNewParticipantEmail('');
+    setNewParticipantComment('');
     setNewParticipantEntryMode('day');
     setNewParticipantRole('student');
     setNewParticipantSubjectId('');
+    setNewParticipantFacultyRole('');
+    setNewParticipantReferenceDate(getTodayDateInputValue());
+    setNewParticipantInactive(false);
+    setParticipantToEdit(null);
   }
 
   function resetSubjectForm() {
@@ -807,34 +904,55 @@ function AdminContent() {
     setNewSubjectCredits('0');
   }
 
-  function openReferenceDateDialog() {
-    setReferenceDateInput(overview.referenceDate || '');
-    setShowReferenceDateDialog(true);
+  function openCreateParticipantDialog() {
+    resetParticipantForm();
+    setShowParticipantDialog(true);
   }
 
-  async function handleCreateParticipant(event: FormEvent<HTMLFormElement>) {
+  function openEditParticipantDialog(participant: AdminParticipant) {
+    const participantRole = participant.participantRole === 'faculty' ? 'faculty' : 'student';
+    setParticipantToEdit(participant);
+    setNewParticipantName(participant.name || '');
+    setNewParticipantEmail(participant.email || '');
+    setNewParticipantComment(participant.comment || '');
+    setNewParticipantEntryMode(participant.entryMode === 'week' ? 'week' : 'day');
+    setNewParticipantRole(participantRole);
+    setNewParticipantSubjectId(participantRole === 'faculty' ? participant.subjects?.[0]?.id || '' : '');
+    setNewParticipantFacultyRole(participantRole === 'faculty' ? participant.role || '' : '');
+    setNewParticipantReferenceDate(getDateInputValue(participant.referenceDate || participant.created));
+    setNewParticipantInactive(!!participant.inactive);
+    setShowParticipantDialog(true);
+  }
+
+  async function handleSaveParticipant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateStatus('loading');
 
     try {
-      await pb.send('/api/admin/participants', {
-        method: 'POST',
+      const isEditingParticipant = participantToEdit !== null;
+      await pb.send(isEditingParticipant ? '/api/admin/participant' : '/api/admin/participants', {
+        method: isEditingParticipant ? 'PATCH' : 'POST',
+        ...(isEditingParticipant && participantToEdit ? { query: { participantId: participantToEdit.id } } : {}),
         body: {
           name: newParticipantName,
           email: newParticipantEmail,
+          comment: newParticipantComment,
           entryMode: newParticipantEntryMode,
           type: newParticipantRole,
           subjectId: newParticipantRole === 'faculty' ? newParticipantSubjectId : '',
+          role: newParticipantRole === 'faculty' ? newParticipantFacultyRole : '',
+          referenceDate: newParticipantReferenceDate,
+          inactive: newParticipantInactive,
         },
       });
 
       setShowParticipantDialog(false);
       resetParticipantForm();
-      showActionMessage('success', t('admin.participant.created'));
+      showActionMessage('success', t(isEditingParticipant ? 'admin.participant.updated' : 'admin.participant.created'));
       await loadOverview();
     } catch (error) {
-      console.error('Participant creation failed:', error);
-      showActionMessage('error', t('admin.participant.createFailed'));
+      console.error('Participant save failed:', error);
+      showActionMessage('error', t(participantToEdit ? 'admin.participant.updateFailed' : 'admin.participant.createFailed'));
     } finally {
       setCreateStatus('idle');
     }
@@ -865,35 +983,6 @@ function AdminContent() {
       showActionMessage('error', t('admin.subject.createFailed'));
     } finally {
       setCreateStatus('idle');
-    }
-  }
-
-  async function handleUpdateReferenceDate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setReferenceDateStatus('loading');
-
-    try {
-      const result = await pb.send<{ referenceDate: string }>('/api/admin/reference-date', {
-        method: 'POST',
-        body: {
-          referenceDate: referenceDateInput,
-        },
-      });
-
-      const updatedReferenceDate = result.referenceDate || referenceDateInput;
-      setOverview((currentOverview) => ({
-        ...currentOverview,
-        referenceDate: updatedReferenceDate,
-      }));
-      setReferenceDateInput(updatedReferenceDate);
-      setShowReferenceDateDialog(false);
-      showActionMessage('success', t('admin.referenceDate.saved'));
-      await loadOverview();
-    } catch (error) {
-      console.error('Reference date update failed:', error);
-      showActionMessage('error', t('admin.referenceDate.saveFailed'));
-    } finally {
-      setReferenceDateStatus('idle');
     }
   }
 
@@ -978,6 +1067,10 @@ function AdminContent() {
     const normalizedQuery = query.trim().toLowerCase();
     return overview.participants
       .filter((participant) => {
+        if (participant.inactive && !showInactiveParticipants) {
+          return false;
+        }
+
         const participantRole = participant.participantRole === 'faculty' ? 'faculty' : 'student';
         const matchesRole = selectedRole === 'all' || participantRole === selectedRole;
         if (!matchesRole) {
@@ -995,21 +1088,8 @@ function AdminContent() {
           ...(participant.subjects ?? []).map((subject) => `${subject.number} ${subject.key} ${subject.labelEn} ${subject.labelDe}`),
         ].join(' ').toLowerCase().includes(normalizedQuery);
       })
-      .sort((a, b) => {
-        const adjustedMissingA = getAdjustedMissingCount(a.missingCount);
-        const adjustedMissingB = getAdjustedMissingCount(b.missingCount);
-
-        if (adjustedMissingB !== adjustedMissingA) {
-          return adjustedMissingB - adjustedMissingA;
-        }
-
-        if (a.entryMode !== b.entryMode) {
-          return a.entryMode === 'day' ? -1 : 1;
-        }
-
-        return (a.name || a.id).localeCompare(b.name || b.id);
-      });
-  }, [overview.participants, query, selectedRole]);
+      .sort((a, b) => compareParticipants(a, b, participantSort, language));
+  }, [overview.participants, query, selectedRole, participantSort, showInactiveParticipants, language]);
 
   const participantCountsByEntryMode = useMemo(() => ({
     day: participantListCandidates.filter((participant) => participant.entryMode !== 'week').length,
@@ -1044,6 +1124,10 @@ function AdminContent() {
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return overview.events.filter((event) => {
+      if (event.participantInactive && !showInactiveParticipants) {
+        return false;
+      }
+
       const matchesEntryMode =
         selectedEntryMode === 'all' || event.kind === 'reminder' || event.kind === 'invitation' || event.periodType === selectedEntryMode;
       const eventRole = event.participantRole === 'faculty' ? 'faculty' : 'student';
@@ -1072,7 +1156,7 @@ function AdminContent() {
         .toLowerCase()
         .includes(normalizedQuery);
     });
-  }, [overview.events, query, selectedEntryMode, selectedRole]);
+  }, [overview.events, query, selectedEntryMode, selectedRole, showInactiveParticipants]);
 
   const displayedEvents = useMemo(() => {
     if (!selectedLogDate) {
@@ -1174,12 +1258,14 @@ function AdminContent() {
                     title={
                       selectedLogDate || selectedEntryMode !== 'all'
                       || selectedRole !== 'all'
+                      || showInactiveParticipants
                         ? t('admin.filters.active')
                         : t('admin.filters.title')
                     }
                     className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border bg-white text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 ${
                       selectedLogDate || selectedEntryMode !== 'all'
                       || selectedRole !== 'all'
+                      || showInactiveParticipants
                         ? 'border-emerald-500 bg-emerald-100 text-emerald-800 ring-2 ring-emerald-200'
                         : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                     }`}
@@ -1242,6 +1328,16 @@ function AdminContent() {
                       </div>
                     </div>
 
+                    <label className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={showInactiveParticipants}
+                        onChange={(event) => setShowInactiveParticipants(event.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-gray-950 focus:ring-gray-900"
+                      />
+                      {t('admin.filters.showInactive')}
+                    </label>
+
                     <div className="grid gap-2">
                       <div className="text-sm font-semibold">{t('admin.log.dateFilterTitle')}</div>
                       <div className="text-xs text-gray-500">{t('admin.log.dateFilterDescription')}</div>
@@ -1259,8 +1355,9 @@ function AdminContent() {
                         setSelectedLogDate('');
                         setSelectedEntryMode('all');
                         setSelectedRole('all');
+                        setShowInactiveParticipants(false);
                       }}
-                      disabled={!selectedLogDate && selectedEntryMode === 'all' && selectedRole === 'all'}
+                      disabled={!selectedLogDate && selectedEntryMode === 'all' && selectedRole === 'all' && !showInactiveParticipants}
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <X className="h-4 w-4" />
@@ -1310,17 +1407,36 @@ function AdminContent() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">{filteredParticipants.length}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title={t('admin.participants.sortBy')}
+                    aria-label={t('admin.participants.sortBy')}
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  >
+                    <ArrowUpAZ className="h-4 w-4" />
+                    <span className="hidden max-w-28 truncate sm:inline">
+                      {t(`admin.participants.sort.${participantSort}`)}
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-52 border-gray-200 bg-white text-gray-900">
+                  {(['missing', 'created', 'firstName', 'lastName'] as const).map((sortOption) => (
+                    <DropdownMenuItem
+                      key={sortOption}
+                      onSelect={() => setParticipantSort(sortOption)}
+                      className={`cursor-pointer ${participantSort === sortOption ? 'font-semibold' : ''}`}
+                    >
+                      {t(`admin.participants.sort.${sortOption}`)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
                 type="button"
-                onClick={openReferenceDateDialog}
-                title={`${t('admin.referenceDate.title')}: ${formatDate(overview.referenceDate, language, t)}`}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
-              >
-                <CalendarDays className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowParticipantDialog(true)}
+                onClick={openCreateParticipantDialog}
                 title={t('admin.participant.add')}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
               >
@@ -1366,22 +1482,27 @@ function AdminContent() {
                 {filteredParticipants.map((participant) => {
                   const adjustedMissingCount = getAdjustedMissingCount(participant.missingCount);
                   const missingBadgeClasses = participantMissingBadgeClasses(adjustedMissingCount, participant.entryMode);
+                  const participantToneClasses = participant.inactive
+                    ? 'border-gray-200 bg-gray-50 opacity-70'
+                    : participantMissingToneClasses(adjustedMissingCount, participant.entryMode);
 
                   return (
                   <div
                     key={participant.id}
-                    className={`flex min-w-0 items-start justify-between gap-3 overflow-hidden border-l-4 p-4 transition-colors ${participantMissingToneClasses(
-                      adjustedMissingCount,
-                      participant.entryMode,
-                    )}`}
+                    className={`flex min-w-0 items-start justify-between gap-3 overflow-hidden border-l-4 p-4 transition-colors ${participantToneClasses}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <div className="truncate text-sm font-bold text-gray-950">
+                            <div className={`truncate text-sm font-bold ${participant.inactive ? 'text-gray-500' : 'text-gray-950'}`}>
                               {participant.name || participant.id}
                             </div>
+                            {participant.inactive && (
+                              <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">
+                                {t('admin.participant.inactiveBadge')}
+                              </span>
+                            )}
                             <span className="shrink-0 text-xs font-medium text-gray-500">
                               {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
                             </span>
@@ -1390,6 +1511,11 @@ function AdminContent() {
                             </span>
                           </div>
                           <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
+                          {participant.comment && (
+                            <div className="mt-1 max-w-full rounded-md bg-gray-100 px-2 py-1 text-xs leading-snug text-gray-600">
+                              {participant.comment}
+                            </div>
+                          )}
                           {participant.participantRole === 'faculty' && (participant.subjects ?? []).length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {[...participant.subjects].sort(compareAdminSubjectsByDisplayName(language)).map((subject) => (
@@ -1434,6 +1560,7 @@ function AdminContent() {
                         onSendReminder={handleSendParticipantReminder}
                         onExportAll={handleExportAllParticipantData}
                         onExportClean={handleExportCleanParticipantData}
+                        onEdit={openEditParticipantDialog}
                         onRemove={setParticipantToRemove}
                       />
                     </div>
@@ -1634,11 +1761,13 @@ function AdminContent() {
       >
         <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('admin.participant.addTitle')}</DialogTitle>
-            <DialogDescription>{t('admin.participant.addDescription')}</DialogDescription>
+            <DialogTitle>{t(participantToEdit ? 'admin.participant.editTitle' : 'admin.participant.addTitle')}</DialogTitle>
+            <DialogDescription>
+              {t(participantToEdit ? 'admin.participant.editDescription' : 'admin.participant.addDescription')}
+            </DialogDescription>
           </DialogHeader>
 
-          <form className="grid gap-4" onSubmit={handleCreateParticipant}>
+          <form className="grid gap-4" onSubmit={handleSaveParticipant}>
             <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
               {t('admin.participant.name')}
               <input
@@ -1657,6 +1786,37 @@ function AdminContent() {
                 onChange={(event) => setNewParticipantEmail(event.target.value)}
                 className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
               />
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.participant.comment')}
+              <textarea
+                value={newParticipantComment}
+                onChange={(event) => setNewParticipantComment(event.target.value)}
+                rows={3}
+                className="min-h-20 w-full min-w-0 resize-y rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+              {t('admin.participant.referenceDate')}
+              <input
+                type="date"
+                value={newParticipantReferenceDate}
+                onChange={(event) => setNewParticipantReferenceDate(event.target.value)}
+                required
+                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              />
+            </label>
+
+            <label className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                checked={newParticipantInactive}
+                onChange={(event) => setNewParticipantInactive(event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-gray-950 focus:ring-gray-900"
+              />
+              {t('admin.participant.inactive')}
             </label>
 
             <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
@@ -1680,6 +1840,7 @@ function AdminContent() {
                   setNewParticipantRole(nextRole);
                   if (nextRole === 'student') {
                     setNewParticipantSubjectId('');
+                    setNewParticipantFacultyRole('');
                   }
                 }}
                 className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
@@ -1690,23 +1851,42 @@ function AdminContent() {
             </label>
 
             {newParticipantRole === 'faculty' && (
-              <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
-                {t('admin.participant.subject')}
-                <select
-                  value={newParticipantSubjectId}
-                  onChange={(event) => setNewParticipantSubjectId(event.target.value)}
-                  required
-                  className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-                >
-                  <option value="">{t('admin.participant.subjectPlaceholder')}</option>
-                  {[...overview.subjects].sort(compareAdminSubjectsByDisplayName(language)).map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {getAdminSubjectDisplayName(subject, language)}
-                      {subject.number ? ` (${subject.number})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+                  {t('admin.participant.facultyRole')}
+                  <select
+                    value={newParticipantFacultyRole}
+                    onChange={(event) => setNewParticipantFacultyRole(event.target.value)}
+                    required
+                    className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                  >
+                    <option value="">{t('admin.participant.facultyRolePlaceholder')}</option>
+                    {facultyRoleOptions.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {t(`admin.participant.facultyRoleOption.${role.translationKey}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+                  {t('admin.participant.subject')}
+                  <select
+                    value={newParticipantSubjectId}
+                    onChange={(event) => setNewParticipantSubjectId(event.target.value)}
+                    required
+                    className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                  >
+                    <option value="">{t('admin.participant.subjectPlaceholder')}</option>
+                    {[...overview.subjects].sort(compareAdminSubjectsByDisplayName(language)).map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {getAdminSubjectDisplayName(subject, language)}
+                        {subject.number ? ` (${subject.number})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
             )}
 
             <DialogFooter>
@@ -1722,62 +1902,9 @@ function AdminContent() {
                 disabled={createStatus === 'loading'}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
-                {createStatus === 'loading' ? t('admin.creating') : t('admin.create')}
-              </button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={showReferenceDateDialog}
-        onOpenChange={(isOpen) => {
-          setShowReferenceDateDialog(isOpen);
-          if (!isOpen) {
-            setReferenceDateInput(overview.referenceDate || '');
-          }
-        }}
-      >
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('admin.referenceDate.title')}</DialogTitle>
-            <DialogDescription>{t('admin.referenceDate.description')}</DialogDescription>
-          </DialogHeader>
-
-          <form className="grid gap-4" onSubmit={handleUpdateReferenceDate}>
-            <div className="rounded-md border border-gray-200 bg-slate-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase text-gray-500">{t('admin.referenceDate.current')}</div>
-              <div className="mt-1 text-sm font-bold text-gray-950">
-                {formatDate(overview.referenceDate, language, t)}
-              </div>
-            </div>
-
-            <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
-              {t('admin.referenceDate.input')}
-              <input
-                type="date"
-                value={referenceDateInput}
-                onChange={(event) => setReferenceDateInput(event.target.value)}
-                required
-                className="h-10 w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-              />
-            </label>
-
-            <DialogFooter>
-              <button
-                type="button"
-                onClick={() => setShowReferenceDateDialog(false)}
-                className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="submit"
-                disabled={referenceDateStatus === 'loading' || !referenceDateInput || referenceDateInput === overview.referenceDate}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                <Save className="h-4 w-4" />
-                {referenceDateStatus === 'loading' ? t('admin.referenceDate.saving') : t('admin.referenceDate.save')}
+                {createStatus === 'loading'
+                  ? t(participantToEdit ? 'admin.saving' : 'admin.creating')
+                  : t(participantToEdit ? 'admin.save' : 'admin.create')}
               </button>
             </DialogFooter>
           </form>

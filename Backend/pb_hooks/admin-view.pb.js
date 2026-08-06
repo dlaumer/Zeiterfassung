@@ -24,6 +24,11 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         return participant ? participant.name : ""
     }
 
+    function adminIsParticipantInactive(participantById, participantId) {
+        const participant = participantById[participantId]
+        return participant ? !!participant.inactive : false
+    }
+
     function adminPeriodDate(periodStart) {
         return String(periodStart || "").slice(0, 10)
     }
@@ -73,20 +78,6 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         }
 
         return count
-    }
-
-    function adminGetReferenceDate(app) {
-        try {
-            const records = app.findRecordsByFilter("referenceDate", "", "", 1, 0)
-            if (records.length === 0) {
-                return ""
-            }
-
-            return adminPeriodDate(adminDateValue(records[0], "referenceDate"))
-        } catch (error) {
-            console.error("Failed to load admin reference date:", error)
-            return ""
-        }
     }
 
     function adminExpectedSubmissionCount(entryMode, todayDate, referenceDate) {
@@ -172,7 +163,6 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     const participantSubjects = $app.findRecordsByFilter("participant_subjects", "", "", 5000, 0)
     const submissions = $app.findRecordsByFilter("submissions", "", "-submittedAt", 5000, 0)
     const submissionItems = $app.findRecordsByFilter("submission_items", "", "", 10000, 0)
-    const referenceDate = adminGetReferenceDate($app)
     let reminderEvents = []
 
     let deletionEvents = []
@@ -197,6 +187,10 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             id: participant.id,
             name: adminStringValue(participant, "name"),
             email: adminStringValue(participant, "email"),
+            comment: adminStringValue(participant, "comment"),
+            role: adminStringValue(participant, "role"),
+            referenceDate: adminPeriodDate(adminDateValue(participant, "referenceDate")),
+            inactive: !!participant.get("inactive"),
             entryMode: adminStringValue(participant, "entryMode") || "day",
             type: adminStringValue(participant, "type") || ((adminStringValue(participant, "entryMode") || "day") === "week" ? "faculty" : "student"),
             participantRole: adminStringValue(participant, "type") || ((adminStringValue(participant, "entryMode") || "day") === "week" ? "faculty" : "student"),
@@ -294,7 +288,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
                     participantById[participantId],
                     adminStringValue(submission, "periodType"),
                     adminDateValue(submission, "periodStart"),
-                    referenceDate
+                    participantById[participantId] ? participantById[participantId].referenceDate : ""
                 )) {
                     validSubmittedPeriodKeysByParticipant[participantId][periodKey] = true
                 }
@@ -318,6 +312,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             participantId: participantId,
             participantName: adminFindParticipantName(participantById, participantId),
             participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
+            participantInactive: adminIsParticipantInactive(participantById, participantId),
             submissionId: submission.id,
             periodType: adminStringValue(submission, "periodType"),
             periodStart: adminDateValue(submission, "periodStart"),
@@ -342,6 +337,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
                 participantId: participantId,
                 participantName: adminFindParticipantName(participantById, participantId),
                 participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
+                participantInactive: adminIsParticipantInactive(participantById, participantId),
                 submissionId: submission.id,
                 periodType: adminStringValue(submission, "periodType"),
                 periodStart: adminDateValue(submission, "periodStart"),
@@ -375,6 +371,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             participantId: participantId,
             participantName: adminStringValue(eventRecord, "participantName") || adminFindParticipantName(participantById, participantId),
             participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
+            participantInactive: adminIsParticipantInactive(participantById, participantId),
             submissionId: adminStringValue(eventRecord, "submissionId"),
             periodType: adminStringValue(eventRecord, "periodType"),
             periodStart: adminDateValue(eventRecord, "periodStart"),
@@ -412,6 +409,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             participantId: participantId,
             participantName: adminStringValue(reminderRecord, "participantName") || adminFindParticipantName(participantById, participantId),
             participantRole: participantById[participantId] ? participantById[participantId].participantRole : "",
+            participantInactive: adminIsParticipantInactive(participantById, participantId),
             participantEmail: participantEmail,
             sentByEmail: sentByEmail,
             submissionId: "",
@@ -432,7 +430,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
     const today = new Date()
     for (const participantId of Object.keys(participantById)) {
         const participant = participantById[participantId]
-        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, today, referenceDate)
+        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, today, participant.referenceDate)
         const submittedPeriodCount = Object.keys(validSubmittedPeriodKeysByParticipant[participantId] || {}).length
         participantStatsById[participantId].missingCount = Math.max(0, expectedCount - submittedPeriodCount)
     }
@@ -450,33 +448,6 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             ...subjectStatsById[id],
         })),
         events: events,
-        referenceDate: referenceDate,
-    })
-}, $apis.requireAuth("admins"))
-
-routerAdd("POST", "/api/admin/reference-date", (e) => {
-    const body = e.requestInfo().body || {}
-    const referenceDate = String(body.referenceDate || "").trim().slice(0, 10)
-
-    if (!referenceDate) {
-        return e.json(400, { error: "Missing referenceDate" })
-    }
-
-    const parsedReferenceDate = new Date(referenceDate + "T00:00:00Z")
-    if (Number.isNaN(parsedReferenceDate.getTime()) || parsedReferenceDate.toISOString().slice(0, 10) !== referenceDate) {
-        return e.json(400, { error: "Invalid referenceDate" })
-    }
-
-    const collection = $app.findCollectionByNameOrId("referenceDate")
-    const existingRecords = $app.findRecordsByFilter("referenceDate", "", "", 1, 0)
-    const record = existingRecords.length > 0 ? existingRecords[0] : new Record(collection)
-
-    record.set("referenceDate", referenceDate)
-    $app.save(record)
-
-    return e.json(200, {
-        ok: true,
-        referenceDate: referenceDate,
     })
 }, $apis.requireAuth("admins"))
 
@@ -490,21 +461,57 @@ routerAdd("POST", "/api/admin/participants", (e) => {
         return String(adminRecordValue(record, fieldName, "") || "")
     }
 
+    function adminNormalizeReferenceDate(value) {
+        const referenceDate = String(value || "").trim().slice(0, 10)
+        const parsedReferenceDate = new Date(referenceDate + "T00:00:00Z")
+
+        if (!referenceDate || Number.isNaN(parsedReferenceDate.getTime()) || parsedReferenceDate.toISOString().slice(0, 10) !== referenceDate) {
+            return ""
+        }
+
+        return referenceDate + " 00:00:00.000Z"
+    }
+
+    function adminBooleanValue(value) {
+        return value === true || String(value || "").toLowerCase() === "true"
+    }
+
     const body = e.requestInfo().body || {}
 
     const name = String(body.name || "").trim()
     const email = String(body.email || "").trim()
+    const comment = String(body.comment || "").trim()
+    const referenceDate = adminNormalizeReferenceDate(body.referenceDate)
+    const inactive = adminBooleanValue(body.inactive)
     const entryMode = String(body.entryMode || "day").trim() === "week" ? "week" : "day"
     const participantRole = String(body.type || body.participantRole || "student").trim() === "faculty" ? "faculty" : "student"
     const subjectId = String(body.subjectId || body.subject || "").trim()
+    const role = String(body.role || "").trim()
+    const allowedFacultyRoles = [
+        "professor",
+        "lecturer",
+        "senior scientist",
+        "teaching assistant",
+        "doctoral candidate",
+        "student assistant",
+        "external guest lecturer",
+    ]
 
     if (!name) {
         return e.json(400, { error: "Missing participant name" })
     }
 
+    if (!referenceDate) {
+        return e.json(400, { error: "Invalid referenceDate" })
+    }
+
     if (participantRole === "faculty") {
         if (!subjectId) {
             return e.json(400, { error: "Missing faculty subject" })
+        }
+
+        if (!role || allowedFacultyRoles.indexOf(role) === -1) {
+            return e.json(400, { error: "Invalid faculty role" })
         }
 
         let subject = null
@@ -528,8 +535,12 @@ routerAdd("POST", "/api/admin/participants", (e) => {
 
             participant.set("name", name)
             participant.set("email", email)
+            participant.set("comment", comment)
+            participant.set("referenceDate", referenceDate)
+            participant.set("inactive", inactive)
             participant.set("entryMode", entryMode)
             participant.set("type", participantRole)
+            participant.set("role", participantRole === "faculty" ? role : "")
 
             txApp.save(participant)
             participantId = participant.id
@@ -547,6 +558,143 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     } catch (error) {
         console.error("Failed to create admin participant:", error)
         return e.json(400, { error: "Failed to create participant" })
+    }
+
+    return e.json(200, {
+        ok: true,
+        participantId: participantId,
+    })
+}, $apis.requireAuth("admins"))
+
+routerAdd("PATCH", "/api/admin/participant", (e) => {
+    function adminRecordValue(record, fieldName, fallback) {
+        const value = record.get(fieldName)
+        return value === null || value === undefined ? fallback : value
+    }
+
+    function adminStringValue(record, fieldName) {
+        return String(adminRecordValue(record, fieldName, "") || "")
+    }
+
+    function adminNormalizeReferenceDate(value) {
+        const referenceDate = String(value || "").trim().slice(0, 10)
+        const parsedReferenceDate = new Date(referenceDate + "T00:00:00Z")
+
+        if (!referenceDate || Number.isNaN(parsedReferenceDate.getTime()) || parsedReferenceDate.toISOString().slice(0, 10) !== referenceDate) {
+            return ""
+        }
+
+        return referenceDate + " 00:00:00.000Z"
+    }
+
+    function adminBooleanValue(value) {
+        return value === true || String(value || "").toLowerCase() === "true"
+    }
+
+    const participantId = String(e.requestInfo().query["participantId"] || "").trim()
+    const body = e.requestInfo().body || {}
+
+    const name = String(body.name || "").trim()
+    const email = String(body.email || "").trim()
+    const comment = String(body.comment || "").trim()
+    const referenceDate = adminNormalizeReferenceDate(body.referenceDate)
+    const inactive = adminBooleanValue(body.inactive)
+    const entryMode = String(body.entryMode || "day").trim() === "week" ? "week" : "day"
+    const participantRole = String(body.type || body.participantRole || "student").trim() === "faculty" ? "faculty" : "student"
+    const subjectId = String(body.subjectId || body.subject || "").trim()
+    const role = String(body.role || "").trim()
+    const allowedFacultyRoles = [
+        "professor",
+        "lecturer",
+        "senior scientist",
+        "teaching assistant",
+        "doctoral candidate",
+        "student assistant",
+        "external guest lecturer",
+    ]
+
+    if (!participantId) {
+        return e.json(400, { error: "Missing participantId" })
+    }
+
+    if (!name) {
+        return e.json(400, { error: "Missing participant name" })
+    }
+
+    if (!referenceDate) {
+        return e.json(400, { error: "Invalid referenceDate" })
+    }
+
+    let participant = null
+    try {
+        participant = $app.findRecordById("participants", participantId)
+    } catch (error) {
+        participant = null
+    }
+
+    if (!participant) {
+        return e.json(404, { error: "Participant not found" })
+    }
+
+    if (participantRole === "faculty") {
+        if (!subjectId) {
+            return e.json(400, { error: "Missing faculty subject" })
+        }
+
+        if (!role || allowedFacultyRoles.indexOf(role) === -1) {
+            return e.json(400, { error: "Invalid faculty role" })
+        }
+
+        let subject = null
+        try {
+            subject = $app.findRecordById("subjects", subjectId)
+        } catch (error) {
+            subject = null
+        }
+
+        const subjectEntryMode = subject ? (adminStringValue(subject, "entryMode") || "day") : ""
+        if (!subject || subjectEntryMode !== "day") {
+            return e.json(400, { error: "Invalid faculty subject" })
+        }
+    }
+
+    try {
+        $app.runInTransaction((txApp) => {
+            const txParticipant = txApp.findRecordById("participants", participantId)
+            txParticipant.set("name", name)
+            txParticipant.set("email", email)
+            txParticipant.set("comment", comment)
+            txParticipant.set("referenceDate", referenceDate)
+            txParticipant.set("inactive", inactive)
+            txParticipant.set("entryMode", entryMode)
+            txParticipant.set("type", participantRole)
+            txParticipant.set("role", participantRole === "faculty" ? role : "")
+            txApp.save(txParticipant)
+
+            const participantSubjects = txApp.findRecordsByFilter(
+                "participant_subjects",
+                "participant = {:participantId}",
+                "",
+                5000,
+                0,
+                { participantId }
+            )
+
+            for (const enrollment of participantSubjects) {
+                txApp.delete(enrollment)
+            }
+
+            if (participantRole === "faculty") {
+                const participantSubjectCollection = txApp.findCollectionByNameOrId("participant_subjects")
+                const participantSubject = new Record(participantSubjectCollection)
+                participantSubject.set("participant", participantId)
+                participantSubject.set("subject", subjectId)
+                txApp.save(participantSubject)
+            }
+        })
+    } catch (error) {
+        console.error("Failed to update admin participant:", error)
+        return e.json(400, { error: "Failed to update participant" })
     }
 
     return e.json(200, {

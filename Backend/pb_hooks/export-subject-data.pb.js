@@ -72,17 +72,6 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         return d
     }
 
-    function getReferenceDateStart(app) {
-        try {
-            const records = app.findRecordsByFilter("referenceDate", "", "", 1, 0)
-            if (records.length === 0) return null
-            return parseDateOnly(records[0].get("referenceDate"))
-        } catch (error) {
-            console.error("Failed to load subject export reference date:", error)
-            return null
-        }
-    }
-
     function getPeriodKey(submission) {
         return `${submission.get("periodType") || ""}_${String(submission.get("periodStart") || "").slice(0, 10)}`
     }
@@ -306,6 +295,23 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         return getParticipantLabel(participant) + " (" + participant.id + ")"
     }
 
+    function getEarliestReferenceDate(studentIdSet, alignToWeek) {
+        let earliest = null
+
+        for (const participantId of Object.keys(studentIdSet)) {
+            const participant = participantById[participantId]
+            const referenceDate = participant ? parseDateOnly(participant.get("referenceDate")) : null
+            if (!referenceDate) continue
+
+            const date = alignToWeek ? startOfWeekMonday(referenceDate) : startOfDay(referenceDate)
+            if (!earliest || date.getTime() < earliest.getTime()) {
+                earliest = date
+            }
+        }
+
+        return earliest
+    }
+
     function buildCsvForPeriod(periodType, itemType, participants, periods, submissionsByParticipantPeriod, minutesBySubmission) {
         const headers = ["periodStart", "periodEnd", ...participants.map(getStudentColumnKey)]
         const rows = [headers]
@@ -364,16 +370,6 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         return e.json(404, { error: "Subject not found" })
     }
 
-    const referenceDateStart = getReferenceDateStart($app)
-    if (!referenceDateStart) {
-        return e.json(400, { error: "Reference date is not configured" })
-    }
-
-    const now = new Date()
-    const dailyPeriods = buildExpectedDailyPeriods(referenceDateStart, now)
-    const weeklyPeriods = buildExpectedWeeklyPeriods(referenceDateStart, now)
-    const rangeStart = formatDateTime(startOfWeekMonday(referenceDateStart))
-
     const enrollments = $app.findRecordsByFilter(
         "participant_subjects",
         "subject = {:subjectId}",
@@ -418,16 +414,31 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         }
     }
 
+    const now = new Date()
+    const dailyReferenceDateStart = getEarliestReferenceDate(dailyStudentIdSet, false)
+    const weeklyReferenceDateStart = getEarliestReferenceDate(weeklyStudentIdSet, true)
+    const dailyPeriods = dailyReferenceDateStart ? buildExpectedDailyPeriods(dailyReferenceDateStart, now) : []
+    const weeklyPeriods = weeklyReferenceDateStart ? buildExpectedWeeklyPeriods(weeklyReferenceDateStart, now) : []
+    const rangeStartCandidates = [dailyReferenceDateStart, weeklyReferenceDateStart].filter((date) => !!date)
+    const rangeStart = rangeStartCandidates.length > 0
+        ? rangeStartCandidates.sort((a, b) => a.getTime() - b.getTime())[0]
+        : null
+
+    const submissionFilterParts = ['submissionMode != "deleted"']
+    const submissionFilterParams = {}
+
+    if (rangeStart) {
+        submissionFilterParts.push("periodStart >= {:rangeStart}")
+        submissionFilterParams.rangeStart = formatDateTime(rangeStart)
+    }
+
     const submissions = $app.findRecordsByFilter(
         "submissions",
-        [
-            'submissionMode != "deleted"',
-            "periodStart >= {:rangeStart}",
-        ].join(" && "),
+        submissionFilterParts.join(" && "),
         "periodStart",
         50000,
         0,
-        { rangeStart }
+        submissionFilterParams
     )
 
     const relevantSubmissions = []

@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "backfill:participant-reference-dates": "node scripts/backfill-participant-reference-dates.mjs",
     "build": "vite build",
     "dev": "vite"
   },

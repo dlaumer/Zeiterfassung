@@ -46,20 +46,6 @@ routerAdd("GET", "/api/workload-status", (e) => {
         return parsed
     }
 
-    function getReferenceDateStart(app) {
-        try {
-            const records = app.findRecordsByFilter("referenceDate", "", "", 1, 0)
-            if (records.length === 0) {
-                return null
-            }
-
-            return parseStartDateInput(records[0].get("referenceDate"))
-        } catch (error) {
-            console.error("Failed to load workload reference date:", error)
-            return null
-        }
-    }
-
     function startOfWeekMonday(date) {
         const d = startOfDay(date)
         const day = d.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
@@ -268,27 +254,22 @@ routerAdd("GET", "/api/workload-status", (e) => {
     const currentWeekStart = startOfWeekMonday(now)
     const currentWeekEnd = endOfWeekSunday(now)
 
-    // The canonical missing-period start comes from the admin-managed referenceDate record.
-    // Keep explicit startDate and lookbackDays as fallbacks for older callers and empty setup data.
-    const referenceDateStart = getReferenceDateStart($app)
+    // The canonical missing-period start comes from each participant's referenceDate.
+    // Keep explicit startDate and lookbackDays as fallbacks for older records and callers.
+    const referenceDateStart = parseStartDateInput(participant.get("referenceDate"))
     const explicitRangeStart = parseStartDateInput(startDateInput)
     const rangeStart = referenceDateStart || explicitRangeStart || addDays(todayStart, -lookbackDays)
-    const submissionRangeStart = entryMode === "week" ? startOfWeekMonday(rangeStart) : rangeStart
-    const rangeStartStr = formatDateTime(submissionRangeStart)
-
     const submissions = $app.findRecordsByFilter(
         "submissions",
         [
             'participant = {:participantId}',
-            'submissionMode != "deleted"',
-            'periodStart >= {:rangeStart}'
+            'submissionMode != "deleted"'
         ].join(" && "),
         "-periodStart",
-        500,
+        5000,
         0,
         {
-            participantId: participantId,
-            rangeStart: rangeStartStr
+            participantId: participantId
         }
     )
 

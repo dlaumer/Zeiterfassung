@@ -1,6 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 routerAdd("POST", "/api/admin/participant/reminder", (e) => {
+    const contactEmail = "katharina.sperger@stab.baug.ethz.ch"
     const defaultCategoryGuideUrl = "https://methric.ch/assets/KategorisierungZeiterfassung-CsWCFA54.pdf"
 
     function reminderStringValue(record, fieldName) {
@@ -78,6 +79,26 @@ routerAdd("POST", "/api/admin/participant/reminder", (e) => {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;")
+    }
+
+    function reminderEmailHtmlFooterDe() {
+        return `<p>Bitte antworten Sie nicht direkt auf diese E-Mail.<br />Kontakt bei Rückfragen und Anregungen: Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
+    }
+
+    function reminderEmailHtmlFooterEn() {
+        return `<p>Please do not reply directly to this email.<br />For any queries or suggestions, please contact Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
+    }
+
+    function reminderEmailTextFooterDe() {
+        return `Bitte antworten Sie nicht direkt auf diese E-Mail.
+Kontakt bei Rückfragen und Anregungen: Katharina Sperger,
+${contactEmail}`
+    }
+
+    function reminderEmailTextFooterEn() {
+        return `Please do not reply directly to this email.
+For any queries or suggestions, please contact Katharina Sperger,
+${contactEmail}`
     }
 
     function reminderFirstName(participantName) {
@@ -163,10 +184,11 @@ routerAdd("POST", "/api/admin/participant/reminder", (e) => {
         <p>Hallo ${safeName},</p>
         <p>dies ist eine kurze Erinnerung, Deinen Arbeitsaufwand fürs Studium einzureichen.</p>
         ${linkSectionDe}
-        <p>Solltest Du einmal nicht fürs Studium gearbeitet haben, bestätige Deinen Aufwand durch Klick auf <em>Überspringen</em>. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
+        <p>Solltest Du einmal nicht fürs Studium gearbeitet haben, bestätige Deinen Aufwand durch Klick auf "<em>Überspringen</em>" rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
         <p>Du erhältst diese E-Mail, weil Du an der Zeiterfassung mit mETHric teilnimmst.</p>
         <p>Vielen Dank und beste Grüsse,</p>
         <p>mETHric und das Projektteam von &laquo;Student Workload&raquo;</p>
+        ${reminderEmailHtmlFooterDe()}
     `
     }
 
@@ -176,15 +198,18 @@ routerAdd("POST", "/api/admin/participant/reminder", (e) => {
 
         return `Hallo ${safeName},
 
-dies ist eine kurze Erinnerung, Deinen Arbeitsaufwand fürs Studium einzureichen.${germanLink}
+dies ist eine kurze Erinnerung, Deinen Arbeitsaufwand fürs Studium einzureichen.
+${germanLink}
 
-Solltest Du einmal nicht fürs Studium gearbeitet haben, bestätige Deinen Aufwand durch Klick auf "Überspringen". Nur so verschwindet die rote Markierung in der Kalenderansicht.
+Solltest Du einmal nicht fürs Studium gearbeitet haben, bestätige Deinen Aufwand durch Klick auf "*Überspringen*" rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.
 
 Du erhältst diese E-Mail, weil Du an der Zeiterfassung mit mETHric teilnimmst.
 
 Vielen Dank und beste Grüsse,
 
-mETHric und das Projektteam von \u00abStudent Workload\u00bb`
+mETHric und das Projektteam von \u00abStudent Workload\u00bb
+
+${reminderEmailTextFooterDe()}`
     }
 
     function reminderEmailHtmlFaculty(participantName, participantLink, subjects, categoryGuideDeUrl, categoryGuideEnUrl) {
@@ -212,20 +237,22 @@ mETHric und das Projektteam von \u00abStudent Workload\u00bb`
         <p>dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für &laquo;${subjectDe}&raquo; einzureichen.</p>
         ${linkSectionDe}
         ${guideSectionDe}
-        <p>Sollten Sie einmal nicht für &laquo;${subjectDe}&raquo; gearbeitet haben, bestätigen Sie bitte den Aufwand durch Klick auf <em>Überspringen</em>. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
+        <p>Sollten Sie einmal nicht für &laquo;${subjectDe}&raquo; gearbeitet haben, bestätigen Sie bitte den Aufwand durch Klick auf &laquo;<em>Überspringen</em>&raquo; rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
         <p>Sie erhalten diese E-Mail, weil Sie an der Zeiterfassung mit mETHric teilnehmen.</p>
         <p>Vielen Dank und beste Grüsse,</p>
         <p>mETHric und das Projektteam von &laquo;Faculty Workload&raquo;</p>
+        ${reminderEmailHtmlFooterDe()}
         <hr />
         <p>*** English version***</p>
         <p>Hello ${safeName},</p>
         <p>This is a quick reminder to submit your workload spent on &ldquo;${subjectEn}&rdquo;.</p>
         ${linkSectionEn}
         ${guideSectionEn}
-        <p>If you did not work on &ldquo;${subjectEn}&rdquo; during a certain period of time, please confirm your workload by clicking <em>Skip</em>. This is the only way to remove the red mark from the calendar view.</p>
+        <p>If you did not work on &ldquo;${subjectEn}&rdquo; during a certain period of time, please confirm your workload by clicking <em>Skip</em> in the top right-hand corner of the view for the relevant day or week. This is the only way to remove the red mark from the calendar view.</p>
         <p>You are receiving this email because you are participating in workload tracking with mETHric.</p>
         <p>Thank you very much and best regards,</p>
         <p>mETHric and the &ldquo;Faculty Workload&rdquo; project team</p>
+        ${reminderEmailHtmlFooterEn()}
     `
     }
 
@@ -242,9 +269,11 @@ mETHric und das Projektteam von \u00abStudent Workload\u00bb`
 
 Hallo ${safeName},
 
-dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für \u00ab${subjectDe}\u00bb einzureichen.${germanLink}${germanGuide}
+dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für \u00ab${subjectDe}\u00bb einzureichen.
+${germanLink}
+${germanGuide}
 
-Sollten Sie einmal nicht für \u00ab${subjectDe}\u00bb gearbeitet haben, bestätigen Sie bitte den Aufwand durch Klick auf "Überspringen". Nur so verschwindet die rote Markierung in der Kalenderansicht.
+Sollten Sie einmal nicht für \u00ab${subjectDe}\u00bb gearbeitet haben, bestätigen Sie bitte den Aufwand durch Klick auf "*Überspringen*" rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.
 
 Sie erhalten diese E-Mail, weil Sie an der Zeiterfassung mit mETHric teilnehmen.
 
@@ -252,20 +281,26 @@ Vielen Dank und beste Grüsse,
 
 mETHric und das Projektteam von \u00abFaculty Workload\u00bb
 
+${reminderEmailTextFooterDe()}
+
 
 *** English version***
 
 Hello ${safeName},
 
-This is a quick reminder to submit your workload spent on "${subjectEn}".${englishLink}${englishGuide}
+This is a quick reminder to submit your workload spent on "${subjectEn}".
+${englishLink}
+${englishGuide}
 
-If you did not work on "${subjectEn}" during a certain period of time, please confirm your workload by clicking "Skip". This is the only way to remove the red mark from the calendar view.
+If you did not work on "${subjectEn}" during a certain period of time, please confirm your workload by clicking "Skip" in the top right-hand corner of the view for the relevant day or week. This is the only way to remove the red mark from the calendar view.
 
 You are receiving this email because you are participating in workload tracking with mETHric.
 
 Thank you very much and best regards,
 
-mETHric and the "Faculty Workload" project team`
+mETHric and the "Faculty Workload" project team
+
+${reminderEmailTextFooterEn()}`
     }
 
     function reminderCreateLogRecord(participantId, participantName, participantEmail, participantLink, subject, senderAddress) {
@@ -444,6 +479,26 @@ routerAdd("POST", "/api/admin/participant/invitation", (e) => {
             .replace(/'/g, "&#39;")
     }
 
+    function invitationEmailHtmlFooterDe() {
+        return `<p>Bitte antworten Sie nicht direkt auf diese E-Mail.<br />Kontakt bei Rückfragen und Anregungen: Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
+    }
+
+    function invitationEmailHtmlFooterEn() {
+        return `<p>Please do not reply directly to this email.<br />For any queries or suggestions, please contact Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
+    }
+
+    function invitationEmailTextFooterDe() {
+        return `Bitte antworten Sie nicht direkt auf diese E-Mail.
+Kontakt bei Rückfragen und Anregungen: Katharina Sperger,
+${contactEmail}`
+    }
+
+    function invitationEmailTextFooterEn() {
+        return `Please do not reply directly to this email.
+For any queries or suggestions, please contact Katharina Sperger,
+${contactEmail}`
+    }
+
     function invitationFirstName(participantName) {
         const trimmedName = String(participantName || "").trim()
         if (!trimmedName) {
@@ -529,17 +584,18 @@ routerAdd("POST", "/api/admin/participant/invitation", (e) => {
         ${linkSectionDe}
         <p>Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:</p>
         <ul>
-            <li>Die Module (Fächer), welche Du tracken möchtest, kannst Du selbstständig unter &laquo;Modulverwaltung / Module Management&raquo; hinzufügen. ACHTUNG: Für die Studie sind nur diejenigen Module relevant, welche Du bereits im Herbstsemester 2025 belegt hast, die Leistungskontrolle aber erst jetzt im Sommer zum ersten Mal ablegen wirst. Das Tracking ist NICHT für andere Module (z.B. aus dem FS2026) oder Repetitionsprüfungen vorgesehen.<br />Sollte dennoch ein Modul in der Auswahl fehlen, melde Dich bitte unter <a href="mailto:${contactEmail}">${contactEmail}</a>.</li>
-            <li>Dank der Kalenderansicht siehst Du jeweils sofort, wenn noch ein Tag in der Eingabe fehlt und an welchen Tagen Du für welches Modul gearbeitet hast. Tage, an welchen Du nicht fürs Studium gearbeitet hast, kannst Du durch einen Klick auf &laquo;Überspringen&raquo; ohne Aufwand in die Auswertung mit aufnehmen. Eingaben am Wochenende sind weiterhin möglich und erwünscht, sofern Du am Wochenende fürs Studium gearbeitet hast.</li>
+            <li>Die Module (Fächer), welche Du tracken möchtest, kannst Du selbstständig unter &laquo;Modulverwaltung / Module Management&raquo; hinzufügen. ACHTUNG: Für die Studie sind nur diejenigen Module relevant, welche Du bereits im Herbstsemester 2025 belegt hast, die Leistungskontrolle aber erst jetzt im Sommer zum ersten Mal ablegen wirst. Das Tracking ist NICHT für andere Module (z.B. aus dem FS2026) oder Repetitionsprüfungen vorgesehen.<br />Sollte dennoch ein Modul in der Auswahl fehlen, melde Dich bitte (Kontakt siehe unten).</li>
+            <li>Dank der Kalenderansicht siehst Du jeweils sofort, wenn noch ein Tag in der Eingabe fehlt und an welchen Tagen Du für welches Modul gearbeitet hast. Tage, an welchen Du nicht fürs Studium gearbeitet hast, kannst Du durch einen Klick auf &laquo;<em>Überspringen</em>&raquo; ohne Aufwand in die Auswertung mit aufnehmen. Eingaben am Wochenende sind weiterhin möglich und erwünscht, sofern Du am Wochenende fürs Studium gearbeitet hast.</li>
             <li>Bei bereits eingegebenen Tagen kannst Du Ergänzungen machen (z.B., wenn Du abends noch ungeplanterweise gelernt hast), oder auch den Tag löschen und neu eingeben.</li>
-            <li>Die Präferenzen zum generellen, täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an <a href="mailto:${contactEmail}">${contactEmail}</a> gemeldet werden.</li>
+            <li>Die Präferenzen zum generellen, täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit gemeldet werden (Kontakt siehe unten).</li>
             <li>Der Workload kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Du Deine Aufwände möglichst zeitnah (d.h. möglichst jeden Tag) eingibst. Falls zu lange keine Eingaben erfolgen, wirst Du einen automatisierten Reminder erhalten.</li>
             <li>Bei der Zuverlässigkeit der Daten kannst Du neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!</li>
         </ul>
-        <p>Du nutzt nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne bei <a href="mailto:${contactEmail}">${contactEmail}</a>, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.</p>
+        <p>Du nutzt nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.</p>
         <p>Wir wünschen Dir viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Deine engagierte Teilnahme!!</p>
         <p>Beste Grüsse,</p>
         <p>mETHric und das Projektteam von &laquo;Student Workload&raquo;</p>
+        ${invitationEmailHtmlFooterDe()}
     `
     }
 
@@ -554,25 +610,27 @@ Jedes Modul, für welches Du den Lernaufwand trackst und anschliessend die Prüf
 
 Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:
 
-- Die Module (Fächer), welche Du tracken möchtest, kannst Du selbstständig unter «Modulverwaltung / Module Management» hinzufügen. ACHTUNG: Für die Studie sind nur diejenigen Module relevant, welche Du bereits im Herbstsemester 2025 belegt hast, die Leistungskontrolle aber erst jetzt im Sommer zum ersten Mal ablegen wirst. Das Tracking ist NICHT für andere Module (z.B. aus dem FS2026) oder Repetitionsprüfungen vorgesehen. Sollte dennoch ein Modul in der Auswahl fehlen, melde Dich bitte unter ${contactEmail}.
+- Die Module (Fächer), welche Du tracken möchtest, kannst Du selbstständig unter «Modulverwaltung / Module Management» hinzufügen. ACHTUNG: Für die Studie sind nur diejenigen Module relevant, welche Du bereits im Herbstsemester 2025 belegt hast, die Leistungskontrolle aber erst jetzt im Sommer zum ersten Mal ablegen wirst. Das Tracking ist NICHT für andere Module (z.B. aus dem FS2026) oder Repetitionsprüfungen vorgesehen. Sollte dennoch ein Modul in der Auswahl fehlen, melde Dich bitte (Kontakt siehe unten).
 
-- Dank der Kalenderansicht siehst Du jeweils sofort, wenn noch ein Tag in der Eingabe fehlt und an welchen Tagen Du für welches Modul gearbeitet hast. Tage, an welchen Du nicht fürs Studium gearbeitet hast, kannst Du durch einen Klick auf «Überspringen» ohne Aufwand in die Auswertung mit aufnehmen. Eingaben am Wochenende sind weiterhin möglich und erwünscht, sofern Du am Wochenende fürs Studium gearbeitet hast.
+- Dank der Kalenderansicht siehst Du jeweils sofort, wenn noch ein Tag in der Eingabe fehlt und an welchen Tagen Du für welches Modul gearbeitet hast. Tage, an welchen Du nicht fürs Studium gearbeitet hast, kannst Du durch einen Klick auf "*Überspringen*" ohne Aufwand in die Auswertung mit aufnehmen. Eingaben am Wochenende sind weiterhin möglich und erwünscht, sofern Du am Wochenende fürs Studium gearbeitet hast.
 
 - Bei bereits eingegebenen Tagen kannst Du Ergänzungen machen (z.B., wenn Du abends noch ungeplanterweise gelernt hast), oder auch den Tag löschen und neu eingeben.
 
-- Die Präferenzen zum generellen, täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an ${contactEmail} gemeldet werden.
+- Die Präferenzen zum generellen, täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit gemeldet werden (Kontakt siehe unten).
 
 - Der Workload kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Du Deine Aufwände möglichst zeitnah (d.h. möglichst jeden Tag) eingibst. Falls zu lange keine Eingaben erfolgen, wirst Du einen automatisierten Reminder erhalten.
 
 - Bei der Zuverlässigkeit der Daten kannst Du neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!
 
-Du nutzt nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne bei ${contactEmail}, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.
+Du nutzt nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.
 
 Wir wünschen Dir viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Deine engagierte Teilnahme!!
 
 Beste Grüsse,
 
-mETHric und das Projektteam von «Student Workload»`
+mETHric und das Projektteam von «Student Workload»
+
+${invitationEmailTextFooterDe()}`
     }
 
     function invitationEmailHtmlFacultyDetailed(participantName, participantLink, subjects, categoryGuideUrl) {
@@ -590,42 +648,45 @@ mETHric und das Projektteam von «Student Workload»`
             : ""
 
         return `
+        <p>*** English version below ***</p>
         <p>Hallo ${safeName},</p>
-        <p>Sie erhalten diese E-Mail, weil Sie bereits im Herbstsemester 2025 an &laquo;Faculty Workload&raquo; teilgenommen haben und diesen Sommer eine weitere Sessionsprüfung für &laquo;${subjectDe}&raquo; ansteht. Es geht daher nun weiter mit dem Tracking der Aufwände - mit <strong>mETHric</strong>, unserem <strong>neu entwickelten Tracking-Tool</strong>.</p>
+        <p>Sie erhalten diese E-Mail, weil Sie bereits im Herbstsemester 2025 an &laquo;Faculty Workload&raquo; teilgenommen haben. Diesen Sommer sind weitere Aufwände in Ihrer Lehre zu erwarten oder sind sogar bereits angefallen - entweder, weil eine weitere Sessionsprüfung für &laquo;${subjectDe}&raquo; ansteht, oder weil die Vorbereitungsarbeiten für das HS26 bereits gestartet haben bzw. dies in Kürze tun. Es geht daher nun weiter mit dem Tracking der Aufwände - mit <strong>mETHric</strong>, unserem <strong>neu entwickelten Tracking-Tool</strong>.</p>
         ${linkSectionDe}
         <p>Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:</p>
         <ul>
-            <li>Die Prüfungsvorbereitung, -durchführung, und -korrektur bzw. -nachbereitung können Sie genauso in die bestehenden Kategorien einteilen wie bisher den Unterricht. Hinweise dazu finden Sie im Dokument <a href="${safeGuideUrl}">Kategorisierung der Lehraufwände (PDF)</a>.</li>
-            <li>Dank der Kalenderansicht sehen Sie jeweils sofort, wenn noch eine Woche in der Eingabe fehlt. Wochen, an welchen Sie nicht für &laquo;${subjectDe}&raquo; gearbeitet haben, können Sie durch einen Klick auf &laquo;Überspringen&raquo; ohne Aufwand in die Auswertung mit aufnehmen.</li>
-            <li>Bei bereits eingegebenen Wochen können Sie Ergänzungen machen und somit den Aufwand auch die gesamte Woche über fortlaufend ergänzen. Es ist auch möglich, den Aufwand für eine Woche zu löschen und neu einzugeben.</li>
-            <li>Die Präferenzen zum generellen, wöchentlichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an <a href="mailto:${contactEmail}">${contactEmail}</a> gemeldet werden.</li>
-            <li>Der Arbeitsaufwand kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Sie die Aufwände möglichst zeitnah (d.h. möglichst einmal wöchentlich) eingeben. Falls zu lange keine Eingaben erfolgen, werden Sie einen automatisierten Reminder erhalten.</li>
+            <li>Aufwände für eine etwaige Prüfungsvorbereitung, -durchführung, und -korrektur bzw. -nachbereitung können Sie genauso in die bestehenden Kategorien einteilen wie bisher den Unterricht. Hinweise dazu finden Sie im Dokument <a href="${safeGuideUrl}">Kategorisierung der Lehraufwände (PDF)</a>.</li>
+            <li>Dank der Kalenderansicht sehen Sie jeweils sofort, wenn noch eine Woche bzw. ein Tag in der Eingabe fehlt. Wochen bzw. Tage, an welchen Sie nicht für &laquo;${subjectDe}&raquo; gearbeitet haben, können Sie durch einen Klick auf &laquo;<em>Überspringen</em>&raquo; ohne Aufwand in die Auswertung mit aufnehmen.</li>
+            <li>Falls Sie Ihren Aufwand wöchentlich erfassen: Bei bereits eingegebenen Wochen können Sie Ergänzungen machen und somit den Aufwand auch die gesamte Woche über fortlaufend ergänzen. Es ist auch möglich, den Aufwand für eine Woche zu löschen und neu einzugeben.</li>
+            <li>Die Präferenzen zum generellen, wöchentlichen bzw. täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an die untenstehende Kontaktadresse gemeldet werden.</li>
+            <li>Der Arbeitsaufwand kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Sie die Aufwände möglichst zeitnah eingeben. Falls zu lange keine Eingaben erfolgen, werden Sie einen automatisierten Reminder erhalten.</li>
             <li>Bei der Zuverlässigkeit der Daten können Sie neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!</li>
             <li>Bitte beachten Sie, dass der administrative Aufwand sowie die strukturellen Änderungen (z.B. durch Änderung des Unterrichts-/Prüfungsformats) als Teilmengen des Gesamtaufwandes zu verstehen sind. Eine strukturelle Änderung kann dabei zugleich auch administrativer Natur sein.</li>
         </ul>
-        <p>Sie nutzen nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne bei <a href="mailto:${contactEmail}">${contactEmail}</a>, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.</p>
-        <p>Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme!</p>
+        <p>Sie nutzen nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne bei der untenstehenden Kontaktadresse, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.</p>
+        <p>Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme! Melden Sie sich gerne jederzeit mit Ihren Fragen (Kontakt siehe unten).</p>
         <p>Beste Grüsse,</p>
         <p>mETHric und das Projektteam von &laquo;Faculty Workload&raquo;</p>
+        ${invitationEmailHtmlFooterDe()}
         <hr />
         <p>*** English version ***</p>
         <p>Hello ${safeName},</p>
-        <p>You are receiving this email because you participated in &ldquo;Faculty Workload&rdquo; during Autumn Semester 2025 and have another session exam coming up this summer for &ldquo;${subjectEn}&rdquo;. We are therefore continuing with the tracking of workload - with mETHric, our newly developed tracking tool.</p>
+        <p>You are receiving this email because you participated in &ldquo;Faculty Workload&rdquo; during Autumn Semester 2025. This summer, you can expect further teaching commitments, or these may even have already started - either because another session examination for &ldquo;${subjectEn}&rdquo; is due, or because preparations for HS26 have already begun or are due to start shortly. We are therefore continuing with the tracking of workload - with mETHric, our newly developed tracking tool.</p>
         ${linkSectionEn}
         <p>The app is very intuitive and mostly self-explanatory. A few notes:</p>
         <ul>
             <li>You can categorise exam preparation, conduction, grading and follow-up work in the same way as you have previously categorised teaching. Further details can be found in the document <a href="${safeGuideUrl}">Categorisation of teaching workload (PDF)</a>.</li>
-            <li>Thanks to the calendar view, you can immediately see if a week is still missing from your entries. You can easily include weeks during which you did not work on &ldquo;${subjectEn}&rdquo; in the evaluation by clicking &ldquo;Skip&rdquo;.</li>
-            <li>For weeks that have already been entered, you can make additions and thus continuously update your time spent throughout the entire week. It is also possible to delete the workload for a week and re-enter it.</li>
-            <li>The preferences for the general, weekly data entry reminder will be carried over from Autumn Semester 2025. Requests for changes can be submitted at any time to <a href="mailto:${contactEmail}">${contactEmail}</a>.</li>
-            <li>Workload can be recorded retroactively. Nevertheless, it remains essential for data quality that you enter the workload as promptly as possible (i.e., ideally once a week). If you do not enter data for too long, you will receive an automated reminder.</li>
+            <li>Thanks to the calendar view, you can immediately see if a week / day is still missing from your entries. You can easily include weeks / days during which you did not work on &ldquo;${subjectEn}&rdquo; in the evaluation by clicking &ldquo;Skip&rdquo;.</li>
+            <li>In case you track your workload weekly: For weeks that have already been entered, you can make additions and thus continuously update your time spent throughout the entire week. It is also possible to delete the workload for a week and re-enter it.</li>
+            <li>The preferences for the general, weekly or daily data entry reminder will be carried over from Autumn Semester 2025. Requests for changes can be submitted at any time to the contact address listed below.</li>
+            <li>Workload can be recorded retroactively. Nevertheless, it remains essential for data quality that you enter the workload as promptly as possible. If you do not enter data for too long, you will receive an automated reminder.</li>
             <li>For data reliability, you can now select between 1 and 5 stars, where 5 stars correspond to a 9-10 in Mentimeter (etc.). This is a qualitative assessment, but it helps us greatly with the evaluation!</li>
             <li>Please note that administrative effort as well as structural changes (e.g., due to changes in the teaching/exam format) should be understood as subsets of the total effort. A structural change can also be of an administrative nature.</li>
         </ul>
-        <p>You are now using mETHric version 1.0, which means that errors or inconsistencies may still occur. Please feel free to contact <a href="mailto:${contactEmail}">${contactEmail}</a> if you notice anything or have suggestions for improvement.</p>
+        <p>You are now using mETHric version 1.0, which means that errors or inconsistencies may still occur. Please feel free to contact us if you notice anything or have suggestions for improvement.</p>
         <p>We hope you enjoy tracking your workload with mETHric and thank you in advance for your dedicated participation!</p>
         <p>Best regards,</p>
         <p>mETHric and the &ldquo;Faculty Workload&rdquo; project team</p>
+        ${invitationEmailHtmlFooterEn()}
     `
     }
 
@@ -637,64 +698,70 @@ mETHric und das Projektteam von «Student Workload»`
         const germanLink = participantLink ? `\n\nÜber folgenden persönlichen Link können Sie Ihre Aufwände für «${subjectDe}» erfassen: ${invitationLanguageLink(participantLink, "de")}\nSpeichern Sie den Link am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.` : ""
         const englishLink = participantLink ? `\n\nYou can use the following personal link to record your workload for "${subjectEn}": ${invitationLanguageLink(participantLink, "en")}\n\nIt's best to save the link directly as a bookmark in your browser - on your phone, tablet, or laptop/PC.` : ""
 
-        return `Hallo ${safeName},
+        return `*** English version below ***
 
-Sie erhalten diese E-Mail, weil Sie bereits im Herbstsemester 2025 an «Faculty Workload» teilgenommen haben und diesen Sommer eine weitere Sessionsprüfung für «${subjectDe}» ansteht. Es geht daher nun weiter mit dem Tracking der Aufwände - mit mETHric, unserem neu entwickelten Tracking-Tool.${germanLink}
+Hallo ${safeName},
+
+Sie erhalten diese E-Mail, weil Sie bereits im Herbstsemester 2025 an «Faculty Workload» teilgenommen haben. Diesen Sommer sind weitere Aufwände in Ihrer Lehre zu erwarten oder sind sogar bereits angefallen - entweder, weil eine weitere Sessionsprüfung für «${subjectDe}» ansteht, oder weil die Vorbereitungsarbeiten für das HS26 bereits gestartet haben bzw. dies in Kürze tun. Es geht daher nun weiter mit dem Tracking der Aufwände - mit mETHric, unserem neu entwickelten Tracking-Tool.${germanLink}
 
 Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:
 
-- Die Prüfungsvorbereitung, -durchführung, und -korrektur bzw. -nachbereitung können Sie genauso in die bestehenden Kategorien einteilen wie bisher den Unterricht. Hinweise dazu finden Sie im Dokument «Kategorisierung der Lehraufwände (PDF)»: ${guideUrl}
+- Aufwände für eine etwaige Prüfungsvorbereitung, -durchführung, und -korrektur bzw. -nachbereitung können Sie genauso in die bestehenden Kategorien einteilen wie bisher den Unterricht. Hinweise dazu finden Sie im Dokument «Kategorisierung der Lehraufwände (PDF)»: ${guideUrl}
 
-- Dank der Kalenderansicht sehen Sie jeweils sofort, wenn noch eine Woche in der Eingabe fehlt. Wochen, an welchen Sie nicht für «${subjectDe}» gearbeitet haben, können Sie durch einen Klick auf «Überspringen» ohne Aufwand in die Auswertung mit aufnehmen.
+- Dank der Kalenderansicht sehen Sie jeweils sofort, wenn noch eine Woche bzw. ein Tag in der Eingabe fehlt. Wochen bzw. Tage, an welchen Sie nicht für «${subjectDe}» gearbeitet haben, können Sie durch einen Klick auf "*Überspringen*" ohne Aufwand in die Auswertung mit aufnehmen.
 
-- Bei bereits eingegebenen Wochen können Sie Ergänzungen machen und somit den Aufwand auch die gesamte Woche über fortlaufend ergänzen. Es ist auch möglich, den Aufwand für eine Woche zu löschen und neu einzugeben.
+- Falls Sie Ihren Aufwand wöchentlich erfassen: Bei bereits eingegebenen Wochen können Sie Ergänzungen machen und somit den Aufwand auch die gesamte Woche über fortlaufend ergänzen. Es ist auch möglich, den Aufwand für eine Woche zu löschen und neu einzugeben.
 
-- Die Präferenzen zum generellen, wöchentlichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an ${contactEmail} gemeldet werden.
+- Die Präferenzen zum generellen, wöchentlichen bzw. täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an die untenstehende Kontaktadresse gemeldet werden.
 
-- Der Arbeitsaufwand kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Sie die Aufwände möglichst zeitnah (d.h. möglichst einmal wöchentlich) eingeben. Falls zu lange keine Eingaben erfolgen, werden Sie einen automatisierten Reminder erhalten.
+- Der Arbeitsaufwand kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Sie die Aufwände möglichst zeitnah eingeben. Falls zu lange keine Eingaben erfolgen, werden Sie einen automatisierten Reminder erhalten.
 
 - Bei der Zuverlässigkeit der Daten können Sie neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!
 
 - Bitte beachten Sie, dass der administrative Aufwand sowie die strukturellen Änderungen (z.B. durch Änderung des Unterrichts-/Prüfungsformats) als Teilmengen des Gesamtaufwandes zu verstehen sind. Eine strukturelle Änderung kann dabei zugleich auch administrativer Natur sein.
 
-Sie nutzen nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne bei ${contactEmail}, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.
+Sie nutzen nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne bei der untenstehenden Kontaktadresse, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.
 
-Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme!
+Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme! Melden Sie sich gerne jederzeit mit Ihren Fragen (Kontakt siehe unten).
 
 Beste Grüsse,
 
 mETHric und das Projektteam von «Faculty Workload»
+
+${invitationEmailTextFooterDe()}
 
 
 *** English version ***
 
 Hello ${safeName},
 
-You are receiving this email because you participated in "Faculty Workload" during Autumn Semester 2025 and have another session exam coming up this summer for "${subjectEn}". We are therefore continuing with the tracking of workload - with mETHric, our newly developed tracking tool.${englishLink}
+You are receiving this email because you participated in "Faculty Workload" during Autumn Semester 2025. This summer, you can expect further teaching commitments, or these may even have already started - either because another session examination for "${subjectEn}" is due, or because preparations for HS26 have already begun or are due to start shortly. We are therefore continuing with the tracking of workload - with mETHric, our newly developed tracking tool.${englishLink}
 
 The app is very intuitive and mostly self-explanatory. A few notes:
 
 - You can categorise exam preparation, conduction, grading and follow-up work in the same way as you have previously categorised teaching. Further details can be found in the document "Categorisation of teaching workload (PDF)": ${guideUrl}
 
-- Thanks to the calendar view, you can immediately see if a week is still missing from your entries. You can easily include weeks during which you did not work on "${subjectEn}" in the evaluation by clicking "Skip".
+- Thanks to the calendar view, you can immediately see if a week / day is still missing from your entries. You can easily include weeks / days during which you did not work on "${subjectEn}" in the evaluation by clicking "Skip".
 
-- For weeks that have already been entered, you can make additions and thus continuously update your time spent throughout the entire week. It is also possible to delete the workload for a week and re-enter it.
+- In case you track your workload weekly: For weeks that have already been entered, you can make additions and thus continuously update your time spent throughout the entire week. It is also possible to delete the workload for a week and re-enter it.
 
-- The preferences for the general, weekly data entry reminder will be carried over from Autumn Semester 2025. Requests for changes can be submitted at any time to ${contactEmail}.
+- The preferences for the general, weekly or daily data entry reminder will be carried over from Autumn Semester 2025. Requests for changes can be submitted at any time to the contact address listed below.
 
-- Workload can be recorded retroactively. Nevertheless, it remains essential for data quality that you enter the workload as promptly as possible (i.e., ideally once a week). If you do not enter data for too long, you will receive an automated reminder.
+- Workload can be recorded retroactively. Nevertheless, it remains essential for data quality that you enter the workload as promptly as possible. If you do not enter data for too long, you will receive an automated reminder.
 
 - For data reliability, you can now select between 1 and 5 stars, where 5 stars correspond to a 9-10 in Mentimeter (etc.). This is a qualitative assessment, but it helps us greatly with the evaluation!
 
 - Please note that administrative effort as well as structural changes (e.g., due to changes in the teaching/exam format) should be understood as subsets of the total effort. A structural change can also be of an administrative nature.
 
-You are now using mETHric version 1.0, which means that errors or inconsistencies may still occur. Please feel free to contact ${contactEmail} if you notice anything or have suggestions for improvement.
+You are now using mETHric version 1.0, which means that errors or inconsistencies may still occur. Please feel free to contact us if you notice anything or have suggestions for improvement.
 
-We hope you enjoy tracking your workload with mETHric and thank you in advance for your dedicated participation! Please feel free to contact us at any time with your questions at ${contactEmail}.
+We hope you enjoy tracking your workload with mETHric and thank you in advance for your dedicated participation!
 
 Best regards,
 
-mETHric and the "Faculty Workload" project team`
+mETHric and the "Faculty Workload" project team
+
+${invitationEmailTextFooterEn()}`
     }
 
     function invitationCreateLogRecord(participantId, participantName, participantEmail, participantLink, subject, senderAddress) {

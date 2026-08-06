@@ -77,6 +77,10 @@ interface SaveWeeklyEntryPayload {
   }[];
 }
 
+interface SaveSubmissionResponse {
+  submittedAt?: string;
+}
+
 interface WorkloadStatusSubject {
   id: string;
   number?: string;
@@ -260,6 +264,7 @@ function mergeDailyEntries(existingEntry: DailyEntry, addendum: DailyEntry): Dai
     courses: mergedCourses,
     subjectTimes: mergedSubjectTimes,
     skipped: false,
+    submittedAt: addendum.submittedAt ?? existingEntry.submittedAt,
   };
 }
 
@@ -368,6 +373,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
   const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
   const [missingSubmissionDates, setMissingSubmissionDates] = useState<Set<string>>(new Set());
+  const [missingReminderDate, setMissingReminderDate] = useState<Date | null>(null);
   const [subjectPendingRemoval, setSubjectPendingRemoval] = useState<Subject | null>(null);
 
   useEffect(() => {
@@ -621,20 +627,25 @@ function AppContent({ participantId }: AppContentProps) {
           })) }),
       };
 
-    await pb.send(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
+    const response = await pb.send<SaveSubmissionResponse>(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
       method: 'POST',
       body: payload,
     });
 
+    const savedEntry: DailyEntry = {
+      ...entry,
+      submittedAt: response.submittedAt,
+    };
+
     setEntries((previousEntries) => {
       const newEntries = new Map(previousEntries);
-      const previousEntry = newEntries.get(entry.date);
+      const previousEntry = newEntries.get(savedEntry.date);
       const nextEntry =
-        previousEntry && !previousEntry.skipped && !entry.skipped
-          ? mergeDailyEntries(previousEntry, entry)
-          : entry;
+        previousEntry && !previousEntry.skipped && !savedEntry.skipped
+          ? mergeDailyEntries(previousEntry, savedEntry)
+          : savedEntry;
 
-      newEntries.set(entry.date, nextEntry);
+      newEntries.set(savedEntry.date, nextEntry);
 
       const entriesObj = Object.fromEntries(newEntries);
       //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
@@ -688,7 +699,47 @@ function AppContent({ participantId }: AppContentProps) {
     setShowViewModal(false);
   };
 
-  const handleDateSelect = (date: Date) => {
+  const getEarlierMissingDates = (date: Date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+
+    return Array.from(missingSubmissionDates)
+      .filter((missingDate) => missingDate < dateKey)
+      .sort();
+  };
+
+  const getMissingReminderMainTranslationKey = (missingCount: number) => {
+    const roleKey = participantRole === 'faculty' ? 'Faculty' : 'Student';
+    const periodKey = entryMode === 'week' ? 'Week' : 'Day';
+    const countKey = missingCount === 1 ? 'Singular' : 'Plural';
+
+    return `dailyEntry.missingBeforeMain${roleKey}${periodKey}${countKey}`;
+  };
+
+  const getMissingReminderSkipTranslationKey = () => {
+    const roleKey = participantRole === 'faculty' ? 'Faculty' : 'Student';
+    const periodKey = entryMode === 'week' ? 'Week' : 'Day';
+
+    return `dailyEntry.missingBeforeSkip${roleKey}${periodKey}`;
+  };
+
+  const renderMissingReminderDescription = () => {
+    const missingCount = missingReminderDate ? getEarlierMissingDates(missingReminderDate).length : 0;
+
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg bg-amber-50 px-3 py-2 font-medium text-amber-900">
+          <p>{t(getMissingReminderMainTranslationKey(missingCount), { count: missingCount })}</p>
+        </div>
+        <p>
+          {t(getMissingReminderSkipTranslationKey())}
+          <br />
+          {t('dailyEntry.missingBeforeSkipLocation')}
+        </p>
+      </div>
+    );
+  };
+
+  const openEntryModalForDate = (date: Date) => {
     setSelectedDate(date);
     const dateKey = format(date, 'yyyy-MM-dd');
     const existingEntry = entries.get(dateKey);
@@ -698,6 +749,20 @@ function AppContent({ participantId }: AppContentProps) {
     } else {
       setShowEntryModal(true);
     }
+  };
+
+  const handleDateSelect = (date: Date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const existingEntry = entries.get(dateKey);
+    const earlierMissingDates = getEarlierMissingDates(date);
+
+    if (!existingEntry && earlierMissingDates.length > 0) {
+      setSelectedDate(date);
+      setMissingReminderDate(date);
+      return;
+    }
+
+    openEntryModalForDate(date);
   };
 
   const handleAddWorkload = () => {
@@ -911,6 +976,26 @@ function AppContent({ participantId }: AppContentProps) {
         variant="danger"
         onCancel={() => setSubjectPendingRemoval(null)}
         onConfirm={() => confirmRemoveSubject(subjectPendingRemoval)}
+      />
+
+      <ConfirmDialog
+        open={!!missingReminderDate}
+        title={t('dailyEntry.missingBeforeTitle')}
+        description={renderMissingReminderDescription()}
+        confirmLabel={t('common.continue')}
+        cancelLabel={t('common.cancel')}
+        onCancel={() => {
+          setMissingReminderDate(null);
+          setSelectedDate(null);
+        }}
+        onConfirm={() => {
+          const dateToOpen = missingReminderDate;
+          setMissingReminderDate(null);
+
+          if (dateToOpen) {
+            openEntryModalForDate(dateToOpen);
+          }
+        }}
       />
     </div>
   );

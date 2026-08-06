@@ -109,20 +109,6 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         return parsed
     }
 
-    function getReferenceDateStart(app) {
-        try {
-            const records = app.findRecordsByFilter("referenceDate", "", "", 1, 0)
-            if (records.length === 0) {
-                return null
-            }
-
-            return parseDateOnly(records[0].get("referenceDate"))
-        } catch (error) {
-            console.error("Failed to load clean export reference date:", error)
-            return null
-        }
-    }
-
     function pad2(n) {
         return n < 10 ? "0" + n : "" + n
     }
@@ -272,7 +258,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         : (["day", "week"].includes(participantEntryMode) ? participantEntryMode : "")
     const includeCommuteTime = participantRole === "student"
     const includeStructuralChanges = participantRole === "faculty"
-    const referenceDateStart = getReferenceDateStart($app)
+    const referenceDateStart = parseDateOnly(participant.get("referenceDate"))
     const submissionRangeStart = referenceDateStart && exportPeriodType === "week"
         ? startOfWeekMonday(referenceDateStart)
         : referenceDateStart

@@ -145,6 +145,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
     let createdSubmissionId = ""
     let createdMode = "initial"
     let createdItemCount = 0
+    let createdSubmittedAt = ""
 
     try {
         $app.runInTransaction((txApp) => {
@@ -196,7 +197,8 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             submissionRecord.set("status", "submitted")
             submissionRecord.set("submissionMode", submissionMode)
             submissionRecord.set("replacesSubmission", replacesSubmissionId)
-            submissionRecord.set("submittedAt", formatUtcDateTime(new Date()))
+            const submittedAt = formatUtcDateTime(new Date())
+            submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
@@ -280,6 +282,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
 
             createdSubmissionId = submissionRecord.id
             createdMode = submissionMode
+            createdSubmittedAt = submittedAt
         })
     } catch (error) {
         return e.json(400, {
@@ -292,6 +295,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
         ok: true,
         submissionId: createdSubmissionId,
         submissionMode: createdMode,
+        submittedAt: createdSubmittedAt,
         createdItems: createdItemCount,
     })
 })
@@ -559,6 +563,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
     let createdSubmissionId = ""
     let createdMode = "initial"
     let createdItemCount = 0
+    let createdSubmittedAt = ""
 
     try {
         $app.runInTransaction((txApp) => {
@@ -630,7 +635,8 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             submissionRecord.set("status", "submitted")
             submissionRecord.set("submissionMode", submissionMode)
             submissionRecord.set("replacesSubmission", replacesSubmissionId)
-            submissionRecord.set("submittedAt", formatUtcDateTime(new Date()))
+            const submittedAt = formatUtcDateTime(new Date())
+            submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
@@ -695,6 +701,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
 
             createdSubmissionId = submissionRecord.id
             createdMode = submissionMode
+            createdSubmittedAt = submittedAt
         })
     } catch (error) {
         return e.json(400, {
@@ -707,6 +714,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         ok: true,
         submissionId: createdSubmissionId,
         submissionMode: createdMode,
+        submittedAt: createdSubmittedAt,
         createdItems: createdItemCount,
     })
 })

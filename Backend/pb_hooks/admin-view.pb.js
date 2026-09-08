@@ -151,6 +151,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         eventRecord.set("submissionMode", adminStringValue(deletedSubmission, "submissionMode"))
         eventRecord.set("comment", adminStringValue(deletedSubmission, "comment"))
         eventRecord.set("dataRating", adminNumberValue(deletedSubmission, "dataRating"))
+        eventRecord.set("socialBattery", adminNumberValue(deletedSubmission, "socialBattery"))
         eventRecord.set("generalAdminTime", adminNumberValue(deletedSubmission, "generalAdminTime"))
         eventRecord.set("commuteTime", adminNumberValue(deletedSubmission, "commuteTime"))
         eventRecord.set("structuralChanges", adminNumberValue(deletedSubmission, "structuralChanges"))
@@ -319,6 +320,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             periodEnd: adminDateValue(submission, "periodEnd"),
             periodDate: adminPeriodDate(adminDateValue(submission, "periodStart")),
             dataRating: adminNumberValue(submission, "dataRating"),
+            socialBattery: adminNumberValue(submission, "socialBattery"),
             generalAdminTime: adminNumberValue(submission, "generalAdminTime"),
             commuteTime: adminNumberValue(submission, "commuteTime"),
             structuralChanges: adminNumberValue(submission, "structuralChanges"),
@@ -344,6 +346,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
                 periodEnd: adminDateValue(submission, "periodEnd"),
                 periodDate: adminPeriodDate(adminDateValue(submission, "periodStart")),
                 dataRating: adminNumberValue(submission, "dataRating"),
+                socialBattery: adminNumberValue(submission, "socialBattery"),
                 generalAdminTime: adminNumberValue(submission, "generalAdminTime"),
                 commuteTime: adminNumberValue(submission, "commuteTime"),
                 structuralChanges: adminNumberValue(submission, "structuralChanges"),
@@ -378,6 +381,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             periodEnd: adminDateValue(eventRecord, "periodEnd"),
             periodDate: adminPeriodDate(adminDateValue(eventRecord, "periodStart")),
             dataRating: adminNumberValue(eventRecord, "dataRating"),
+            socialBattery: adminNumberValue(eventRecord, "socialBattery"),
             generalAdminTime: adminNumberValue(eventRecord, "generalAdminTime"),
             commuteTime: adminNumberValue(eventRecord, "commuteTime"),
             structuralChanges: adminNumberValue(eventRecord, "structuralChanges"),
@@ -418,6 +422,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             periodEnd: "",
             periodDate: adminPeriodDate(happenedAt),
             dataRating: 0,
+            socialBattery: 0,
             generalAdminTime: 0,
             commuteTime: 0,
             structuralChanges: 0,
@@ -770,6 +775,7 @@ onRecordAfterDeleteSuccess((e) => {
         eventRecord.set("submissionMode", adminStringValue(deletedSubmission, "submissionMode"))
         eventRecord.set("comment", adminStringValue(deletedSubmission, "comment"))
         eventRecord.set("dataRating", adminNumberValue(deletedSubmission, "dataRating"))
+        eventRecord.set("socialBattery", adminNumberValue(deletedSubmission, "socialBattery"))
         eventRecord.set("generalAdminTime", adminNumberValue(deletedSubmission, "generalAdminTime"))
         eventRecord.set("commuteTime", adminNumberValue(deletedSubmission, "commuteTime"))
         eventRecord.set("structuralChanges", adminNumberValue(deletedSubmission, "structuralChanges"))

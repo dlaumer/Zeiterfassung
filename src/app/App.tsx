@@ -31,6 +31,7 @@ interface DailyEntry {
   courses: Course[];
   subjectTimes: SubjectTime[];
   reliability: number;
+  socialBattery?: number;
   adminEffort: number;
   commuteTime: number;
   structuralChanges?: number;
@@ -43,6 +44,7 @@ interface SaveDailyEntryPayload {
   participantId: string;
   date: string;
   reliability: number;
+  socialBattery?: number;
   adminEffortMinutes: number;
   commuteMinutes?: number;
   structuralChangesMinutes?: number;
@@ -62,6 +64,7 @@ interface SaveWeeklyEntryPayload {
   participantId: string;
   weekStart: string;
   reliability: number;
+  socialBattery?: number;
   adminEffortMinutes: number;
   commuteMinutes?: number;
   structuralChangesMinutes?: number;
@@ -100,6 +103,7 @@ interface WorkloadStatusHistoryEntry {
   structuralChanges?: number;
   generalAdminTime?: number;
   dataRating?: number;
+  socialBattery?: number;
   comment?: string;
   comments?: string[];
   submittedAt?: string;
@@ -257,6 +261,7 @@ function mergeDailyEntries(existingEntry: DailyEntry, addendum: DailyEntry): Dai
   return {
     ...existingEntry,
     reliability: addendum.reliability,
+    socialBattery: addendum.socialBattery,
     adminEffort: addendum.adminEffort,
     commuteTime: addendum.commuteTime,
     structuralChanges: addendum.structuralChanges,
@@ -544,6 +549,7 @@ function AppContent({ participantId }: AppContentProps) {
               hasStudyEntry: !!subject.hasStudyEntry,
             })),
             reliability: Number(item.dataRating ?? 0),
+            socialBattery: Number(item.socialBattery ?? 0),
             adminEffort: Number(item.generalAdminTime ?? 0) / 60,
             commuteTime: Number(item.commuteTime ?? 0) / 60,
             structuralChanges: Number(item.structuralChanges ?? 0) / 60,
@@ -588,6 +594,7 @@ function AppContent({ participantId }: AppContentProps) {
         participantId,
         weekStart: entry.date,
         reliability: entry.skipped ? 5 : entry.reliability,
+        socialBattery: entry.socialBattery || undefined,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
         commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
         structuralChangesMinutes: participantRole === 'faculty' && !entry.skipped ? Math.round((entry.structuralChanges ?? 0) * 60) : 0,
@@ -609,6 +616,7 @@ function AppContent({ participantId }: AppContentProps) {
         participantId,
         date: entry.date,
         reliability: entry.skipped ? 5 : entry.reliability,
+        socialBattery: entry.socialBattery || undefined,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
         commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
         structuralChangesMinutes: participantRole === 'faculty' && !entry.skipped ? Math.round((entry.structuralChanges ?? 0) * 60) : 0,

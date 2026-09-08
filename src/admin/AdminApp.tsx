@@ -113,6 +113,7 @@ interface AdminEvent {
   periodEnd: string;
   periodDate: string;
   dataRating: number;
+  socialBattery?: number;
   generalAdminTime: number;
   commuteTime: number;
   structuralChanges: number;
@@ -1639,6 +1640,7 @@ function AdminContent() {
                                   : t('admin.metric.commute', { value: formatMinutes(event.commuteTime, t) })}
                               </span>
                               <span>{event.dataRating ? t('admin.metric.rating', { value: event.dataRating }) : t('admin.metric.noRating')}</span>
+                              <span>{event.socialBattery ? t('admin.metric.socialBattery', { value: event.socialBattery }) : t('admin.metric.noSocialBattery')}</span>
                             </div>
 
                             {event.items.length > 0 && (

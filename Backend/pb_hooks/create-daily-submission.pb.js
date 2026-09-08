@@ -120,6 +120,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
     const weekStart = String(body.weekStart || "").trim()
     const comment = String(body.comment || "").trim()
     const reliability = Number(body.reliability || 0)
+    const socialBattery = body.socialBattery == null ? null : Number(body.socialBattery)
     const adminEffortMinutes = Math.max(0, Number(body.adminEffortMinutes || 0))
     const commuteMinutes = Math.max(0, Number(body.commuteMinutes || 0))
     const structuralChangesMinutes = Math.max(0, Number(body.structuralChangesMinutes || 0))
@@ -140,6 +141,10 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
 
     if (reliability < 0 || reliability > 5) {
         return e.json(400, { error: "reliability must be between 0 and 5" })
+    }
+
+    if (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5) {
+        return e.json(400, { error: "socialBattery must be an integer between 1 and 5" })
     }
 
     let createdSubmissionId = ""
@@ -200,6 +205,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             const submittedAt = formatUtcDateTime(new Date())
             submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
+            submissionRecord.set("socialBattery", socialBattery)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
             submissionRecord.set("commuteTime", participantRole === "student" ? commuteMinutes : 0)
@@ -537,6 +543,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
     const date = String(body.date || "").trim()
     const comment = String(body.comment || "").trim()
     const reliability = Number(body.reliability || 0)
+    const socialBattery = body.socialBattery == null ? null : Number(body.socialBattery)
     const adminEffortMinutes = Math.max(0, Number(body.adminEffortMinutes || 0))
     const commuteMinutes = Math.max(0, Number(body.commuteMinutes || 0))
     const structuralChangesMinutes = Math.max(0, Number(body.structuralChangesMinutes || 0))
@@ -558,6 +565,10 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
 
     if (reliability < 0 || reliability > 5) {
         return e.json(400, { error: "reliability must be between 0 and 5" })
+    }
+
+    if (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5) {
+        return e.json(400, { error: "socialBattery must be an integer between 1 and 5" })
     }
 
     let createdSubmissionId = ""
@@ -638,6 +649,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             const submittedAt = formatUtcDateTime(new Date())
             submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
+            submissionRecord.set("socialBattery", socialBattery)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", adminEffortMinutes)
             submissionRecord.set("commuteTime", participantRole === "student" ? commuteMinutes : 0)

@@ -1134,5 +1134,77 @@
   "admin.hoursDetails": {
     "en": "Hours details",
     "de": "Stundendetails"
+  },
+  "socialBattery.student": {
+    "en": "Study-related battery level",
+    "de": "Studiumsbezogener Batteriestand"
+  },
+  "socialBattery.faculty": {
+    "en": "Teaching-related battery level",
+    "de": "Lehrbezogener Batteriestand"
+  },
+  "socialBattery.hint": {
+    "en": "Select a battery level.",
+    "de": "Wähle einen Batteriestand."
+  },
+  "socialBattery.level1": {
+    "en": "Drained",
+    "de": "Erschöpft"
+  },
+  "socialBattery.level2": {
+    "en": "Low energy",
+    "de": "Wenig Energie"
+  },
+  "socialBattery.level3": {
+    "en": "Neutral",
+    "de": "Neutral"
+  },
+  "socialBattery.level4": {
+    "en": "Energized",
+    "de": "Energiegeladen"
+  },
+  "socialBattery.level5": {
+    "en": "Fully charged",
+    "de": "Voll aufgeladen"
+  },
+  "fieldHelp.label": {
+    "de": "Informationen zu {{title}}",
+    "en": "Information about {{title}}"
+  },
+  "fieldHelp.reliability.faculty": {
+    "de": "Mit der Angabe der Datenzuverlässigkeit geben Sie uns Auskunft darüber, wie sicher Sie sich sind, dass der eingetragene Zeitaufwand mit dem tatsächlich geleisteten Aufwand übereinstimmt. Nachfolgend ein paar Beispiele:\n\n1 Stern (★): Sie können sich kaum noch erinnern, inwieweit Sie in der betrachteten Periode für die Lehre Ihres Moduls gearbeitet haben. Die Aufwände konnten Sie, wenn überhaupt, lediglich grob anhand anderer Anhaltspunkte rekonstruieren.\n\n3 Sterne (★★★): Ihre Angaben stimmen wahrscheinlich recht gut mit dem überein, was Sie tatsächlich gemacht haben. Ganz sicher sind Sie sich jedoch nicht mehr, insbesondere betreffend genaue Höhe des tatsächlich geleisteten Zeitaufwands. Das kann sein, weil Sie zu viel anderes parallel gemacht haben, oder weil die Eingabe in mETHric nicht sehr zeitnah erfolgt ist.\n\n5 Sterne (★★★★★): Sie sind sich sicher, dass die gemachten Eingaben sehr gut mit dem tatsächlich von Ihnen geleisteten Aufwand übereinstimmen, z.B., weil Sie die Eingabe direkt im Anschluss an die Tätigkeit gemacht haben, oder auch, weil Sie Ihre Aufwände separat notiert haben.",
+    "en": "The data reliability rating tells us how confident you are that the time you entered matches the time you actually spent. Here are a few examples:\n\n1 star (★): You can barely remember how much work you did on teaching your module during the period in question. If at all, you could only roughly reconstruct the time spent using other clues.\n\n3 stars (★★★): Your entries probably match what you actually did quite well. However, you are no longer completely sure, particularly about the exact amount of time spent. This may be because you were doing many other things at the same time, or because you did not enter the data in mETHric soon afterwards.\n\n5 stars (★★★★★): You are confident that your entries closely match the time you actually spent, for example because you entered the data immediately after the activity or kept separate notes of your time."
+  },
+  "fieldHelp.reliability.student": {
+    "de": "Mit der Angabe der Datenzuverlässigkeit gibst Du uns Auskunft darüber, wie sicher Du Dir bist, dass der eingetragene Zeitaufwand mit dem tatsächlich geleisteten Aufwand übereinstimmt. Nachfolgend ein paar Beispiele:\n\n1 Stern (★): Du kannst Dich kaum noch erinnern, inwieweit Du am betrachteten Tag etwas fürs Studium gemacht hast. Die Aufwände konntest Du, wenn überhaupt, lediglich grob anhand anderer Anhaltspunkte rekonstruieren.\n\n3 Sterne (★★★): Deine Angaben stimmen wahrscheinlich recht gut mit dem überein, was Du tatsächlich gemacht hast. Ganz sicher bist Du Dir jedoch nicht mehr, insbesondere betreffend genaue Höhe des tatsächlich geleisteten Zeitaufwands. Das kann sein, weil Du zu viel anderes parallel gemacht hast, oder weil die Eingabe in mETHric nicht sehr zeitnah erfolgt ist.\n\n5 Sterne (★★★★★): Du bist Dir sicher, dass die gemachten Eingaben sehr gut mit dem tatsächlich von Dir geleisteten Aufwand übereinstimmen, z.B., weil Du die Eingabe direkt im Anschluss an die Tätigkeit gemacht hast, oder auch, weil Du Deine Aufwände separat notiert hast.",
+    "en": "The data reliability rating tells us how confident you are that the time you entered matches the time you actually spent. Here are a few examples:\n\n1 star (★): You can barely remember how much studying you did on the day in question. If at all, you could only roughly reconstruct the time spent using other clues.\n\n3 stars (★★★): Your entries probably match what you actually did quite well. However, you are no longer completely sure, particularly about the exact amount of time spent. This may be because you were doing many other things at the same time, or because you did not enter the data in mETHric soon afterwards.\n\n5 stars (★★★★★): You are confident that your entries closely match the time you actually spent, for example because you entered the data immediately after the activity or kept separate notes of your time."
+  },
+  "fieldHelp.battery.faculty": {
+    "de": "Mit dem «Batteriestand» teilen Sie uns mit, wie Sie Ihre Arbeit während der konkreten Lehrtätigkeit(en) im betrachteten Zeitraum erlebt haben – von stark erschöpfend und belastend bis hin zu ausgesprochen motivierend und energiegebend. Schlechte Nacht, private Sorgen oder andere Belastungen ausserhalb der Lehre sollten dabei möglichst ausgeblendet werden.\n\nAm Beispiel «Vorbereitung neuer Unterrichtsmaterialien»:\n\n1 – Batterie praktisch leer: Sie sitzen vor dem Bildschirm und versuchen zum dritten Mal, denselben Abschnitt zu lesen – aber Sie kommen kaum mehr weiter. Jeder nächste Schritt kostet Überwindung. Sie fühlen sich von der Aufgabe ausgelaugt, gestresst, gelangweilt oder frustriert und würden am liebsten einfach aufhören. Ihre Batterie ist praktisch leer.\n\n3 – Batterie halbvoll: Sie arbeiten die Inhalte durch, verstehen, was Sie brauchen, und kommen Schritt für Schritt voran. Natürlich braucht die Vorbereitung Zeit und Konzentration, aber die Aufgabe fühlt sich gut machbar an. Sie fühlen sich weder besonders erschöpft noch besonders beflügelt.\n\n5 – Batterie voll geladen: Sie gehen richtig in der Arbeit auf. Die Gedanken fliessen, eine Idee führt zur nächsten und die Zeit vergeht im Flug. Die Erarbeitung der Materialien macht Ihnen richtig Freude und motiviert Sie. Statt danach erschöpft zu sein, würden Sie am liebsten gleich weitermachen. Ihre Batterie fühlt sich voller an als vorher.",
+    "en": "Your “battery level” tells us how you experienced your work during the specific teaching activity or activities in the period in question – from very draining and stressful to highly motivating and energizing. Try to set aside a poor night's sleep, personal worries, or other pressures outside teaching as much as possible.\n\nTaking “preparing new teaching materials” as an example:\n\n1 – Battery almost empty: You are sitting in front of the screen, trying to read the same section for the third time, but barely making progress. Every next step takes an effort. The task leaves you feeling drained, stressed, bored, or frustrated, and you would rather just stop. Your battery is almost empty.\n\n3 – Battery half full: You work through the content, understand what you need, and make progress step by step. Preparing the materials takes time and concentration, of course, but the task feels manageable. You feel neither particularly drained nor particularly inspired.\n\n5 – Battery fully charged: You are completely absorbed in your work. Your thoughts flow, one idea leads to the next, and time flies. Developing the materials is enjoyable and motivating. Instead of feeling exhausted afterwards, you would like to keep going straight away. Your battery feels fuller than before."
+  },
+  "fieldHelp.battery.student": {
+    "de": "Mit dem «Batteriestand» teilst Du uns mit, wie Du das Studium am betrachteten Tag erlebt hast – von stark erschöpfend und belastend bis hin zu ausgesprochen motivierend und energiegebend. Schlechte Nacht, private Sorgen oder andere Belastungen ausserhalb des Studiums sollten dabei möglichst ausgeblendet werden.\n\nAm Beispiel «Erarbeiten eines Berichts»:\n\n1 – Batterie praktisch leer: Du sitzt vor dem Bildschirm und versuchst zum dritten Mal, denselben Abschnitt zu lesen – aber Du kommst kaum mehr weiter. Jeder nächste Schritt kostet Überwindung. Du fühlst Dich von der Aufgabe ausgelaugt, gestresst, gelangweilt oder frustriert und würdest am liebsten einfach aufhören. Deine Batterie ist praktisch leer.\n\n3 – Batterie halbvoll: Du arbeitest die Inhalte durch, verstehst, was Du brauchst, und kommst Schritt für Schritt voran. Natürlich braucht das Erarbeiten Zeit und Konzentration, aber die Aufgabe fühlt sich gut machbar an. Du fühlst Dich weder besonders erschöpft noch besonders beflügelt.\n\n5 – Batterie voll geladen: Du gehst richtig in der Arbeit auf. Die Gedanken fliessen, eine Idee führt zur nächsten und die Zeit vergeht im Flug. Die Aufgabe macht Dir richtig Freude und motiviert Dich. Statt danach erschöpft zu sein, würdest Du am liebsten gleich weitermachen. Deine Batterie fühlt sich voller an als vorher.",
+    "en": "Your “battery level” tells us how you experienced studying on the day in question – from very draining and stressful to highly motivating and energizing. Try to set aside a poor night's sleep, personal worries, or other pressures outside your studies as much as possible.\n\nTaking “working on a report” as an example:\n\n1 – Battery almost empty: You are sitting in front of the screen, trying to read the same section for the third time, but barely making progress. Every next step takes an effort. The task leaves you feeling drained, stressed, bored, or frustrated, and you would rather just stop. Your battery is almost empty.\n\n3 – Battery half full: You work through the content, understand what you need, and make progress step by step. Working on the report takes time and concentration, of course, but the task feels manageable. You feel neither particularly drained nor particularly inspired.\n\n5 – Battery fully charged: You are completely absorbed in your work. Your thoughts flow, one idea leads to the next, and time flies. The task is enjoyable and motivating. Instead of feeling exhausted afterwards, you would like to keep going straight away. Your battery feels fuller than before."
+  },
+  "dailyEntry.commentPlaceholder.faculty": {
+    "de": "Raum für Ihre persönlichen Notizen, z.B.: Gibt es etwas, was Ihre Batterie rückblickend besonders stark “geladen” oder “entladen” hat?",
+    "en": "Space for your personal notes, e.g.: Looking back, was there anything that particularly “charged” or “drained” your battery?"
+  },
+  "dailyEntry.commentPlaceholder.student": {
+    "de": "Raum für Deine persönlichen Notizen, z.B.: Gibt es etwas, was Deine Batterie am getrackten Tag rückblickend besonders stark “geladen” oder “entladen” hat?",
+    "en": "Space for your personal notes, e.g.: Looking back at the day you tracked, was there anything that particularly “charged” or “drained” your battery?"
+  },
+  "dailyEntry.socialBatteryRequired": {
+    "en": "Please select a battery level before submitting.",
+    "de": "Bitte wähle vor dem Absenden einen Batteriestand aus."
+  },
+  "admin.metric.socialBattery": {
+    "en": "{{value}}/5 battery level",
+    "de": "{{value}}/5 Batteriestand"
+  },
+  "admin.metric.noSocialBattery": {
+    "en": "No battery level recorded",
+    "de": "Kein Batteriestand erfasst"
   }
 }

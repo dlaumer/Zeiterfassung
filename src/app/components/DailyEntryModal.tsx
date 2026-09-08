@@ -1,6 +1,8 @@
+import { FieldHelp } from './FieldHelp';
 import { X, Star, Bike, TrainFront, FileText, CheckCircle } from 'lucide-react';
 import { format, endOfWeek } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
+import { SocialBatteryInput } from './SocialBatteryInput';
 import { SubjectTimeInput } from './SubjectTimeInput';
 import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
@@ -29,6 +31,7 @@ interface DailyEntry {
   courses: Course[];
   subjectTimes: SubjectTime[];
   reliability: number;
+  socialBattery?: number;
   adminEffort: number;
   commuteTime: number;
   structuralChanges?: number;
@@ -129,6 +132,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
   const [reliability, setReliability] = useState(0);
+  const [socialBattery, setSocialBattery] = useState(0);
   const [adminEffort, setAdminEffort] = useState(0);
   const [commuteTime, setCommuteTime] = useState(0);
   const [structuralChanges, setStructuralChanges] = useState(0);
@@ -139,6 +143,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showReliabilityError, setShowReliabilityError] = useState(false);
+  const [showSocialBatteryError, setShowSocialBatteryError] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const reEntryMode = existingEntry ? 'add' : null;
   const isAddMode = reEntryMode === 'add' && !!existingEntry;
@@ -156,7 +161,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   useEffect(() => {
     setCourses([]);
     setSubjectTimes(subjects.map(s => ({ subjectId: s.id, classTime: 0, selfStudyTime: 0 })));
-    setReliability(existingEntry?.reliability ?? 0);
+    setReliability(0);
+    setSocialBattery(0);
     const nextAdminEffort = isFaculty ? 0 : existingEntry?.adminEffort ?? 0;
     const nextCommuteTime = isFaculty ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime;
     setAdminEffort(nextAdminEffort);
@@ -164,7 +170,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     setStructuralChanges(0);
     setAdminEffortSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextAdminEffort));
     setCommuteTimeSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextCommuteTime));
-    setComment(existingEntry?.comment ?? '');
+    setComment('');
+    setShowReliabilityError(false);
+    setShowSocialBatteryError(false);
+    setSaveError(null);
   }, [existingEntry, subjects, defaultCommuteTime, isFaculty]);
 
   const handleSubjectClassTimeChange = (subjectId: string, time: number) => {
@@ -220,12 +229,18 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
 
   const handleSkipDay = async () => {
     setSaveError(null);
+    setShowSocialBatteryError(socialBattery <= 0);
+    if (socialBattery <= 0) {
+      setSaveError(t('dailyEntry.socialBatteryRequired'));
+      return;
+    }
     setIsSaving(true);
     const entry: DailyEntry = {
       date: format(date, 'yyyy-MM-dd'),
       courses: [],
       subjectTimes: [],
       reliability: 5,
+      socialBattery: socialBattery || undefined,
       adminEffort: 0,
       commuteTime: 0,
       structuralChanges: 0,
@@ -269,15 +284,17 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const hasEnteredCourseLikeWorkload =
     courses.some((course) => course.hours > 0) ||
     hasEnteredSubjectTime;
-  const hasChangedReliability = reliability !== (existingEntry?.reliability ?? 0);
+  const hasChangedSocialBattery = socialBattery !== 0;
+  const hasChangedReliability = reliability !== 0;
   const hasChangedAdminEffort = adminEffort !== (isFaculty ? 0 : existingEntry?.adminEffort ?? 0);
   const hasChangedCommuteTime = !isFaculty && commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
   const hasChangedStructuralChanges = isFaculty && structuralChanges > 0;
-  const hasChangedComment = comment !== (existingEntry?.comment ?? '');
+  const hasChangedComment = comment !== '';
   const hasComment = existingEntry ? hasChangedComment : comment.trim().length > 0;
   const hasAddendumChanges =
     hasEnteredSubjectTime ||
     hasChangedReliability ||
+    hasChangedSocialBattery ||
     hasChangedAdminEffort ||
     hasChangedCommuteTime ||
     hasChangedStructuralChanges ||
@@ -286,6 +303,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const shouldShowCloseWarning =
     hasEnteredSubjectTime ||
     hasChangedReliability ||
+    hasChangedSocialBattery ||
     hasChangedAdminEffort ||
     hasChangedCommuteTime ||
     hasChangedStructuralChanges ||
@@ -302,11 +320,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
 
   const handleSubmit = async () => {
     setSaveError(null);
-    setShowReliabilityError(false);
+    setShowReliabilityError(reliability <= 0);
+    setShowSocialBatteryError(socialBattery <= 0);
 
-    if (reliability <= 0) {
-      setShowReliabilityError(true);
-      setSaveError(t('dailyEntry.reliabilityRequired'));
+    if (reliability <= 0 || socialBattery <= 0) {
       return;
     }
 
@@ -320,6 +337,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       courses,
       subjectTimes,
       reliability,
+      socialBattery: socialBattery || undefined,
       adminEffort,
       commuteTime,
       structuralChanges,
@@ -462,47 +480,6 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
         </div>
 
         <div className="space-y-6 mb-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                {t('dailyEntry.reliability')}
-                {reEntryMode === 'add' && existingEntry && existingEntry.reliability > 0 && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                    {t('dailyEntry.filledBefore')}
-                  </span>
-                )}
-              </label>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map(rating => (
-                  <button
-                    key={rating}
-                    type="button"
-                    aria-label={`${t('dailyEntry.reliability')}: ${rating}/5`}
-                    onClick={() => {
-                      setReliability(rating);
-                      setShowReliabilityError(false);
-                      setSaveError(null);
-                    }}
-                    className="transition-colors"
-                  >
-                    <Star
-                      className={`w-5 h-5 ${
-                        rating <= reliability
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-            {showReliabilityError && (
-              <p className="text-sm font-medium text-red-600">
-                {t('dailyEntry.reliabilityRequired')}
-              </p>
-            )}
-          </div>
-
           {shouldShowFacultyExtraSliders && (
             <div className="space-y-1 bg-blue-50 rounded-lg p-3 text-xs text-blue-800">
               <p>{t('weeklyEntry.facultyAllocationInfo')}</p>
@@ -635,16 +612,72 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
           </div>}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                {t('dailyEntry.reliability')}
+                <FieldHelp title={t('dailyEntry.reliability')} text={t(`fieldHelp.reliability.${participantRole}`)} />
+              </div>
+              <div className="flex shrink-0 gap-1">
+                {[1, 2, 3, 4, 5].map(rating => (
+                  <button
+                    key={rating}
+                    type="button"
+                    aria-label={`${t('dailyEntry.reliability')}: ${rating}/5`}
+                    onClick={() => {
+                      setReliability(rating);
+                      setShowReliabilityError(false);
+                      setSaveError(null);
+                    }}
+                    className="rounded-sm p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  >
+                    <Star
+                      className={`w-6 h-6 ${
+                        rating <= reliability
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            {showReliabilityError && (
+              <p role="alert" className="text-sm font-medium text-red-600">
+                {t('dailyEntry.reliabilityRequired')}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <SocialBatteryInput
+              value={socialBattery}
+              onChange={(value) => {
+                setSocialBattery(value);
+                setShowSocialBatteryError(false);
+                setSaveError(null);
+              }}
+              participantRole={participantRole}
+            />
+            {showSocialBatteryError && (
+              <p role="alert" className="text-sm font-medium text-red-600">
+                {t('dailyEntry.socialBatteryRequired')}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
-              {t('dailyEntry.comment')}
-            </label>
+              <label htmlFor="submission-comment">{t('dailyEntry.comment')}</label>
+              <FieldHelp title={t('dailyEntry.comment')} text={t(`dailyEntry.commentPlaceholder.${participantRole}`)} />
+            </div>
             <textarea
+              id="submission-comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              placeholder={t('dailyEntry.commentPlaceholder')}
+              placeholder={t(`dailyEntry.commentPlaceholder.${participantRole}`)}
             />
           </div>
         </div>

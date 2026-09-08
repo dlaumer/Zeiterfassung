@@ -433,6 +433,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             structuralChanges: representativeStructuralChanges,
             generalAdminTime: representativeGeneralAdminTime,
             dataRating: representativeDataRating,
+            socialBattery: Number(pickLatestFieldValue(effectiveSubmissions, "socialBattery", 0) || 0),
             comment: representativeComment,
             comments: comments,
             submittedAt: representative.get("submittedAt") || "",

@@ -133,22 +133,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     }
 
     function chooseBaseSubmission(group) {
-        const corrections = group.filter((s) => s.get("submissionMode") === "correction")
-        if (corrections.length > 0) {
-            return corrections.sort(compareLatestFirst)[0]
-        }
-
-        const initials = group.filter((s) => s.get("submissionMode") === "initial")
-        if (initials.length > 0) {
-            return initials.sort(compareLatestFirst)[0]
-        }
-
-        const nonAppendums = group.filter((s) => s.get("submissionMode") !== "appendum")
-        if (nonAppendums.length > 0) {
-            return nonAppendums.sort(compareLatestFirst)[0]
-        }
-
-        return null
+        return group.filter(s => s.get("submissionMode") === "initial").sort(compareLatestFirst)[0] || null
     }
 
     function compareLatestFirst(a, b) {
@@ -167,16 +152,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     }
 
     function pickLatestFieldValue(submissions, fieldName, fallbackValue) {
-        const newestFirst = [...submissions].sort(compareLatestFirst)
-
-        for (const submission of newestFirst) {
-            const rawValue = submission.get(fieldName)
-            if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
-                return rawValue
-            }
-        }
-
-        return fallbackValue
+        return require(`${__hooks}/submission-review.js`).fieldValue(submissions, fieldName, fallbackValue)
     }
 
     function getPeriodKey(submission) {
@@ -266,7 +242,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             'submissionMode != "deleted"'
         ].join(" && "),
         "-periodStart",
-        5000,
+        0,
         0,
         {
             participantId: participantId
@@ -294,7 +270,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             "submission_items",
             idFilter,
             "",
-            5000,
+            0,
             0
         )
     }
@@ -333,6 +309,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
         if (!itemsBySubmission[submissionId][subjectId]) {
             itemsBySubmission[submissionId][subjectId] = {
+                classTime: 0,
+                selfStudyTime: 0,
                 hasClassEntry: false,
                 hasStudyEntry: false,
             }
@@ -340,10 +318,12 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
         if (itemType === "class") {
             itemsBySubmission[submissionId][subjectId].hasClassEntry = true
+            itemsBySubmission[submissionId][subjectId].classTime += Number(item.get("durationMinutes") || 0) / 60
         }
 
         if (itemType === "study") {
             itemsBySubmission[submissionId][subjectId].hasStudyEntry = true
+            itemsBySubmission[submissionId][subjectId].selfStudyTime += Number(item.get("durationMinutes") || 0) / 60
         }
     }
 
@@ -358,13 +338,15 @@ routerAdd("GET", "/api/workload-status", (e) => {
         submissionsByPeriod[periodKey].push(submission)
     }
 
+    const review = require(`${__hooks}/submission-review.js`)
+    const reviewSettings = review.settings($app)
     const submissionHistory = []
     const periodKeys = Object.keys(submissionsByPeriod)
 
     for (const periodKey of periodKeys) {
         const group = submissionsByPeriod[periodKey]
         const baseSubmission = chooseBaseSubmission(group)
-        const appendumSubmissions = group.filter((s) => s.get("submissionMode") === "appendum")
+        const appendumSubmissions = group.filter((s) => ["appendum", "correction"].includes(s.get("submissionMode")))
 
         const effectiveSubmissions = []
 
@@ -388,11 +370,15 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
             for (const subjectId of Object.keys(bySubject)) {
                 const existing = subjectMap[subjectId] || {
+                    classTime: 0,
+                    selfStudyTime: 0,
                     hasClassEntry: false,
                     hasStudyEntry: false,
                 }
 
                 const fromSubmission = bySubject[subjectId]
+                existing.classTime += fromSubmission.classTime
+                existing.selfStudyTime += fromSubmission.selfStudyTime
                 existing.hasClassEntry = existing.hasClassEntry || !!fromSubmission.hasClassEntry
                 existing.hasStudyEntry = existing.hasStudyEntry || !!fromSubmission.hasStudyEntry
                 subjectMap[subjectId] = existing
@@ -406,8 +392,8 @@ routerAdd("GET", "/api/workload-status", (e) => {
                 key: subjectById[subjectId].key,
                 labelEn: subjectById[subjectId].labelEn,
                 labelDe: subjectById[subjectId].labelDe,
-                classTime: 0,
-                selfStudyTime: 0,
+                classTime: subjectMap[subjectId].classTime,
+                selfStudyTime: subjectMap[subjectId].selfStudyTime,
                 hasClassEntry: !!subjectMap[subjectId].hasClassEntry,
                 hasStudyEntry: !!subjectMap[subjectId].hasStudyEntry,
             }))
@@ -436,10 +422,14 @@ routerAdd("GET", "/api/workload-status", (e) => {
             socialBattery: Number(pickLatestFieldValue(effectiveSubmissions, "socialBattery", 0) || 0),
             comment: representativeComment,
             comments: comments,
-            submittedAt: representative.get("submittedAt") || "",
+            submittedAt: group.slice().sort(review.newestFirst)[0].get("submittedAt") || "",
+            initialSubmittedAt: baseSubmission ? baseSubmission.get("submittedAt") : "",
+            latestSubmissionId: group.slice().sort(review.newestFirst)[0].id,
+            correctionDates: group.filter(s => ["appendum", "correction"].includes(s.get("submissionMode"))).sort(review.newestFirst).map(s => s.get("submittedAt") || s.get("created")),
             submissionIds: effectiveSubmissions.map((s) => s.id),
             baseSubmissionId: baseSubmission ? baseSubmission.id : "",
-            appendumSubmissionIds: appendumSubmissions.map((s) => s.id),
+            appendumSubmissionIds: appendumSubmissions.filter(s => s.get("submissionMode") === "appendum").map(s => s.id),
+            correctionSubmissionIds: appendumSubmissions.filter(s => s.get("submissionMode") === "correction").map(s => s.id),
             subjects: subjectsForPeriod,
         })
     }
@@ -488,6 +478,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     }
 
     return e.json(200, {
+        ...reviewSettings,
         participant: {
             id: participant.id,
             entryMode: entryMode,
@@ -513,11 +504,11 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
         currentActionSuggestion: alreadySubmittedCurrent
             ? {
-                needsChoice: true,
-                options: ["correction", "addendum"],
+                needsChoice: false,
+                options: ["correction"],
                 existingSubmissionId: currentSubmission.id,
                 message:
-                    "A submission already exists for the current period. The user should choose correction or addendum."
+                    "A submission already exists for the current period. Open the existing entry for review."
             }
             : {
                 needsChoice: false,

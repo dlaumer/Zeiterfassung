@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
-import { ViewEntryModal } from './components/ViewEntryModal';
+import { ReviewExpiredModal } from './components/ReviewExpiredModal';
 import { CourseManagement, Subject, compareSubjectsByDisplayName, getSubjectDisplayName } from './components/CourseManagement';
-import { format } from 'date-fns';
+import { format, endOfWeek } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import { LanguageSelector } from './i18n/LanguageSelector';
 import PocketBase from 'pocketbase';
@@ -37,7 +37,10 @@ interface DailyEntry {
   structuralChanges?: number;
   comment: string;
   skipped: boolean;
+  initialSubmittedAt?: string;
   submittedAt?: string;
+  latestSubmissionId?: string;
+  correctionDates?: string[];
 }
 
 interface SaveDailyEntryPayload {
@@ -81,6 +84,7 @@ interface SaveWeeklyEntryPayload {
 }
 
 interface SaveSubmissionResponse {
+  submissionId: string;
   submittedAt?: string;
 }
 
@@ -97,6 +101,7 @@ interface WorkloadStatusSubject {
 }
 
 interface WorkloadStatusHistoryEntry {
+  initialSubmittedAt?: string;
   periodType: 'day' | 'week' | string;
   periodDate: string;
   commuteTime?: number;
@@ -107,10 +112,14 @@ interface WorkloadStatusHistoryEntry {
   comment?: string;
   comments?: string[];
   submittedAt?: string;
+  latestSubmissionId?: string;
+  correctionDates?: string[];
   subjects: WorkloadStatusSubject[];
 }
 
 interface WorkloadStatusResponse {
+  reviewTime: number;
+  reviewCutoff: string;
   participant?: {
     id: string;
     entryMode: 'day' | 'week' | string;
@@ -157,17 +166,7 @@ const WEEKLY_CATEGORIES: Subject[] = [
 ];
 
 function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
-  const comments = historyEntry.comments ?? [];
-  const newestAppendum = comments
-    .map((comment) => String(comment ?? '').trim())
-    .filter(Boolean)
-    .at(0);
-
-  if (newestAppendum) {
-    return newestAppendum;
-  }
-
-  return String(historyEntry.comment ?? '').trim();
+  return String(historyEntry.comment ?? "");
 }
 
 const SUBJECT_COLORS = [
@@ -218,60 +217,6 @@ const ensureUniqueSubjectColors = <T extends { color?: string }>(subjects: T[]) 
   });
 };
 
-function mergeDailyEntries(existingEntry: DailyEntry, addendum: DailyEntry): DailyEntry {
-  const mergedCourses = [...existingEntry.courses];
-
-  addendum.courses.forEach((newCourse) => {
-    const existingCourseIndex = mergedCourses.findIndex((course) => course.name === newCourse.name);
-
-    if (existingCourseIndex >= 0) {
-      mergedCourses[existingCourseIndex] = {
-        ...mergedCourses[existingCourseIndex],
-        hours: mergedCourses[existingCourseIndex].hours + newCourse.hours,
-      };
-      return;
-    }
-
-    mergedCourses.push(newCourse);
-  });
-
-  const mergedSubjectTimes = [...existingEntry.subjectTimes];
-
-  addendum.subjectTimes.forEach((newSubjectTime) => {
-    const existingSubjectTimeIndex = mergedSubjectTimes.findIndex(
-      (subjectTime) => subjectTime.subjectId === newSubjectTime.subjectId,
-    );
-
-    if (existingSubjectTimeIndex >= 0) {
-      const existingSubjectTime = mergedSubjectTimes[existingSubjectTimeIndex];
-
-      mergedSubjectTimes[existingSubjectTimeIndex] = {
-        ...existingSubjectTime,
-        classTime: existingSubjectTime.classTime + newSubjectTime.classTime,
-        selfStudyTime: existingSubjectTime.selfStudyTime + newSubjectTime.selfStudyTime,
-        hasClassEntry: existingSubjectTime.hasClassEntry || newSubjectTime.classTime > 0 || newSubjectTime.hasClassEntry,
-        hasStudyEntry: existingSubjectTime.hasStudyEntry || newSubjectTime.selfStudyTime > 0 || newSubjectTime.hasStudyEntry,
-      };
-      return;
-    }
-
-    mergedSubjectTimes.push(newSubjectTime);
-  });
-
-  return {
-    ...existingEntry,
-    reliability: addendum.reliability,
-    socialBattery: addendum.socialBattery,
-    adminEffort: addendum.adminEffort,
-    commuteTime: addendum.commuteTime,
-    structuralChanges: addendum.structuralChanges,
-    comment: addendum.comment,
-    courses: mergedCourses,
-    subjectTimes: mergedSubjectTimes,
-    skipped: false,
-    submittedAt: addendum.submittedAt ?? existingEntry.submittedAt,
-  };
-}
 
 function shouldMarkDeletedPeriodMissing(date: string, entryMode: EntryMode) {
   if (entryMode === 'week') {
@@ -368,7 +313,8 @@ function AppContent({ participantId }: AppContentProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
   const [showEntryModal, setShowEntryModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
+  const [reviewTime, setReviewTime] = useState(14);
+  const [reviewCutoff, setReviewCutoff] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
@@ -525,6 +471,8 @@ function AppContent({ participantId }: AppContentProps) {
       setEntryMode(responseEntryMode);
       setParticipantRole(responseParticipantRole);
       setSubmissionHistory(history);
+      setReviewTime(response.reviewTime);
+      setReviewCutoff(response.reviewCutoff);
       setMissingSubmissionDates(
         new Set(
           (response.missingPeriods ?? [])
@@ -543,8 +491,8 @@ function AppContent({ participantId }: AppContentProps) {
             courses: [],
             subjectTimes: item.subjects.map((subject) => ({
               subjectId: responseParticipantRole === 'faculty' ? subject.key : subject.id,
-              classTime: 0,
-              selfStudyTime: 0,
+              classTime: Number(subject.classTime || 0),
+              selfStudyTime: Number(subject.selfStudyTime || 0),
               hasClassEntry: !!subject.hasClassEntry,
               hasStudyEntry: !!subject.hasStudyEntry,
             })),
@@ -556,6 +504,9 @@ function AppContent({ participantId }: AppContentProps) {
             comment: getNewestComment(item),
             skipped: false,
             submittedAt: item.submittedAt,
+            initialSubmittedAt: item.initialSubmittedAt,
+            latestSubmissionId: item.latestSubmissionId,
+            correctionDates: item.correctionDates,
           });
         });
 
@@ -637,23 +588,20 @@ function AppContent({ participantId }: AppContentProps) {
 
     const response = await pb.send<SaveSubmissionResponse>(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
       method: 'POST',
-      body: payload,
+      body: { ...payload, inputMode: 'totals', expectedSubmissionId: entries.get(entry.date)?.latestSubmissionId ?? '' },
     });
 
     const savedEntry: DailyEntry = {
       ...entry,
       submittedAt: response.submittedAt,
+      initialSubmittedAt: entries.get(entry.date)?.initialSubmittedAt ?? response.submittedAt,
+      latestSubmissionId: response.submissionId,
+      correctionDates: [...(entries.get(entry.date)?.correctionDates ?? []), ...(entries.has(entry.date) && response.submittedAt ? [response.submittedAt] : [])].sort().reverse(),
     };
 
     setEntries((previousEntries) => {
       const newEntries = new Map(previousEntries);
-      const previousEntry = newEntries.get(savedEntry.date);
-      const nextEntry =
-        previousEntry && !previousEntry.skipped && !savedEntry.skipped
-          ? mergeDailyEntries(previousEntry, savedEntry)
-          : savedEntry;
-
-      newEntries.set(savedEntry.date, nextEntry);
+      newEntries.set(savedEntry.date, savedEntry);
 
       const entriesObj = Object.fromEntries(newEntries);
       //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
@@ -668,7 +616,6 @@ function AppContent({ participantId }: AppContentProps) {
     });
 
     setShowEntryModal(false);
-    setShowViewModal(false);
   };
 
   const deleteEntry = async (date: string) => {
@@ -682,10 +629,12 @@ function AppContent({ participantId }: AppContentProps) {
         ? {
           participantId,
           weekStart: date,
+          expectedSubmissionId: entries.get(date)?.latestSubmissionId ?? '',
         }
         : {
           participantId,
           date,
+          expectedSubmissionId: entries.get(date)?.latestSubmissionId ?? '',
         },
     });
 
@@ -704,7 +653,7 @@ function AppContent({ participantId }: AppContentProps) {
     const entriesObj = Object.fromEntries(newEntries);
     //localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesObj));
 
-    setShowViewModal(false);
+    setShowEntryModal(false);
   };
 
   const getEarlierMissingDates = (date: Date) => {
@@ -749,14 +698,7 @@ function AppContent({ participantId }: AppContentProps) {
 
   const openEntryModalForDate = (date: Date) => {
     setSelectedDate(date);
-    const dateKey = format(date, 'yyyy-MM-dd');
-    const existingEntry = entries.get(dateKey);
-
-    if (existingEntry && !existingEntry.skipped) {
-      setShowViewModal(true);
-    } else {
-      setShowEntryModal(true);
-    }
+    setShowEntryModal(true);
   };
 
   const handleDateSelect = (date: Date) => {
@@ -773,10 +715,6 @@ function AppContent({ participantId }: AppContentProps) {
     openEntryModalForDate(date);
   };
 
-  const handleAddWorkload = () => {
-    setShowViewModal(false);
-    setShowEntryModal(true);
-  };
 
   const handleAddSubject = async (subject: Subject) => {
     if (!participantId) {
@@ -858,8 +796,11 @@ function AppContent({ participantId }: AppContentProps) {
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
+  const isSelectedEntryExpired = !!existingEntry && !!selectedDate && (
+    !reviewCutoff || format(entryMode === 'week' ? endOfWeek(selectedDate, { weekStartsOn: 1 }) : selectedDate, 'yyyy-MM-dd') < reviewCutoff
+  );
   const sortedSubjects = [...subjects].sort(compareSubjectsByDisplayName(language));
-  const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects;
+  const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : [...sortedSubjects, ...availableSubjects.filter(subject => !sortedSubjects.some(s => s.id === subject.id) && existingEntry?.subjectTimes.some(s => s.subjectId === subject.id))];
   const participantSubjectLabel = participantRole === 'faculty'
     ? sortedSubjects
       .map((subject) => getSubjectDisplayName(subject, language))
@@ -917,6 +858,7 @@ function AppContent({ participantId }: AppContentProps) {
                 onDateSelect={handleDateSelect}
                 entriesMap={entries}
                 missingSubmissionDates={missingSubmissionDates}
+                reviewCutoff={reviewCutoff}
                 subjects={activeSubjects}
                 entryMode={entryMode}
               />
@@ -938,7 +880,14 @@ function AppContent({ participantId }: AppContentProps) {
         </div>
       </div>
 
-      {showEntryModal && selectedDate && (
+      {showEntryModal && isSelectedEntryExpired && (
+        <ReviewExpiredModal days={reviewTime} onClose={() => {
+          setShowEntryModal(false);
+          setSelectedDate(null);
+        }} />
+      )}
+
+      {showEntryModal && selectedDate && !isSelectedEntryExpired && (
         <DailyEntryModal
           date={selectedDate}
           onClose={() => {
@@ -946,6 +895,9 @@ function AppContent({ participantId }: AppContentProps) {
             setSelectedDate(null);
           }}
           onSave={saveEntry}
+          onDelete={() => deleteEntry(format(selectedDate, 'yyyy-MM-dd'))}
+          readOnly={false}
+          reviewTime={reviewTime}
           existingEntry={existingEntry}
           availableCourses={availableSubjects.map((subject) => subject.labelEn)}
           subjects={activeSubjects}
@@ -956,24 +908,6 @@ function AppContent({ participantId }: AppContentProps) {
         />
       )}
 
-      {showViewModal && selectedDate && existingEntry && (
-        <ViewEntryModal
-          entry={existingEntry}
-          date={selectedDate}
-          onClose={() => {
-            setShowViewModal(false);
-            setSelectedDate(null);
-          }}
-          onDelete={() => {
-            deleteEntry(format(selectedDate, 'yyyy-MM-dd')).catch((error) => {
-              console.error('Failed to delete entry:', error);
-            });
-          }}
-          onAddWorkload={handleAddWorkload}
-          subjects={activeSubjects}
-          entryMode={entryMode}
-        />
-      )}
 
       <ConfirmDialog
         open={!!subjectPendingRemoval}

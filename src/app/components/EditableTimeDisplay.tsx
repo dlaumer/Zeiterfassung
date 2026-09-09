@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useI18n } from '../i18n/i18n';
 
 interface EditableTimeDisplayProps {
   value: number;
@@ -7,6 +8,7 @@ interface EditableTimeDisplayProps {
   clampToMax?: boolean;
   prefix?: string;
   displayClassName?: string;
+  previousValue?: number;
 }
 
 const splitTime = (hoursValue: number) => {
@@ -24,7 +26,24 @@ export const formatTime = (hoursValue: number) => {
   return `${hours}h ${minutes}min`;
 };
 
-export function EditableTimeDisplay({
+export function EditableTimeDisplay({ previousValue, ...props }: EditableTimeDisplayProps) {
+  const { t } = useI18n();
+  const deltaMinutes = previousValue === undefined ? 0 : Math.round(props.value * 60) - Math.round(previousValue * 60);
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+      <TimeValueEditor {...props} />
+      {deltaMinutes !== 0 && <span
+        title={t('dailyEntry.changeFromSaved')}
+        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${deltaMinutes > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}
+      >
+        <span className="sr-only">{t('dailyEntry.changeFromSaved')}: </span>
+        {deltaMinutes > 0 ? '+' : '−'}{formatTime(Math.abs(deltaMinutes) / 60)}
+      </span>}
+    </div>
+  );
+}
+
+function TimeValueEditor({
   value,
   onChange,
   max = 24,

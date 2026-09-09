@@ -125,13 +125,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
     }
 
     function chooseBaseSubmission(group) {
-        const corrections = group.filter((s) => s.get("submissionMode") === "correction")
-        if (corrections.length > 0) return corrections.sort(compareLatestFirst)[0]
-
-        const initials = group.filter((s) => s.get("submissionMode") === "initial")
-        if (initials.length > 0) return initials.sort(compareLatestFirst)[0]
-
-        return null
+        return group.filter(s => s.get("submissionMode") === "initial").sort(compareLatestFirst)[0] || null
     }
 
     function cleanFilenamePart(value) {
@@ -329,7 +323,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
                 }
 
                 const baseSubmission = chooseBaseSubmission(group)
-                const appendumSubmissions = group.filter((s) => s.get("submissionMode") === "appendum")
+                const appendumSubmissions = group.filter((s) => ["appendum", "correction"].includes(s.get("submissionMode")))
                 const effectiveSubmissions = []
 
                 if (baseSubmission) {

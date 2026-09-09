@@ -1,5 +1,5 @@
 import { FieldHelp } from './FieldHelp';
-import { X, Star, Bike, TrainFront, FileText, CheckCircle } from 'lucide-react';
+import { X, Trash2, Star, Bike, TrainFront, FileText, CheckCircle, History, FileCheck2, Pencil, Clock3 } from 'lucide-react';
 import { format, endOfWeek } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import { SocialBatteryInput } from './SocialBatteryInput';
@@ -37,11 +37,16 @@ interface DailyEntry {
   structuralChanges?: number;
   comment: string;
   skipped: boolean;
+  initialSubmittedAt?: string;
+  correctionDates?: string[];
 }
 
 interface DailyEntryModalProps {
   date: Date;
   onClose: () => void;
+  onDelete: () => Promise<void>;
+  readOnly: boolean;
+  reviewTime: number;
   onSave: (entry: DailyEntry) => Promise<void>;
   existingEntry: DailyEntry | null;
   availableCourses: string[];
@@ -127,7 +132,7 @@ function EditablePercentageDisplay({ value, onChange }: EditablePercentageDispla
   );
 }
 
-export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student', participantSubjectLabel }: DailyEntryModalProps) {
+export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, reviewTime, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student', participantSubjectLabel }: DailyEntryModalProps) {
   const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
@@ -145,10 +150,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const [showReliabilityError, setShowReliabilityError] = useState(false);
   const [showSocialBatteryError, setShowSocialBatteryError] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
-  const reEntryMode = existingEntry ? 'add' : null;
-  const isAddMode = reEntryMode === 'add' && !!existingEntry;
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const isWeekly = entryMode === 'week';
   const isFaculty = participantRole === 'faculty';
+  const isCorrection = !!existingEntry && !readOnly;
   const categoriesTitle = isFaculty && participantSubjectLabel
     ? participantSubjectLabel
     : ""
@@ -159,22 +164,22 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
     : format(date, 'EEEE, MMMM d, yyyy', { locale: dateLocale });
 
   useEffect(() => {
-    setCourses([]);
-    setSubjectTimes(subjects.map(s => ({ subjectId: s.id, classTime: 0, selfStudyTime: 0 })));
-    setReliability(0);
-    setSocialBattery(0);
-    const nextAdminEffort = isFaculty ? 0 : existingEntry?.adminEffort ?? 0;
+    setCourses(existingEntry?.courses ?? []);
+    setSubjectTimes(subjects.map(s => existingEntry?.subjectTimes.find(st => st.subjectId === s.id) ?? { subjectId: s.id, classTime: 0, selfStudyTime: 0 }));
+    setReliability(readOnly ? existingEntry?.reliability ?? 0 : 0);
+    setSocialBattery(readOnly ? existingEntry?.socialBattery ?? 0 : 0);
+    const nextAdminEffort = existingEntry?.adminEffort ?? 0;
     const nextCommuteTime = isFaculty ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime;
     setAdminEffort(nextAdminEffort);
     setCommuteTime(nextCommuteTime);
-    setStructuralChanges(0);
+    setStructuralChanges(existingEntry?.structuralChanges ?? 0);
     setAdminEffortSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextAdminEffort));
     setCommuteTimeSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextCommuteTime));
-    setComment('');
+    setComment(readOnly ? existingEntry?.comment ?? '' : '');
     setShowReliabilityError(false);
     setShowSocialBatteryError(false);
     setSaveError(null);
-  }, [existingEntry, subjects, defaultCommuteTime, isFaculty]);
+  }, [existingEntry, subjects.map(s => s.id).join(','), defaultCommuteTime, isFaculty, readOnly]);
 
   const handleSubjectClassTimeChange = (subjectId: string, time: number) => {
     setSubjectTimes(prev => {
@@ -284,30 +289,16 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   const hasEnteredCourseLikeWorkload =
     courses.some((course) => course.hours > 0) ||
     hasEnteredSubjectTime;
-  const hasChangedSocialBattery = socialBattery !== 0;
-  const hasChangedReliability = reliability !== 0;
-  const hasChangedAdminEffort = adminEffort !== (isFaculty ? 0 : existingEntry?.adminEffort ?? 0);
-  const hasChangedCommuteTime = !isFaculty && commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime);
-  const hasChangedStructuralChanges = isFaculty && structuralChanges > 0;
-  const hasChangedComment = comment !== '';
-  const hasComment = existingEntry ? hasChangedComment : comment.trim().length > 0;
-  const hasAddendumChanges =
-    hasEnteredSubjectTime ||
-    hasChangedReliability ||
-    hasChangedSocialBattery ||
-    hasChangedAdminEffort ||
-    hasChangedCommuteTime ||
-    hasChangedStructuralChanges ||
-    hasChangedComment;
-
-  const shouldShowCloseWarning =
-    hasEnteredSubjectTime ||
-    hasChangedReliability ||
-    hasChangedSocialBattery ||
-    hasChangedAdminEffort ||
-    hasChangedCommuteTime ||
-    hasChangedStructuralChanges ||
-    hasComment;
+  const shouldShowCloseWarning = !readOnly && (
+    subjectTimes.some(st => {
+      const old = existingEntry?.subjectTimes.find(item => item.subjectId === st.subjectId);
+      return st.classTime !== (old?.classTime ?? 0) || st.selfStudyTime !== (old?.selfStudyTime ?? 0);
+    }) || reliability !== 0 ||
+    socialBattery !== 0 ||
+    adminEffort !== (existingEntry?.adminEffort ?? 0) ||
+    commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime) ||
+    structuralChanges !== (existingEntry?.structuralChanges ?? 0) || comment !== ''
+  );
 
   const handleCloseRequest = () => {
     if (shouldShowCloseWarning) {
@@ -319,6 +310,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
   };
 
   const handleSubmit = async () => {
+    if (readOnly || isSaving) return;
     setSaveError(null);
     setShowReliabilityError(reliability <= 0);
     setShowSocialBatteryError(socialBattery <= 0);
@@ -327,7 +319,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
       return;
     }
 
-    const submittedComment = !hasEnteredCourseLikeWorkload && comment.trim().length === 0
+    const submittedComment = !existingEntry && !hasEnteredCourseLikeWorkload && comment.trim().length === 0
       ? t('dailyEntry.skippedTag')
       : comment;
 
@@ -385,28 +377,60 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-gray-900">
-              {reEntryMode === 'add' ? t('dailyEntry.addHours') : isWeekly ? t('weeklyEntry.title') : t('dailyEntry.title')}
+              {existingEntry ? t('dailyEntry.reviewTitle') : isWeekly ? t('weeklyEntry.title') : t('dailyEntry.title')}
             </h3>
             <p className="text-sm text-gray-500">{periodLabel}</p>
-            {reEntryMode === 'add' && (
-              <p className="text-xs text-amber-700 mt-1">{t('dailyEntry.addingExisting')}</p>
-            )}
           </div>
           <div className="flex items-center gap-2">
-            <button
+            {!existingEntry && <button
+              disabled={isSaving}
               onClick={handleSkipDay}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
             >
               {t('dailyEntry.skip')}
-            </button>
+            </button>}
             <button onClick={handleCloseRequest} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-lg p-3 mb-6">
-          <p className="text-xs text-blue-800">
+        {existingEntry && <section className="mb-5 overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-white" aria-label={t('dailyEntry.submissionHistory')}>
+          <div className="flex items-center gap-2 border-b border-indigo-100/70 px-4 py-3">
+            <History aria-hidden="true" className="h-4 w-4 text-indigo-500" />
+            <h4 className="text-sm font-semibold text-indigo-950">{t('dailyEntry.submissionHistory')}</h4>
+          </div>
+          <ol className="max-h-48 overflow-y-auto px-4 py-2">
+            {[
+              ...(existingEntry.initialSubmittedAt ? [{ value: existingEntry.initialSubmittedAt, label: t('dailyEntry.initialSubmission'), initial: true }] : []),
+              ...[...(existingEntry.correctionDates ?? [])].sort().map((value, index) => ({ value, label: t('dailyEntry.correctionNumber', { number: index + 1 }), initial: false })),
+            ].map(({ value, label, initial }, index, history) => {
+              const Icon = initial ? FileCheck2 : Pencil;
+              return <li key={`${value}-${index}`} className="relative flex items-start gap-3 py-2">
+                {index < history.length - 1 && <span aria-hidden="true" className="absolute bottom-[-0.5rem] left-3.5 top-9 w-px bg-indigo-100" />}
+                <span className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${initial ? 'bg-indigo-100 text-indigo-600' : 'border border-indigo-100 bg-white text-slate-500'}`}>
+                  <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1">
+                  <span className="text-sm font-medium text-slate-700">{label}</span>
+                  <time dateTime={new Date(value.replace(' ', 'T')).toISOString()} className="flex items-center gap-1.5 text-xs tabular-nums text-slate-500">
+                    <Clock3 aria-hidden="true" className="h-3 w-3" />
+                    {format(new Date(value.replace(' ', 'T')), 'dd.MM.yyyy HH:mm', { locale: dateLocale })}
+                  </time>
+                </div>
+              </li>;
+            })}
+          </ol>
+        </section>}
+        {readOnly && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{t('dailyEntry.reviewExpired', { days: reviewTime })}</p>}
+        <fieldset
+          disabled={readOnly || isSaving}
+          onClickCapture={event => { if (readOnly || isSaving) event.stopPropagation(); }}
+          onPointerDownCapture={event => { if (readOnly || isSaving) event.stopPropagation(); }}
+          className="min-w-0"
+        >
+        {!readOnly && <div className="bg-blue-50 rounded-lg p-3 mb-6">
+          <div className="text-xs text-blue-800">
             💡 <strong>{t('dailyEntry.tip')}</strong>
             <p>{t('dailyEntry.tipDescription1')}</p> 
             <p>{t('dailyEntry.tipDescription2')}</p>
@@ -422,8 +446,8 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                 </a>
               </p>
             )}
-          </p>
-        </div>
+          </div>
+        </div>}
 
         <div className="space-y-4 mb-6">
           <h4 className="font-medium text-gray-800">{isFaculty ? categoriesTitle : t('dailyEntry.subjects')}</h4>
@@ -438,40 +462,19 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
               {subjects.map(subject => {
                 const subjectTime = subjectTimes.find(st => st.subjectId === subject.id);
 
-                let classStatusTag: string | null = null;
-                let studyStatusTag: string | null = null;
-                let isFaded = false;
-                if (reEntryMode === 'add' && existingEntry) {
-                  const existingSubjectTime = existingEntry.subjectTimes?.find(st => st.subjectId === subject.id);
-                  const hadClassData = !!existingSubjectTime && (
-                    existingSubjectTime.hasClassEntry ||
-                    existingSubjectTime.classTime > 0
-                  );
-                  const hadStudyData = !!existingSubjectTime && (
-                    existingSubjectTime.hasStudyEntry ||
-                    existingSubjectTime.selfStudyTime > 0
-                  );
-
-                  classStatusTag = hadClassData ? t('dailyEntry.filledBefore') : t('dailyEntry.skippedTag');
-                  studyStatusTag = hadStudyData ? t('dailyEntry.filledBefore') : t('dailyEntry.skippedTag');
-                  isFaded = true;
-                }
-
                 return (
                   <SubjectTimeInput
                     key={subject.id}
                     subjectName={getSubjectDisplayName(subject, language)}
                     subjectColor={subject.color}
                     classTime={subjectTime?.classTime || 0}
+                    previousClassTime={isCorrection ? existingEntry.subjectTimes.find(st => st.subjectId === subject.id)?.classTime ?? 0 : undefined}
+                    previousSelfStudyTime={isCorrection ? existingEntry.subjectTimes.find(st => st.subjectId === subject.id)?.selfStudyTime ?? 0 : undefined}
                     selfStudyTime={isFaculty ? 0 : subjectTime?.selfStudyTime || 0}
                     onClassTimeChange={(time) => handleSubjectClassTimeChange(subject.id, time)}
                     onSelfStudyTimeChange={(time) => handleSubjectSelfStudyTimeChange(subject.id, time)}
-                    classStatusTag={classStatusTag}
-                    studyStatusTag={isFaculty ? null : studyStatusTag}
-                    isFaded={isFaded}
-                    isAdditionalHours={reEntryMode === 'add'}
                     singleTimeLabel={isFaculty ? t('weeklyEntry.hours') : undefined}
-                    timeSliderMax={isWeekly ? WEEKLY_TIME_SLIDER_MAX : undefined}
+                    timeSliderMax={Math.max(isWeekly ? WEEKLY_TIME_SLIDER_MAX : 8, subjectTime?.classTime ?? 0, subjectTime?.selfStudyTime ?? 0)}
                   />
                 );
               })}
@@ -491,15 +494,11 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 {t('dailyEntry.adminEffort')}
-                {reEntryMode === 'add' && existingEntry && existingEntry.adminEffort > 0 && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                    {t('dailyEntry.filledBefore')}
-                  </span>
-                )}
               </label>
               <div className="flex items-center gap-2">
                 <EditableTimeDisplay
                   value={adminEffort}
+                  previousValue={isCorrection ? existingEntry.adminEffort : undefined}
                   onChange={handleAdminEffortManualChange}
                   max={isFaculty ? facultyWorkloadTotal : DEFAULT_TIME_SLIDER_MAX}
                   clampToMax={isFaculty}
@@ -540,14 +539,10 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
                   <TrainFront className="w-4 h-4" />
                 </span>
                 {t('dailyEntry.commute')}
-                {reEntryMode === 'add' && existingEntry && existingEntry.commuteTime > 0 && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                    {t('dailyEntry.filledBefore')}
-                  </span>
-                )}
               </label>
               <EditableTimeDisplay
                 value={commuteTime}
+                previousValue={isCorrection ? existingEntry.commuteTime : undefined}
                 onChange={handleCommuteTimeManualChange}
                 max={DEFAULT_TIME_SLIDER_MAX}
                 clampToMax={false}
@@ -581,6 +576,7 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
               <div className="flex items-center gap-2">
                 <EditableTimeDisplay
                   value={structuralChanges}
+                  previousValue={isCorrection ? existingEntry.structuralChanges ?? 0 : undefined}
                   onChange={handleStructuralChangesManualChange}
                   max={facultyWorkloadTotal}
                   clampToMax
@@ -682,20 +678,37 @@ export function DailyEntryModal({ date, onClose, onSave, existingEntry, subjects
           </div>
         </div>
 
+        </fieldset>
         <div className="flex gap-3">
           {saveError && (
             <p className="text-sm text-red-600">{saveError}</p>
           )}
-          <button
+          {existingEntry && !readOnly && <button disabled={isSaving} onClick={() => setShowDeleteWarning(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />{t('dailyEntry.delete')}</button>}
+          {!readOnly && <button
             onClick={handleSubmit}
             disabled={isSaving}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isSaving ? `${t('dailyEntry.submit')}...` : t('dailyEntry.submit')}
-          </button>
+            {isSaving ? `${t('dailyEntry.submit')}...` : existingEntry ? t('dailyEntry.saveCorrection') : t('dailyEntry.submit')}
+          </button>}
         </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={showDeleteWarning}
+        title={t('dailyEntry.delete')}
+        description={t('dailyEntry.deleteConfirm')}
+        confirmLabel={t('dailyEntry.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onCancel={() => setShowDeleteWarning(false)}
+        onConfirm={async () => {
+          if (readOnly || isSaving) return;
+          setIsSaving(true);
+          try { await onDelete(); } catch (error) { setSaveError(t('dailyEntry.saveFailed')); }
+          finally { setIsSaving(false); setShowDeleteWarning(false); }
+        }}
+      />
       <ConfirmDialog
         open={showCloseWarning}
         title={t('dailyEntry.closeTitle')}

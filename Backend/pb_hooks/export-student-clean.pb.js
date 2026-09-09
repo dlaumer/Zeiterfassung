@@ -4,23 +4,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
 
 
     function chooseBaseSubmission(group) {
-        const corrections = group.filter((s) => {
-            return s.get("submissionMode") === "correction"
-        })
-
-        if (corrections.length > 0) {
-            return corrections.sort(compareLatestFirst)[0]
-        }
-
-        const initials = group.filter((s) => {
-            return s.get("submissionMode") === "initial"
-        })
-
-        if (initials.length > 0) {
-            return initials.sort(compareLatestFirst)[0]
-        }
-
-        return null
+        return group.filter(s => s.get("submissionMode") === "initial").sort(compareLatestFirst)[0] || null
     }
 
     function compareLatestFirst(a, b) {
@@ -39,16 +23,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
     }
 
     function pickLatestFieldValue(submissions, fieldName, fallbackValue) {
-        const newestFirst = [...submissions].sort(compareLatestFirst)
-
-        for (const submission of newestFirst) {
-            const rawValue = submission.get(fieldName)
-            if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
-                return rawValue
-            }
-        }
-
-        return fallbackValue
+        return require(`${__hooks}/submission-review.js`).fieldValue(submissions, fieldName, fallbackValue)
     }
 
     function minutesToHours(value) {
@@ -403,6 +378,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         "baseSubmissionId",
         "baseSubmissionMode",
         "appendumSubmissionIds",
+        "correctionSubmissionIds",
         "dataRating",
         "adminEffort_hours",
         ...(includeCommuteTime ? ["commuteTime_hours"] : []),
@@ -449,7 +425,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         const baseSubmission = chooseBaseSubmission(group)
 
         const appendumSubmissions = group.filter((s) => {
-            return s.get("submissionMode") === "appendum"
+            return ["appendum", "correction"].includes(s.get("submissionMode"))
         })
 
         if (!baseSubmission && appendumSubmissions.length === 0) {
@@ -514,7 +490,8 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
             csvDateTime(latestEffectiveSubmission.get("submittedAt")),
             baseSubmission ? baseSubmission.id : "",
             baseSubmission ? baseSubmission.get("submissionMode") || "" : "",
-            appendumSubmissions.map((s) => s.id).join(";"),
+            appendumSubmissions.filter(s => s.get("submissionMode") === "appendum").map(s => s.id).join(";"),
+            appendumSubmissions.filter(s => s.get("submissionMode") === "correction").map(s => s.id).join(";"),
             pickLatestFieldValue(effectiveSubmissions, "dataRating", ""),
             minutesToHours(pickLatestFieldValue(effectiveSubmissions, "generalAdminTime", 0)),
         ]

@@ -34,7 +34,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             pad2(date.getUTCMinutes()) +
             ":" +
             pad2(date.getUTCSeconds()) +
-            ".000Z"
+            "." + String(date.getUTCMilliseconds()).padStart(3, "0") + "Z"
         )
     }
 
@@ -114,6 +114,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
         return record
     }
 
+    const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
 
     const participantId = String(body.participantId || "").trim()
@@ -139,8 +140,8 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
         return e.json(400, { error: "Invalid weekStart" })
     }
 
-    if (reliability < 0 || reliability > 5) {
-        return e.json(400, { error: "reliability must be between 0 and 5" })
+    if (!Number.isInteger(reliability) || reliability < 1 || reliability > 5) {
+        return e.json(400, { error: "reliability must be an integer between 1 and 5" })
     }
 
     if (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5) {
@@ -179,8 +180,8 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                     "periodStart >= {:periodStart}",
                     "periodStart <= {:periodStartDayEnd}",
                 ].join(" && "),
-                "-submittedAt",
-                50,
+                "-submittedAt,-id",
+                0,
                 0,
                 {
                     participantId,
@@ -189,9 +190,9 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                 }
             )
 
-            const submissionMode = existingWeekSubmissions.length > 0 ? "appendum" : "initial"
-            const replacesSubmissionId =
-                submissionMode === "appendum" ? String(existingWeekSubmissions[0].id || "") : ""
+            const changes = review.prepare(txApp, existingWeekSubmissions, body, periodEndStr)
+            const submissionMode = existingWeekSubmissions.length > 0 ? "correction" : "initial"
+            const replacesSubmissionId = changes.latestId
 
             const submissionCollection = txApp.findCollectionByNameOrId("submissions")
             const submissionRecord = new Record(submissionCollection)
@@ -207,9 +208,9 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("socialBattery", socialBattery)
             submissionRecord.set("comment", comment)
-            submissionRecord.set("generalAdminTime", adminEffortMinutes)
-            submissionRecord.set("commuteTime", participantRole === "student" ? commuteMinutes : 0)
-            submissionRecord.set("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0)
+            submissionRecord.set("generalAdminTime", changes.field("generalAdminTime", adminEffortMinutes))
+            submissionRecord.set("commuteTime", changes.field("commuteTime", participantRole === "student" ? commuteMinutes : 0))
+            submissionRecord.set("structuralChanges", changes.field("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0))
 
             txApp.save(submissionRecord)
 
@@ -219,9 +220,9 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                 for (const item of categoryTimes) {
                     const categoryKey = String(item.categoryId || "").trim()
                     const category = ensureWeeklyCategory(txApp, categoryKey)
-                    const minutes = Math.max(0, Number(item.minutes || 0))
+                    const minutes = category ? changes.item(category.id, "class", item.minutes) : 0
 
-                    if (!category || minutes <= 0) {
+                    if (!category || minutes === 0) {
                         continue
                     }
 
@@ -246,6 +247,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                 )
 
                 const allowedSubjectIds = {}
+                for (const id of changes.subjectIds) allowedSubjectIds[id] = true
                 for (const enrollment of enrollmentRecords) {
                     const subjectId = String(enrollment.get("subject") || "")
                     if (!subjectId) continue
@@ -261,10 +263,10 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                     const subjectId = String(item.subjectId || "")
                     if (!subjectId || !allowedSubjectIds[subjectId]) continue
 
-                    const classMinutes = Math.max(0, Number(item.classMinutes || 0))
-                    const studyMinutes = Math.max(0, Number(item.studyMinutes || 0))
+                    const classMinutes = changes.item(subjectId, "class", item.classMinutes)
+                    const studyMinutes = changes.item(subjectId, "study", item.studyMinutes)
 
-                    if (classMinutes > 0) {
+                    if (classMinutes !== 0) {
                         const classItem = new Record(itemCollection)
                         classItem.set("submission", submissionRecord.id)
                         classItem.set("workloadType", subjectId)
@@ -274,7 +276,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                         createdItemCount++
                     }
 
-                    if (studyMinutes > 0) {
+                    if (studyMinutes !== 0) {
                         const studyItem = new Record(itemCollection)
                         studyItem.set("submission", submissionRecord.id)
                         studyItem.set("workloadType", subjectId)
@@ -288,7 +290,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
 
             createdSubmissionId = submissionRecord.id
             createdMode = submissionMode
-            createdSubmittedAt = submittedAt
+            createdSubmittedAt = submissionRecord.get("submittedAt")
         })
     } catch (error) {
         return e.json(400, {
@@ -340,7 +342,7 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
             pad2(date.getUTCMinutes()) +
             ":" +
             pad2(date.getUTCSeconds()) +
-            ".000Z"
+            "." + String(date.getUTCMilliseconds()).padStart(3, "0") + "Z"
         )
     }
 
@@ -364,6 +366,7 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
         return d
     }
 
+    const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
 
     const participantId = String(body.participantId || "").trim()
@@ -405,7 +408,7 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
                     "periodStart <= {:periodStartDayEnd}",
                 ].join(" && "),
                 "",
-                500,
+                0,
                 0,
                 {
                     participantId,
@@ -415,6 +418,17 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
             )
 
             const deletedAt = formatUtcDateTime(new Date())
+            const latest = weekSubmissions.slice().sort(review.newestFirst)[0]
+            if (!latest) throw new Error("Entry no longer exists")
+            review.assertEditable(txApp, latest.get("periodEnd"))
+            if (String(body.expectedSubmissionId || "") !== latest.id) throw new Error("This entry has changed. Reload the page before deleting.")
+            const deletion = new Record(txApp.findCollectionByNameOrId("submissions"))
+            for (const field of ["participant", "periodType", "periodStart", "periodEnd", "status"]) deletion.set(field, latest.get(field))
+            deletion.set("submissionMode", "deleted")
+            deletion.set("replacesSubmission", latest.id)
+            deletion.set("submittedAt", deletedAt)
+            deletion.set("deletedAt", deletedAt)
+            txApp.save(deletion)
 
             for (const submission of weekSubmissions) {
                 submission.set("submissionMode", "deleted")
@@ -472,7 +486,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             pad2(date.getUTCMinutes()) +
             ":" +
             pad2(date.getUTCSeconds()) +
-            ".000Z"
+            "." + String(date.getUTCMilliseconds()).padStart(3, "0") + "Z"
         )
     }
 
@@ -537,6 +551,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         return record
     }
 
+    const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
 
     const participantId = String(body.participantId || "").trim()
@@ -563,8 +578,8 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         return e.json(400, { error: "Invalid date" })
     }
 
-    if (reliability < 0 || reliability > 5) {
-        return e.json(400, { error: "reliability must be between 0 and 5" })
+    if (!Number.isInteger(reliability) || reliability < 1 || reliability > 5) {
+        return e.json(400, { error: "reliability must be an integer between 1 and 5" })
     }
 
     if (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5) {
@@ -601,8 +616,8 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                     "periodStart >= {:dayStart}",
                     "periodStart <= {:dayEnd}",
                 ].join(" && "),
-                "-submittedAt",
-                50,
+                "-submittedAt,-id",
+                0,
                 0,
                 {
                     participantId,
@@ -611,9 +626,9 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                 }
             )
 
-            const submissionMode = existingDaySubmissions.length > 0 ? "appendum" : "initial"
-            const replacesSubmissionId =
-                submissionMode === "appendum" ? String(existingDaySubmissions[0].id || "") : ""
+            const changes = review.prepare(txApp, existingDaySubmissions, body, dayEndStr)
+            const submissionMode = existingDaySubmissions.length > 0 ? "correction" : "initial"
+            const replacesSubmissionId = changes.latestId
 
             const enrollmentRecords = participantRole === "student" ? txApp.findRecordsByFilter(
                 "participant_subjects",
@@ -625,6 +640,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             ) : []
 
             const allowedSubjectIds = {}
+                for (const id of changes.subjectIds) allowedSubjectIds[id] = true
             for (const enrollment of enrollmentRecords) {
                 const subjectId = String(enrollment.get("subject") || "")
                 if (!subjectId) {
@@ -651,9 +667,9 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("socialBattery", socialBattery)
             submissionRecord.set("comment", comment)
-            submissionRecord.set("generalAdminTime", adminEffortMinutes)
-            submissionRecord.set("commuteTime", participantRole === "student" ? commuteMinutes : 0)
-            submissionRecord.set("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0)
+            submissionRecord.set("generalAdminTime", changes.field("generalAdminTime", adminEffortMinutes))
+            submissionRecord.set("commuteTime", changes.field("commuteTime", participantRole === "student" ? commuteMinutes : 0))
+            submissionRecord.set("structuralChanges", changes.field("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0))
 
             txApp.save(submissionRecord)
 
@@ -666,10 +682,10 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                         continue
                     }
 
-                    const classMinutes = Math.max(0, Number(item.classMinutes || 0))
-                    const studyMinutes = Math.max(0, Number(item.studyMinutes || 0))
+                    const classMinutes = changes.item(subjectId, "class", item.classMinutes)
+                    const studyMinutes = changes.item(subjectId, "study", item.studyMinutes)
 
-                    if (classMinutes > 0) {
+                    if (classMinutes !== 0) {
                         const classItem = new Record(itemCollection)
                         classItem.set("submission", submissionRecord.id)
                         classItem.set("workloadType", subjectId)
@@ -679,7 +695,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                         createdItemCount++
                     }
 
-                    if (studyMinutes > 0) {
+                    if (studyMinutes !== 0) {
                         const studyItem = new Record(itemCollection)
                         studyItem.set("submission", submissionRecord.id)
                         studyItem.set("workloadType", subjectId)
@@ -695,9 +711,9 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                 for (const item of categoryTimes) {
                     const categoryKey = String(item.categoryId || "").trim()
                     const category = ensureFacultyCategory(txApp, categoryKey)
-                    const minutes = Math.max(0, Number(item.minutes || 0))
+                    const minutes = category ? changes.item(category.id, "class", item.minutes) : 0
 
-                    if (!category || minutes <= 0) {
+                    if (!category || minutes === 0) {
                         continue
                     }
 
@@ -713,7 +729,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
 
             createdSubmissionId = submissionRecord.id
             createdMode = submissionMode
-            createdSubmittedAt = submittedAt
+            createdSubmittedAt = submissionRecord.get("submittedAt")
         })
     } catch (error) {
         return e.json(400, {
@@ -765,7 +781,7 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
             pad2(date.getUTCMinutes()) +
             ":" +
             pad2(date.getUTCSeconds()) +
-            ".000Z"
+            "." + String(date.getUTCMilliseconds()).padStart(3, "0") + "Z"
         )
     }
 
@@ -781,6 +797,7 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
         return d
     }
 
+    const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
 
     const participantId = String(body.participantId || "").trim()
@@ -824,7 +841,7 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
                     "periodStart <= {:dayEnd}",
                 ].join(" && "),
                 "",
-                500,
+                0,
                 0,
                 {
                     participantId,
@@ -834,6 +851,17 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
             )
 
             const deletedAt = formatUtcDateTime(new Date())
+            const latest = daySubmissions.slice().sort(review.newestFirst)[0]
+            if (!latest) throw new Error("Entry no longer exists")
+            review.assertEditable(txApp, latest.get("periodEnd"))
+            if (String(body.expectedSubmissionId || "") !== latest.id) throw new Error("This entry has changed. Reload the page before deleting.")
+            const deletion = new Record(txApp.findCollectionByNameOrId("submissions"))
+            for (const field of ["participant", "periodType", "periodStart", "periodEnd", "status"]) deletion.set(field, latest.get(field))
+            deletion.set("submissionMode", "deleted")
+            deletion.set("replacesSubmission", latest.id)
+            deletion.set("submittedAt", deletedAt)
+            deletion.set("deletedAt", deletedAt)
+            txApp.save(deletion)
 
             for (const submission of daySubmissions) {
                 submission.set("submissionMode", "deleted")

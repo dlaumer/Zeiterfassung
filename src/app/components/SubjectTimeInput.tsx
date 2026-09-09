@@ -18,6 +18,8 @@ interface SubjectTimeInputProps {
   isAdditionalHours?: boolean;
   singleTimeLabel?: string;
   timeSliderMax?: number;
+  previousClassTime?: number;
+  previousSelfStudyTime?: number;
 }
 
 export function SubjectTimeInput({
@@ -33,6 +35,8 @@ export function SubjectTimeInput({
   onRemove,
   isAdditionalHours = false,
   singleTimeLabel,
+  previousClassTime,
+  previousSelfStudyTime,
   timeSliderMax = 8
 }: SubjectTimeInputProps) {
   const { t } = useI18n();
@@ -104,6 +108,7 @@ export function SubjectTimeInput({
           </label>
           <EditableTimeDisplay
             value={classTime}
+            previousValue={previousClassTime}
             onChange={onClassTimeChange}
             max={Math.max(24, timeSliderMax)}
             prefix={isAdditionalHours && classHasExistingEntry && classTime > 0 ? '+' : ''}
@@ -146,6 +151,7 @@ export function SubjectTimeInput({
           </label>
           <EditableTimeDisplay
             value={selfStudyTime}
+            previousValue={previousSelfStudyTime}
             onChange={onSelfStudyTimeChange}
             max={Math.max(24, timeSliderMax)}
             prefix={isAdditionalHours && studyHasExistingEntry && selfStudyTime > 0 ? '+' : ''}

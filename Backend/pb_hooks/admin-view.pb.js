@@ -280,7 +280,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
 
         if (participantStatsById[participantId]) {
             if (submissionMode !== "deleted") {
-                if (submissionMode !== "appendum") {
+                if (submissionMode !== "appendum" && submissionMode !== "correction") {
                     participantStatsById[participantId].submissionCount++
                 }
 

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LockKeyhole } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
 import { getDateLocale } from '../i18n/dateLocale';
@@ -13,6 +13,7 @@ interface CalendarProps {
   missingSubmissionDates: Set<string>;
   subjects: Subject[];
   entryMode?: 'day' | 'week';
+  reviewCutoff: string | null;
 }
 
 interface DotColor {
@@ -20,7 +21,7 @@ interface DotColor {
   opacity: number;
 }
 
-export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day' }: CalendarProps) {
+export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff }: CalendarProps) {
   const { t, language } = useI18n();
   const dateLocale = getDateLocale(language);
   const monthStart = startOfMonth(currentDate);
@@ -55,6 +56,15 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
     const dateKey = format(date, 'yyyy-MM-dd');
     return entriesMap.has(dateKey);
   };
+
+  const renderLock = (periodEnd: Date, exists: boolean) => (
+    exists && (!reviewCutoff || format(periodEnd, 'yyyy-MM-dd') < reviewCutoff) && (
+      <span className="pointer-events-none absolute right-1 top-1 text-gray-400 md:right-1.5 md:top-1.5">
+        <LockKeyhole aria-hidden="true" strokeWidth={1.5} className="h-2.5 w-2.5 md:h-3 md:w-3" />
+        <span className="sr-only">{t('dailyEntry.reviewExpiredTitle')}</span>
+      </span>
+    )
+  );
 
   const isMissingSubmissionDay = (date: Date) => {
     const dateKey = format(date, 'yyyy-MM-dd');
@@ -158,6 +168,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                 ${!isSelected && !hasEntryWeek && !isCurrentWeek ? 'text-gray-700' : ''}
               `}
             >
+              {renderLock(weekEnd, hasEntryWeek)}
               <div className="h-full flex items-center justify-between gap-3">
                 <div className="text-left">
                   <div
@@ -200,6 +211,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
                 ${!isSelected && !hasEntryDay ? 'text-gray-700' : ''}
               `}
             >
+              {renderLock(day, hasEntryDay)}
               <div className="h-full flex flex-col items-center justify-between">
                 {isToday ? (
                   <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">

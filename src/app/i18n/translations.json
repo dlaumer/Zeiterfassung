@@ -1206,5 +1206,49 @@
   "admin.metric.noSocialBattery": {
     "en": "No battery level recorded",
     "de": "Kein Batteriestand erfasst"
+  },
+  "dailyEntry.changeFromSaved": {
+    "en": "Change from saved total",
+    "de": "Änderung zum gespeicherten Gesamtwert"
+  },
+  "dailyEntry.submissionHistory": {
+    "en": "Submission history",
+    "de": "Übermittlungsverlauf"
+  },
+  "dailyEntry.reviewTitle": {
+    "en": "Review entry",
+    "de": "Eintrag überprüfen"
+  },
+  "dailyEntry.initialSubmission": {
+    "en": "Initial submission",
+    "de": "Erste Übermittlung"
+  },
+  "dailyEntry.correctionNumber": {
+    "en": "Correction {{number}}",
+    "de": "Korrektur {{number}}"
+  },
+  "dailyEntry.reviewExpiredTitle": {
+    "en": "Review period has ended",
+    "de": "Überprüfungsfrist abgelaufen"
+  },
+  "dailyEntry.reviewUnavailable": {
+    "en": "It is too late to open this entry. The {{days}}-day review period has ended, so it can no longer be viewed or changed.",
+    "de": "Es ist zu spät, diesen Eintrag zu öffnen. Die Überprüfungsfrist von {{days}} Tagen ist abgelaufen. Der Eintrag kann nicht mehr angesehen oder geändert werden."
+  },
+  "dailyEntry.reviewExpired": {
+    "en": "This entry is read-only. Entries can be changed for {{days}} days after the recorded day or week.",
+    "de": "Dieser Eintrag ist schreibgeschützt. Einträge können bis {{days}} Tage nach dem erfassten Tag oder der erfassten Woche geändert werden."
+  },
+  "dailyEntry.saveCorrection": {
+    "en": "Save correction",
+    "de": "Korrektur speichern"
+  },
+  "dailyEntry.delete": {
+    "en": "Delete entry",
+    "de": "Eintrag löschen"
+  },
+  "dailyEntry.deleteConfirm": {
+    "en": "Delete this entry? Its submission history will be retained.",
+    "de": "Diesen Eintrag löschen? Der Übermittlungsverlauf bleibt erhalten."
   }
 }

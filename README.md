@@ -20,7 +20,8 @@ The review window is measured in calendar days from the recorded day, or Sunday
 for a weekly entry, using the backend's calendar date. The cutoff day is included.
 Older entries cannot be opened from the calendar: a notice explains that the
 review period has ended and the entry can no longer be viewed or changed.
-Corrections and deletion are also rejected by the backend.
+Corrections are also rejected by the backend. Locked entries can still be deleted
+from the notice, then submitted again as a new initial entry.
 Initial submissions for missing dates retain the existing behaviour.
 
 The form and POST API send complete current totals (`inputMode: "totals"`), plus

@@ -84,7 +84,11 @@ try {
     for (const [age, status] of [[14, 200], [15, 400]]) {
         const first = await request('/api/submissions/daily', { ...payload, date: daysAgo(age) });
         await request('/api/submissions/daily', { ...payload, date: daysAgo(age), expectedSubmissionId: first.submissionId, comment: 'review' }, 'POST', status);
-        if (age === 15) await request('/api/submissions/daily', { participantId: participant.id, date: daysAgo(age), expectedSubmissionId: first.submissionId }, 'DELETE', 400);
+        if (age === 15) {
+            await request('/api/submissions/daily', { participantId: participant.id, date: daysAgo(age), expectedSubmissionId: first.submissionId }, 'DELETE');
+            const replacement = await request('/api/submissions/daily', { ...payload, date: daysAgo(age) });
+            assert.equal(replacement.submissionMode, 'initial');
+        }
     }
     // A changed admin setting applies immediately, without restarting the server.
     const settings = await request('/api/collections/adminSettings/records');
@@ -97,6 +101,19 @@ try {
     await create('admins', { email: 'admin@example.test', password, passwordConfirm: password });
     const superuserToken = token;
     token = (await request('/api/collections/admins/auth-with-password', { identity: 'admin@example.test', password })).token;
+    assert.equal((await request('/api/admin/settings')).reviewTime, 14);
+    await request('/api/admin/settings', { reviewTime: 21 }, 'PATCH');
+    assert.equal((await request('/api/admin/settings')).reviewTime, 21);
+    assert.equal((await request(`/api/workload-status?participantId=${participant.id}`)).reviewTime, 21);
+    for (const reviewTime of [-1, 1.5, '', null, 36501]) {
+        await request('/api/admin/settings', { reviewTime }, 'PATCH', 400);
+    }
+    await request('/api/admin/settings', { reviewTime: 14 }, 'PATCH');
+    const adminToken = token;
+    token = '';
+    await request('/api/admin/settings', undefined, 'GET', 401);
+    await request('/api/admin/settings', { reviewTime: 30 }, 'PATCH', 401);
+    token = adminToken;
     const csv = await request(`/api/export-student-clean?participantId=${participant.id}`);
     const csvLines = csv.trim().split('\n').map(line => line.split(','));
     const headers = csvLines.shift();
@@ -129,6 +146,12 @@ try {
     assert.equal(history.submissionHistory[0].subjects[0].classTime, 5);
     assert.equal(history.submissionHistory[0].structuralChanges, 60);
     await request('/api/submissions/weekly', { participantId: faculty.id, weekStart: weekly.weekStart, expectedSubmissionId: secondWeek.submissionId }, 'DELETE');
+    week.setDate(week.getDate() - 28);
+    const oldWeekly = { ...weekly, weekStart: dateKey(week) };
+    const lockedWeek = await request('/api/submissions/weekly', oldWeekly);
+    await request('/api/submissions/weekly', { ...oldWeekly, expectedSubmissionId: lockedWeek.submissionId }, 'POST', 400);
+    await request('/api/submissions/weekly', { participantId: faculty.id, weekStart: oldWeekly.weekStart, expectedSubmissionId: lockedWeek.submissionId }, 'DELETE');
+    assert.equal((await request('/api/submissions/weekly', oldWeekly)).submissionMode, 'initial');
     console.log('PASS: legacy increments, negative/positive corrections, totals/history, stale saves, review boundary/settings, export, deletion/recreation and weekly entries.');
 } catch (error) {
     console.error(log.slice(-4000));

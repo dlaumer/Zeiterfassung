@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
+import { AdminSettingsDialog } from './AdminSettingsDialog';
 import {
   BookOpen,
   ChevronDown,
@@ -7,6 +8,7 @@ import {
   Download,
   ExternalLink,
   Filter,
+  Settings,
   LogOut,
   Mail,
   MoreHorizontal,
@@ -670,6 +672,7 @@ function SubjectActionMenu({ subject, onExportData, onRemove }: SubjectActionMen
 }
 
 function AdminContent() {
+  const [showSettings, setShowSettings] = useState(false);
   const { t, language } = useI18n();
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -1366,7 +1369,10 @@ function AdminContent() {
                     </button>
                   </div>
                 </PopoverContent>
-              </Popover>
+                </Popover>
+                <button type="button" onClick={() => setShowSettings(true)} title={t('admin.settings.title')} aria-label={t('admin.settings.title')} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:h-10 md:w-10">
+                  <Settings className="h-4 w-4" />
+                </button>
             </div>
 
             <div className="order-2 ml-auto flex w-auto shrink-0 items-center gap-2 md:order-3">
@@ -1751,6 +1757,8 @@ function AdminContent() {
           </section>
         </aside>
       </main>
+
+      <AdminSettingsDialog pb={pb} open={showSettings} onOpenChange={setShowSettings} />
 
       <Dialog
         open={showParticipantDialog}

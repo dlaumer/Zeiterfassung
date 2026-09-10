@@ -1,5 +1,5 @@
 import { FieldHelp } from './FieldHelp';
-import { X, Trash2, Star, Bike, TrainFront, FileText, CheckCircle, History, FileCheck2, Pencil, Clock3 } from 'lucide-react';
+import { X, Trash2, Star, Bike, TrainFront, FileText, CheckCircle, History } from 'lucide-react';
 import { format, endOfWeek } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import { SocialBatteryInput } from './SocialBatteryInput';
@@ -58,7 +58,7 @@ interface DailyEntryModalProps {
 }
 
 const DEFAULT_TIME_SLIDER_MAX = 5;
-const WEEKLY_TIME_SLIDER_MAX = 41;
+const WEEKLY_TIME_SLIDER_MAX = 20;
 
 interface EditablePercentageDisplayProps {
   value: number;
@@ -395,29 +395,21 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
           </div>
         </div>
 
-        {existingEntry && <section className="mb-5 overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-white" aria-label={t('dailyEntry.submissionHistory')}>
-          <div className="flex items-center gap-2 border-b border-indigo-100/70 px-4 py-3">
-            <History aria-hidden="true" className="h-4 w-4 text-indigo-500" />
-            <h4 className="text-sm font-semibold text-indigo-950">{t('dailyEntry.submissionHistory')}</h4>
+        {existingEntry && <section className="mb-4" aria-label={t('dailyEntry.submissionHistory')}>
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <History aria-hidden="true" className="h-3.5 w-3.5 text-gray-400" />
+            <h4 className="text-xs font-medium text-gray-500">{t('dailyEntry.submissionHistory')}</h4>
           </div>
-          <ol className="max-h-48 overflow-y-auto px-4 py-2">
+          <ol className="grid max-h-32 grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 overflow-y-auto text-xs leading-4 text-gray-500">
             {[
               ...(existingEntry.initialSubmittedAt ? [{ value: existingEntry.initialSubmittedAt, label: t('dailyEntry.initialSubmission'), initial: true }] : []),
               ...[...(existingEntry.correctionDates ?? [])].sort().map((value, index) => ({ value, label: t('dailyEntry.correctionNumber', { number: index + 1 }), initial: false })),
-            ].map(({ value, label, initial }, index, history) => {
-              const Icon = initial ? FileCheck2 : Pencil;
-              return <li key={`${value}-${index}`} className="relative flex items-start gap-3 py-2">
-                {index < history.length - 1 && <span aria-hidden="true" className="absolute bottom-[-0.5rem] left-3.5 top-9 w-px bg-indigo-100" />}
-                <span className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${initial ? 'bg-indigo-100 text-indigo-600' : 'border border-indigo-100 bg-white text-slate-500'}`}>
-                  <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-                </span>
-                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1">
-                  <span className="text-sm font-medium text-slate-700">{label}</span>
-                  <time dateTime={new Date(value.replace(' ', 'T')).toISOString()} className="flex items-center gap-1.5 text-xs tabular-nums text-slate-500">
-                    <Clock3 aria-hidden="true" className="h-3 w-3" />
+            ].map(({ value, label }, index) => {
+              return <li key={`${value}-${index}`} className="col-span-2 grid grid-cols-subgrid items-baseline">
+                  <span>{label}:</span>
+                  <time dateTime={new Date(value.replace(' ', 'T')).toISOString()} className="whitespace-nowrap tabular-nums text-gray-400">
                     {format(new Date(value.replace(' ', 'T')), 'dd.MM.yyyy HH:mm', { locale: dateLocale })}
                   </time>
-                </div>
               </li>;
             })}
           </ol>
@@ -474,7 +466,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
                     onClassTimeChange={(time) => handleSubjectClassTimeChange(subject.id, time)}
                     onSelfStudyTimeChange={(time) => handleSubjectSelfStudyTimeChange(subject.id, time)}
                     singleTimeLabel={isFaculty ? t('weeklyEntry.hours') : undefined}
-                    timeSliderMax={Math.max(isWeekly ? WEEKLY_TIME_SLIDER_MAX : 8, subjectTime?.classTime ?? 0, subjectTime?.selfStudyTime ?? 0)}
+                    timeSliderMax={isWeekly ? WEEKLY_TIME_SLIDER_MAX : Math.max(8, subjectTime?.classTime ?? 0, subjectTime?.selfStudyTime ?? 0)}
                   />
                 );
               })}

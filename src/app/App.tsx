@@ -881,7 +881,7 @@ function AppContent({ participantId }: AppContentProps) {
       </div>
 
       {showEntryModal && isSelectedEntryExpired && (
-        <ReviewExpiredModal days={reviewTime} onClose={() => {
+        <ReviewExpiredModal days={reviewTime} onDelete={() => deleteEntry(existingEntry!.date)} onClose={() => {
           setShowEntryModal(false);
           setSelectedDate(null);
         }} />

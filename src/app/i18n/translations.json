@@ -1,4 +1,12 @@
 {
+  "admin.settings.title": { "en": "Settings", "de": "Einstellungen" },
+  "admin.settings.description": { "en": "Manage application settings.", "de": "Anwendungseinstellungen verwalten." },
+  "admin.settings.reviewPeriod": { "en": "Review period (days)", "de": "Überprüfungsfrist (Tage)" },
+  "admin.settings.reviewHelp": { "en": "How many days after a recorded day or week entries can be viewed and changed. Enter a whole number; 0 allows only current periods.", "de": "Wie viele Tage nach einem erfassten Tag oder einer Woche Einträge angesehen und geändert werden können. Eine ganze Zahl eingeben; 0 erlaubt nur aktuelle Zeiträume." },
+  "admin.settings.save": { "en": "Save settings", "de": "Einstellungen speichern" },
+  "admin.settings.saving": { "en": "Saving…", "de": "Wird gespeichert…" },
+  "admin.settings.loadFailed": { "en": "Could not load settings. Close and reopen this dialog to try again.", "de": "Einstellungen konnten nicht geladen werden. Bitte das Fenster schließen und erneut öffnen." },
+  "admin.settings.saveFailed": { "en": "Could not save settings. Please try again.", "de": "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen." },
   "language.en": {
     "en": "English",
     "de": "Englisch"
@@ -345,7 +353,7 @@
   },
   "weeklyEntry.structuralChanges": {
     "en": "Structural Changes",
-    "de": "Structural Changes"
+    "de": "Strukturelle Veränderungen"
   },
   "weeklyEntry.facultyAllocationInfo": {
     "en": "What share of the specified total workload (in hours or %) falls into the following two areas of work?",
@@ -693,7 +701,7 @@
   },
   "admin.metric.structuralChanges": {
     "en": "{{value}} structural changes",
-    "de": "{{value}} Structural Changes"
+    "de": "{{value}} Strukturelle Veränderungen"
   },
   "admin.metric.rating": {
     "en": "{{value}}/5 rating",
@@ -1213,15 +1221,15 @@
   },
   "dailyEntry.submissionHistory": {
     "en": "Submission history",
-    "de": "Übermittlungsverlauf"
+    "de": "Einreichungsverlauf"
   },
   "dailyEntry.reviewTitle": {
-    "en": "Review entry",
-    "de": "Eintrag überprüfen"
+    "en": "Correct entry",
+    "de": "Eintrag korrigieren"
   },
   "dailyEntry.initialSubmission": {
     "en": "Initial submission",
-    "de": "Erste Übermittlung"
+    "de": "Erste Einreichung"
   },
   "dailyEntry.correctionNumber": {
     "en": "Correction {{number}}",
@@ -1232,8 +1240,12 @@
     "de": "Überprüfungsfrist abgelaufen"
   },
   "dailyEntry.reviewUnavailable": {
-    "en": "It is too late to open this entry. The {{days}}-day review period has ended, so it can no longer be viewed or changed.",
-    "de": "Es ist zu spät, diesen Eintrag zu öffnen. Die Überprüfungsfrist von {{days}} Tagen ist abgelaufen. Der Eintrag kann nicht mehr angesehen oder geändert werden."
+    "en": "The {{days}}-day review period has ended, so this entry can no longer be viewed or changed. You can delete it and submit a new entry for the same period.",
+    "de": "Die Überprüfungsfrist von {{days}} Tagen ist abgelaufen. Dieser Eintrag kann nicht mehr angesehen oder geändert werden. Du kannst ihn löschen und für denselben Zeitraum einen neuen Eintrag einreichen."
+  },
+  "dailyEntry.deleteFailed": {
+    "en": "Could not delete the entry. Please try again.",
+    "de": "Der Eintrag konnte nicht gelöscht werden. Bitte erneut versuchen."
   },
   "dailyEntry.reviewExpired": {
     "en": "This entry is read-only. Entries can be changed for {{days}} days after the recorded day or week.",
@@ -1249,6 +1261,6 @@
   },
   "dailyEntry.deleteConfirm": {
     "en": "Delete this entry? Its submission history will be retained.",
-    "de": "Diesen Eintrag löschen? Der Übermittlungsverlauf bleibt erhalten."
+    "de": "Diesen Eintrag löschen? Der Einreichungsverlauf bleibt erhalten."
   }
 }

@@ -420,7 +420,6 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
             const deletedAt = formatUtcDateTime(new Date())
             const latest = weekSubmissions.slice().sort(review.newestFirst)[0]
             if (!latest) throw new Error("Entry no longer exists")
-            review.assertEditable(txApp, latest.get("periodEnd"))
             if (String(body.expectedSubmissionId || "") !== latest.id) throw new Error("This entry has changed. Reload the page before deleting.")
             const deletion = new Record(txApp.findCollectionByNameOrId("submissions"))
             for (const field of ["participant", "periodType", "periodStart", "periodEnd", "status"]) deletion.set(field, latest.get(field))
@@ -853,7 +852,6 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
             const deletedAt = formatUtcDateTime(new Date())
             const latest = daySubmissions.slice().sort(review.newestFirst)[0]
             if (!latest) throw new Error("Entry no longer exists")
-            review.assertEditable(txApp, latest.get("periodEnd"))
             if (String(body.expectedSubmissionId || "") !== latest.id) throw new Error("This entry has changed. Reload the page before deleting.")
             const deletion = new Record(txApp.findCollectionByNameOrId("submissions"))
             for (const field of ["participant", "periodType", "periodStart", "periodEnd", "status"]) deletion.set(field, latest.get(field))

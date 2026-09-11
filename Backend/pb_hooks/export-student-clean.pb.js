@@ -261,14 +261,14 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         0
     )
 
-    const submissions = $app.findRecordsByFilter(
+    const submissions = require(`${__hooks}/submission-review.js`).active($app, $app.findRecordsByFilter(
         "submissions",
         submissionFilterParts.join(" && "),
         "periodStart",
         5000,
         0,
         submissionFilterParams
-    )
+    ))
 
     const submissionIds = submissions.map((s) => s.id)
 

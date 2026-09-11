@@ -151,6 +151,9 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   const [showSocialBatteryError, setShowSocialBatteryError] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showRatingConfirmation, setShowRatingConfirmation] = useState(false);
+  const [confirmedClassTimes, setConfirmedClassTimes] = useState<Record<string, number>>({});
+  const [showClassTimeWarnings, setShowClassTimeWarnings] = useState(false);
   const isWeekly = entryMode === 'week';
   const isFaculty = participantRole === 'faculty';
   const isCorrection = !!existingEntry && !readOnly;
@@ -165,9 +168,11 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
 
   useEffect(() => {
     setCourses(existingEntry?.courses ?? []);
+    setConfirmedClassTimes({});
+    setShowClassTimeWarnings(false);
     setSubjectTimes(subjects.map(s => existingEntry?.subjectTimes.find(st => st.subjectId === s.id) ?? { subjectId: s.id, classTime: 0, selfStudyTime: 0 }));
-    setReliability(readOnly ? existingEntry?.reliability ?? 0 : 0);
-    setSocialBattery(readOnly ? existingEntry?.socialBattery ?? 0 : 0);
+    setReliability(existingEntry?.reliability ?? 0);
+    setSocialBattery(existingEntry?.socialBattery ?? 0);
     const nextAdminEffort = existingEntry?.adminEffort ?? 0;
     const nextCommuteTime = isFaculty ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime;
     setAdminEffort(nextAdminEffort);
@@ -178,10 +183,16 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
     setComment(readOnly ? existingEntry?.comment ?? '' : '');
     setShowReliabilityError(false);
     setShowSocialBatteryError(false);
+    setShowRatingConfirmation(false);
     setSaveError(null);
   }, [existingEntry, subjects.map(s => s.id).join(','), defaultCommuteTime, isFaculty, readOnly]);
 
   const handleSubjectClassTimeChange = (subjectId: string, time: number) => {
+    setConfirmedClassTimes(prev => {
+      const next = { ...prev };
+      delete next[subjectId];
+      return next;
+    });
     setSubjectTimes(prev => {
       const existing = prev.find(st => st.subjectId === subjectId);
       if (existing) {
@@ -233,18 +244,16 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   };
 
   const handleSkipDay = async () => {
+    if (readOnly || isSaving) return;
     setSaveError(null);
-    setShowSocialBatteryError(socialBattery <= 0);
-    if (socialBattery <= 0) {
-      setSaveError(t('dailyEntry.socialBatteryRequired'));
-      return;
-    }
+    setShowReliabilityError(false);
+    setShowSocialBatteryError(false);
     setIsSaving(true);
     const entry: DailyEntry = {
       date: format(date, 'yyyy-MM-dd'),
       courses: [],
       subjectTimes: [],
-      reliability: 5,
+      reliability: reliability || 5,
       socialBattery: socialBattery || undefined,
       adminEffort: 0,
       commuteTime: 0,
@@ -289,12 +298,22 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   const hasEnteredCourseLikeWorkload =
     courses.some((course) => course.hours > 0) ||
     hasEnteredSubjectTime;
+  const pendingClassTimes = !isFaculty && !readOnly ? subjectTimes.filter(st =>
+    st.classTime > 0 && Math.abs(st.classTime - Math.round(st.classTime)) > 0.000001 &&
+    confirmedClassTimes[st.subjectId] !== st.classTime
+  ) : [];
+  const unchangedRatings = isCorrection ? [
+    ...(reliability > 0 && reliability === existingEntry.reliability
+      ? [`${t('dailyEntry.reliability')}: ${reliability}/5`] : []),
+    ...(socialBattery > 0 && socialBattery === existingEntry.socialBattery
+      ? [`${t(`socialBattery.${participantRole}`)}: ${socialBattery}/5`] : []),
+  ] : [];
   const shouldShowCloseWarning = !readOnly && (
     subjectTimes.some(st => {
       const old = existingEntry?.subjectTimes.find(item => item.subjectId === st.subjectId);
       return st.classTime !== (old?.classTime ?? 0) || st.selfStudyTime !== (old?.selfStudyTime ?? 0);
-    }) || reliability !== 0 ||
-    socialBattery !== 0 ||
+    }) || reliability !== (existingEntry?.reliability ?? 0) ||
+    socialBattery !== (existingEntry?.socialBattery ?? 0) ||
     adminEffort !== (existingEntry?.adminEffort ?? 0) ||
     commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime) ||
     structuralChanges !== (existingEntry?.structuralChanges ?? 0) || comment !== ''
@@ -309,15 +328,21 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
     onClose();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (ratingsConfirmed = false) => {
     if (readOnly || isSaving) return;
+    setShowClassTimeWarnings(true);
     setSaveError(null);
     setShowReliabilityError(reliability <= 0);
     setShowSocialBatteryError(socialBattery <= 0);
 
-    if (reliability <= 0 || socialBattery <= 0) {
+    if (pendingClassTimes.length > 0 || reliability <= 0 || socialBattery <= 0) {
       return;
     }
+    if (!ratingsConfirmed && unchangedRatings.length > 0) {
+      setShowRatingConfirmation(true);
+      return;
+    }
+    setShowRatingConfirmation(false);
 
     const submittedComment = !existingEntry && !hasEnteredCourseLikeWorkload && comment.trim().length === 0
       ? t('dailyEntry.skippedTag')
@@ -399,6 +424,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
           <div className="mb-1.5 flex items-center gap-1.5">
             <History aria-hidden="true" className="h-3.5 w-3.5 text-gray-400" />
             <h4 className="text-xs font-medium text-gray-500">{t('dailyEntry.submissionHistory')}</h4>
+            <FieldHelp title={t('dailyEntry.submissionHistory')} text={t('dailyEntry.restoreSubmissionHelp')} />
           </div>
           <ol className="grid max-h-32 grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 overflow-y-auto text-xs leading-4 text-gray-500">
             {[
@@ -459,13 +485,15 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
                     key={subject.id}
                     subjectName={getSubjectDisplayName(subject, language)}
                     subjectColor={subject.color}
+                    classTimeConfirmationId={`class-time-confirmation-${subject.id}`}
+                    onConfirmClassTime={showClassTimeWarnings && pendingClassTimes.some(st => st.subjectId === subject.id) ? () => setConfirmedClassTimes(prev => ({ ...prev, [subject.id]: subjectTime?.classTime ?? 0 })) : undefined}
                     classTime={subjectTime?.classTime || 0}
                     previousClassTime={isCorrection ? existingEntry.subjectTimes.find(st => st.subjectId === subject.id)?.classTime ?? 0 : undefined}
                     previousSelfStudyTime={isCorrection ? existingEntry.subjectTimes.find(st => st.subjectId === subject.id)?.selfStudyTime ?? 0 : undefined}
                     selfStudyTime={isFaculty ? 0 : subjectTime?.selfStudyTime || 0}
                     onClassTimeChange={(time) => handleSubjectClassTimeChange(subject.id, time)}
                     onSelfStudyTimeChange={(time) => handleSubjectSelfStudyTimeChange(subject.id, time)}
-                    singleTimeLabel={isFaculty ? t('weeklyEntry.hours') : undefined}
+                    isSingleTimeMode={isFaculty}
                     timeSliderMax={isWeekly ? WEEKLY_TIME_SLIDER_MAX : Math.max(8, subjectTime?.classTime ?? 0, subjectTime?.selfStudyTime ?? 0)}
                   />
                 );
@@ -601,7 +629,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <div className="text-base font-medium text-gray-700 flex items-center gap-2">
                 {t('dailyEntry.reliability')}
                 <FieldHelp title={t('dailyEntry.reliability')} text={t(`fieldHelp.reliability.${participantRole}`)} />
               </div>
@@ -631,7 +659,9 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
             </div>
             {showReliabilityError && (
               <p role="alert" className="text-sm font-medium text-red-600">
-                {t('dailyEntry.reliabilityRequired')}
+                {t('dailyEntry.reliabilityRequired')}{' '}
+                {t(`fieldHelp.moreInformation.${participantRole}`)}{' '}
+                <FieldHelp title={t('dailyEntry.reliability')} text={t(`fieldHelp.reliability.${participantRole}`)} triggerLabel={t('fieldHelp.here')} />.
               </p>
             )}
           </div>
@@ -648,7 +678,9 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
             />
             {showSocialBatteryError && (
               <p role="alert" className="text-sm font-medium text-red-600">
-                {t('dailyEntry.socialBatteryRequired')}
+                {t('dailyEntry.socialBatteryRequired')}{' '}
+                {t(`fieldHelp.moreInformation.${participantRole}`)}{' '}
+                <FieldHelp title={t(`socialBattery.${participantRole}`)} text={t(`fieldHelp.battery.${participantRole}`)} triggerLabel={t('fieldHelp.here')} />.
               </p>
             )}
           </div>
@@ -657,7 +689,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
             <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
               <label htmlFor="submission-comment">{t('dailyEntry.comment')}</label>
-              <FieldHelp title={t('dailyEntry.comment')} text={t(`dailyEntry.commentPlaceholder.${participantRole}`)} />
+              <FieldHelp title={t('dailyEntry.comment')} text={t(`fieldHelp.comment.${participantRole}`)} />
             </div>
             <textarea
               id="submission-comment"
@@ -671,13 +703,26 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
         </div>
 
         </fieldset>
+        {showClassTimeWarnings && pendingClassTimes.length > 0 && <div role="alert" className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p>{t('dailyEntry.pendingClassTimeConfirmations')}</p>
+          <ul className="mt-2 list-disc space-y-1 pl-4">
+            {pendingClassTimes.map(st => {
+              const subject = subjects.find(item => item.id === st.subjectId);
+              return <li key={st.subjectId}><button type="button" className="text-sm underline underline-offset-2" onClick={() => {
+                const warning = document.getElementById(`class-time-confirmation-${st.subjectId}`);
+                warning?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                warning?.focus({ preventScroll: true });
+              }}>{subject ? getSubjectDisplayName(subject, language) : st.subjectId}</button></li>;
+            })}
+          </ul>
+        </div>}
         <div className="flex gap-3">
           {saveError && (
             <p className="text-sm text-red-600">{saveError}</p>
           )}
           {existingEntry && !readOnly && <button disabled={isSaving} onClick={() => setShowDeleteWarning(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />{t('dailyEntry.delete')}</button>}
           {!readOnly && <button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             disabled={isSaving}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
@@ -686,6 +731,20 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
         </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={showRatingConfirmation}
+        title={t('dailyEntry.confirmRatingsTitle')}
+        description={<>
+          <p>{t(`dailyEntry.confirmRatings.${participantRole}`)}</p>
+          <ul className="mt-2 list-disc space-y-1 pl-4">
+            {unchangedRatings.map(rating => <li key={rating}>{rating}</li>)}
+          </ul>
+        </>}
+        confirmLabel={t('dailyEntry.confirmRatingsSave')}
+        cancelLabel={t('common.continueEditing')}
+        onCancel={() => setShowRatingConfirmation(false)}
+        onConfirm={() => handleSubmit(true)}
+      />
       <ConfirmDialog
         open={showDeleteWarning}
         title={t('dailyEntry.delete')}

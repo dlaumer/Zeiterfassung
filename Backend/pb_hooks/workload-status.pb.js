@@ -235,7 +235,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
     const referenceDateStart = parseStartDateInput(participant.get("referenceDate"))
     const explicitRangeStart = parseStartDateInput(startDateInput)
     const rangeStart = referenceDateStart || explicitRangeStart || addDays(todayStart, -lookbackDays)
-    const submissions = $app.findRecordsByFilter(
+    const submissions = require(`${__hooks}/submission-review.js`).active($app, $app.findRecordsByFilter(
         "submissions",
         [
             'participant = {:participantId}',
@@ -247,7 +247,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
         {
             participantId: participantId
         }
-    )
+    ))
 
     const submittedPeriods = submissions.map((r) => ({
         id: r.id,

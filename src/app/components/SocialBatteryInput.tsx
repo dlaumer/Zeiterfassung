@@ -22,7 +22,7 @@ export function SocialBatteryInput({ value, onChange, participantRole }: SocialB
 
   return (
     <div role="group" aria-labelledby={`${id}-label`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+      <div className="flex items-center gap-2 text-base font-medium text-gray-700">
         <span id={`${id}-label`}>{t(`socialBattery.${participantRole}`)}</span>
         <FieldHelp title={t(`socialBattery.${participantRole}`)} text={t(`fieldHelp.battery.${participantRole}`)} />
       </div>

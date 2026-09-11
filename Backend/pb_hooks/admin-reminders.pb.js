@@ -81,26 +81,6 @@ routerAdd("POST", "/api/admin/participant/reminder", (e) => {
             .replace(/'/g, "&#39;")
     }
 
-    function reminderEmailHtmlFooterDe() {
-        return `<p>Bitte antworten Sie nicht direkt auf diese E-Mail.<br />Kontakt bei Rückfragen und Anregungen: Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
-    }
-
-    function reminderEmailHtmlFooterEn() {
-        return `<p>Please do not reply directly to this email.<br />For any queries or suggestions, please contact Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
-    }
-
-    function reminderEmailTextFooterDe() {
-        return `Bitte antworten Sie nicht direkt auf diese E-Mail.
-Kontakt bei Rückfragen und Anregungen: Katharina Sperger,
-${contactEmail}`
-    }
-
-    function reminderEmailTextFooterEn() {
-        return `Please do not reply directly to this email.
-For any queries or suggestions, please contact Katharina Sperger,
-${contactEmail}`
-    }
-
     function reminderFirstName(participantName) {
         const trimmedName = String(participantName || "").trim()
         if (!trimmedName) {
@@ -175,132 +155,123 @@ ${contactEmail}`
 
     function reminderEmailHtmlStudent(participantName, participantLink) {
         const safeName = reminderHtmlEscape(reminderFirstName(participantName) || participantName || "Du")
-        const participantLinkDe = reminderLanguageLink(participantLink, "de")
-        const linkSectionDe = participantLinkDe
-            ? `<p>Erfasse Deinen Aufwand hier: <a href="${reminderHtmlEscape(participantLinkDe)}">${reminderHtmlEscape(participantLinkDe)}</a></p>`
-            : ""
+        const urlDe = reminderHtmlEscape(reminderLanguageLink(participantLink, "de"))
+        const linkDe = `<a href="${urlDe}">${urlDe}</a>`
+        const contact = `<a href="mailto:${contactEmail}">${contactEmail}</a>`
 
-        return `
-        <p>Hallo ${safeName},</p>
-        <p>dies ist eine kurze Erinnerung, Deinen Arbeitsaufwand fürs Studium einzureichen.</p>
-        ${linkSectionDe}
-        <p>Solltest Du einmal nicht fürs Studium gearbeitet haben, bestätige Deinen Aufwand durch Klick auf "<em>Überspringen</em>" rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
-        <p>Du erhältst diese E-Mail, weil Du an der Zeiterfassung mit mETHric teilnimmst.</p>
-        <p>Vielen Dank und beste Grüsse,</p>
-        <p>mETHric und das Projektteam von &laquo;Student Workload&raquo;</p>
-        ${reminderEmailHtmlFooterDe()}
-    `
+        return `<p>Hallo ${safeName},</p>
+        <p>dies ist eine kurze Erinnerung, deinen Arbeitsaufwand fürs Studium einzureichen.<br />Erfasse deinen Aufwand hier: ${linkDe}</p>
+        <p>Solltest du einmal nicht fürs Studium gearbeitet haben, bestätige das bitte durch Klick auf "<strong>Überspringen</strong>" rechts oben in der Ansicht des jeweiligen Tages. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
+        <p>Du erhältst diese E-Mail, weil du an der Zeiterfassung mit <em>mETHric</em> teilnimmst.</p>
+        <p>Kontakt bei Rückfragen und Anregungen: Katharina Sperger, ${contact}</p>
+        <p>Vielen Dank und beste Grüsse,<br /><em>mETHric</em> und das Projektteam von «Student Workload»</p>
+        <p><em>Bitte antworte nicht direkt auf diese E-Mail.</em></p>`
     }
 
     function reminderEmailTextStudent(participantName, participantLink) {
         const safeName = reminderFirstName(participantName) || participantName || "Du"
-        const germanLink = participantLink ? `\n\nErfasse Deinen Aufwand hier: ${reminderLanguageLink(participantLink, "de")}` : ""
+        const linkDe = reminderLanguageLink(participantLink, "de")
+        const contact = contactEmail
 
         return `Hallo ${safeName},
 
-dies ist eine kurze Erinnerung, Deinen Arbeitsaufwand fürs Studium einzureichen.
-${germanLink}
+dies ist eine kurze Erinnerung, deinen Arbeitsaufwand fürs Studium einzureichen.
+Erfasse deinen Aufwand hier: ${linkDe}
 
-Solltest Du einmal nicht fürs Studium gearbeitet haben, bestätige Deinen Aufwand durch Klick auf "*Überspringen*" rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.
+Solltest du einmal nicht fürs Studium gearbeitet haben, bestätige das bitte durch Klick auf "Überspringen" rechts oben in der Ansicht des jeweiligen Tages. Nur so verschwindet die rote Markierung in der Kalenderansicht.
 
-Du erhältst diese E-Mail, weil Du an der Zeiterfassung mit mETHric teilnimmst.
+Du erhältst diese E-Mail, weil du an der Zeiterfassung mit mETHric teilnimmst.
+
+Kontakt bei Rückfragen und Anregungen: Katharina Sperger, ${contact}
 
 Vielen Dank und beste Grüsse,
+mETHric und das Projektteam von «Student Workload»
 
-mETHric und das Projektteam von \u00abStudent Workload\u00bb
-
-${reminderEmailTextFooterDe()}`
+Bitte antworte nicht direkt auf diese E-Mail.`
     }
 
     function reminderEmailHtmlFaculty(participantName, participantLink, subjects, categoryGuideDeUrl, categoryGuideEnUrl) {
         const safeName = reminderHtmlEscape(participantName || "Sie")
+        const urlDe = reminderHtmlEscape(reminderLanguageLink(participantLink, "de"))
+        const linkDe = `<a href="${urlDe}">${urlDe}</a>`
         const subjectDe = reminderHtmlEscape(reminderSubjectList(subjects, "de") || "Ihr Modul")
+        const guideDe = `<a href="${reminderHtmlEscape(categoryGuideDeUrl || defaultCategoryGuideUrl)}">Kategorisierungshilfe (PDF)</a>`
+        const urlEn = reminderHtmlEscape(reminderLanguageLink(participantLink, "en"))
+        const linkEn = `<a href="${urlEn}">${urlEn}</a>`
         const subjectEn = reminderHtmlEscape(reminderSubjectList(subjects, "en") || "your module")
-        const participantLinkDe = reminderLanguageLink(participantLink, "de")
-        const participantLinkEn = reminderLanguageLink(participantLink, "en")
-        const linkSectionDe = participantLinkDe
-            ? `<p>Erfassen Sie Ihren Aufwand hier: <a href="${reminderHtmlEscape(participantLinkDe)}">${reminderHtmlEscape(participantLinkDe)}</a></p>`
-            : ""
-        const linkSectionEn = participantLinkEn
-            ? `<p>Enter your workload here: <a href="${reminderHtmlEscape(participantLinkEn)}">${reminderHtmlEscape(participantLinkEn)}</a></p>`
-            : ""
-        const guideSectionDe = categoryGuideDeUrl
-            ? `<p>Unsicher über die korrekte Kategorie für Ihre Aufwände? Werfen Sie einen Blick in die <a href="${reminderHtmlEscape(categoryGuideDeUrl)}">Kategorisierungshilfe (PDF)</a>.</p>`
-            : ""
-        const guideSectionEn = categoryGuideEnUrl
-            ? `<p>Unsure about the correct category for your workload? Please have a look at the <a href="${reminderHtmlEscape(categoryGuideEnUrl)}">categorisation guide (PDF)</a>.</p>`
-            : ""
+        const guideEn = `<a href="${reminderHtmlEscape(categoryGuideEnUrl || defaultCategoryGuideUrl)}">categorisation guide (PDF)</a>`
+        const contact = `<a href="mailto:${contactEmail}">${contactEmail}</a>`
 
-        return `
-        <p>*** English version below***</p>
+        return `<p>*** English version below ***</p>
         <p>Hallo ${safeName},</p>
-        <p>dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für &laquo;${subjectDe}&raquo; einzureichen.</p>
-        ${linkSectionDe}
-        ${guideSectionDe}
-        <p>Sollten Sie einmal nicht für &laquo;${subjectDe}&raquo; gearbeitet haben, bestätigen Sie bitte den Aufwand durch Klick auf &laquo;<em>Überspringen</em>&raquo; rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
-        <p>Sie erhalten diese E-Mail, weil Sie an der Zeiterfassung mit mETHric teilnehmen.</p>
-        <p>Vielen Dank und beste Grüsse,</p>
-        <p>mETHric und das Projektteam von &laquo;Faculty Workload&raquo;</p>
-        ${reminderEmailHtmlFooterDe()}
+        <p>dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für ${subjectDe} einzureichen.<br />Erfassen Sie Ihren Aufwand hier: ${linkDe}</p>
+        <p>Sollten Sie einmal nicht für ${subjectDe} gearbeitet haben, bestätigen Sie das bitte durch Klick auf "<strong>Überspringen</strong>" rechts oben in der Ansicht der jeweiligen Woche / des jeweiligen Tages. Nur so verschwindet die rote Markierung in der Kalenderansicht.</p>
+        <p>Unsicher über die korrekte Kategorie für Ihre Aufwände? Werfen Sie einen Blick in die ${guideDe}.</p>
+        <p>Sie erhalten diese E-Mail, weil Sie an der Zeiterfassung mit <em>mETHric</em> teilnehmen.</p>
+        <p>Kontakt bei Rückfragen und Anregungen: Katharina Sperger, ${contact}</p>
+        <p>Vielen Dank und beste Grüsse,<br /><em>mETHric</em> und das Projektteam von «Faculty Workload»</p>
+        <p><em>Bitte antworten Sie nicht direkt auf diese E-Mail.</em></p>
         <hr />
-        <p>*** English version***</p>
+        <p>*** English version ***</p>
         <p>Hello ${safeName},</p>
-        <p>This is a quick reminder to submit your workload spent on &ldquo;${subjectEn}&rdquo;.</p>
-        ${linkSectionEn}
-        ${guideSectionEn}
-        <p>If you did not work on &ldquo;${subjectEn}&rdquo; during a certain period of time, please confirm your workload by clicking <em>Skip</em> in the top right-hand corner of the view for the relevant day or week. This is the only way to remove the red mark from the calendar view.</p>
-        <p>You are receiving this email because you are participating in workload tracking with mETHric.</p>
-        <p>Thank you very much and best regards,</p>
-        <p>mETHric and the &ldquo;Faculty Workload&rdquo; project team</p>
-        ${reminderEmailHtmlFooterEn()}
-    `
+        <p>This is a short reminder to submit your workload for ${subjectEn}.<br />Please record your workload here: ${linkEn}</p>
+        <p>If you did not work on ${subjectEn} during a particular week or day, please confirm this by clicking “<strong>Skip</strong>” in the top-right corner of the respective weekly/daily view. This is the only way to remove the red marking from the calendar view.</p>
+        <p>Unsure which category your workload belongs to? Take a look at the ${guideEn}.</p>
+        <p>You are receiving this email because you are participating in time tracking with <em>mETHric</em>.</p>
+        <p>For any queries or suggestions, please contact Katharina Sperger, ${contact}</p>
+        <p>Thank you very much and best wishes,<br /><em>mETHric</em> and the project team of «Faculty Workload»</p>
+        <p><em>Please do not reply directly to this email.</em></p>`
     }
 
     function reminderEmailTextFaculty(participantName, participantLink, subjects, categoryGuideDeUrl, categoryGuideEnUrl) {
         const safeName = participantName || "Sie"
+        const linkDe = reminderLanguageLink(participantLink, "de")
         const subjectDe = reminderSubjectList(subjects, "de") || "Ihr Modul"
+        const guideDe = `Kategorisierungshilfe (PDF) (${categoryGuideDeUrl || defaultCategoryGuideUrl})`
+        const linkEn = reminderLanguageLink(participantLink, "en")
         const subjectEn = reminderSubjectList(subjects, "en") || "your module"
-        const germanLink = participantLink ? `\n\nErfassen Sie Ihren Aufwand hier: ${reminderLanguageLink(participantLink, "de")}` : ""
-        const englishLink = participantLink ? `\n\nEnter your workload here: ${reminderLanguageLink(participantLink, "en")}` : ""
-        const germanGuide = categoryGuideDeUrl ? `\n\nUnsicher über die korrekte Kategorie für Ihre Aufwände? Kategorisierungshilfe (PDF): ${categoryGuideDeUrl}` : ""
-        const englishGuide = categoryGuideEnUrl ? `\n\nUnsure about the correct category for your workload? Categorisation guide (PDF): ${categoryGuideEnUrl}` : ""
+        const guideEn = `categorisation guide (PDF) (${categoryGuideEnUrl || defaultCategoryGuideUrl})`
+        const contact = contactEmail
 
-        return `*** English version below***
+        return `*** English version below ***
 
 Hallo ${safeName},
 
-dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für \u00ab${subjectDe}\u00bb einzureichen.
-${germanLink}
-${germanGuide}
+dies ist eine kurze Erinnerung, Ihren Arbeitsaufwand für ${subjectDe} einzureichen.
+Erfassen Sie Ihren Aufwand hier: ${linkDe}
 
-Sollten Sie einmal nicht für \u00ab${subjectDe}\u00bb gearbeitet haben, bestätigen Sie bitte den Aufwand durch Klick auf "*Überspringen*" rechts oben in der Ansicht des jeweiligen Tages / der jeweiligen Woche. Nur so verschwindet die rote Markierung in der Kalenderansicht.
+Sollten Sie einmal nicht für ${subjectDe} gearbeitet haben, bestätigen Sie das bitte durch Klick auf "Überspringen" rechts oben in der Ansicht der jeweiligen Woche / des jeweiligen Tages. Nur so verschwindet die rote Markierung in der Kalenderansicht.
+
+Unsicher über die korrekte Kategorie für Ihre Aufwände? Werfen Sie einen Blick in die ${guideDe}.
 
 Sie erhalten diese E-Mail, weil Sie an der Zeiterfassung mit mETHric teilnehmen.
 
+Kontakt bei Rückfragen und Anregungen: Katharina Sperger, ${contact}
+
 Vielen Dank und beste Grüsse,
+mETHric und das Projektteam von «Faculty Workload»
 
-mETHric und das Projektteam von \u00abFaculty Workload\u00bb
+Bitte antworten Sie nicht direkt auf diese E-Mail.
 
-${reminderEmailTextFooterDe()}
-
-
-*** English version***
+*** English version ***
 
 Hello ${safeName},
 
-This is a quick reminder to submit your workload spent on "${subjectEn}".
-${englishLink}
-${englishGuide}
+This is a short reminder to submit your workload for ${subjectEn}.
+Please record your workload here: ${linkEn}
 
-If you did not work on "${subjectEn}" during a certain period of time, please confirm your workload by clicking "Skip" in the top right-hand corner of the view for the relevant day or week. This is the only way to remove the red mark from the calendar view.
+If you did not work on ${subjectEn} during a particular week or day, please confirm this by clicking “Skip” in the top-right corner of the respective weekly/daily view. This is the only way to remove the red marking from the calendar view.
 
-You are receiving this email because you are participating in workload tracking with mETHric.
+Unsure which category your workload belongs to? Take a look at the ${guideEn}.
 
-Thank you very much and best regards,
+You are receiving this email because you are participating in time tracking with mETHric.
 
-mETHric and the "Faculty Workload" project team
+For any queries or suggestions, please contact Katharina Sperger, ${contact}
 
-${reminderEmailTextFooterEn()}`
+Thank you very much and best wishes,
+mETHric and the project team of «Faculty Workload»
+
+Please do not reply directly to this email.`
     }
 
     function reminderCreateLogRecord(participantId, participantName, participantEmail, participantLink, subject, senderAddress) {
@@ -479,26 +450,6 @@ routerAdd("POST", "/api/admin/participant/invitation", (e) => {
             .replace(/'/g, "&#39;")
     }
 
-    function invitationEmailHtmlFooterDe() {
-        return `<p>Bitte antworten Sie nicht direkt auf diese E-Mail.<br />Kontakt bei Rückfragen und Anregungen: Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
-    }
-
-    function invitationEmailHtmlFooterEn() {
-        return `<p>Please do not reply directly to this email.<br />For any queries or suggestions, please contact Katharina Sperger,<br /><a href="mailto:${contactEmail}">${contactEmail}</a></p>`
-    }
-
-    function invitationEmailTextFooterDe() {
-        return `Bitte antworten Sie nicht direkt auf diese E-Mail.
-Kontakt bei Rückfragen und Anregungen: Katharina Sperger,
-${contactEmail}`
-    }
-
-    function invitationEmailTextFooterEn() {
-        return `Please do not reply directly to this email.
-For any queries or suggestions, please contact Katharina Sperger,
-${contactEmail}`
-    }
-
     function invitationFirstName(participantName) {
         const trimmedName = String(participantName || "").trim()
         if (!trimmedName) {
@@ -517,251 +468,129 @@ ${contactEmail}`
         return invitationStringValue(participant, "entryMode") === "week" ? "faculty" : "student"
     }
 
-    function invitationSubjectName(subject, language) {
-        if (!subject) {
-            return ""
-        }
-
-        const label = language === "en"
-            ? invitationStringValue(subject, "label_en") || invitationStringValue(subject, "label_de")
-            : invitationStringValue(subject, "label_de") || invitationStringValue(subject, "label_en")
-        const fallback = invitationStringValue(subject, "key") || subject.id
-        const name = label || fallback
-        const number = invitationStringValue(subject, "number")
-
-        return number ? `${name} (${number})` : name
-    }
-
-    function invitationLoadParticipantSubjects(participantId) {
-        const enrollments = $app.findRecordsByFilter(
-            "participant_subjects",
-            "participant = {:participantId}",
-            "",
-            50,
-            0,
-            { participantId }
-        )
-        const subjects = []
-
-        for (const enrollment of enrollments) {
-            const subjectId = invitationStringValue(enrollment, "subject")
-            if (!subjectId) {
-                continue
-            }
-
-            try {
-                subjects.push($app.findRecordById("subjects", subjectId))
-            } catch (error) {
-                // Ignore stale enrollment links so one broken relation does not block the invitation.
-            }
-        }
-
-        return subjects
-    }
-
-    function invitationSubjectList(subjects, language) {
-        const names = []
-        for (const subject of subjects || []) {
-            const name = invitationSubjectName(subject, language)
-            if (name) {
-                names.push(name)
-            }
-        }
-
-        return names.join(", ")
-    }
-
     function invitationEmailHtmlStudent(participantName, participantLink) {
         const safeName = invitationHtmlEscape(invitationFirstName(participantName) || participantName || "Du")
-        const participantLinkDe = invitationLanguageLink(participantLink, "de")
-        const linkSectionDe = participantLinkDe
-            ? `<p>Über folgenden <strong>persönlichen Link</strong> kannst Du Deine Aufwände erfassen: <a href="${invitationHtmlEscape(participantLinkDe)}">${invitationHtmlEscape(participantLinkDe)}</a><br />Speichere ihn am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.</p>`
-            : ""
+        const urlDe = invitationHtmlEscape(invitationLanguageLink(participantLink, "de"))
+        const linkDe = `<a href="${urlDe}">${urlDe}</a>`
+        const contact = `<a href="mailto:${contactEmail}">${contactEmail}</a>`
 
-        return `
-        <p>Hallo ${safeName},</p>
-        <p>Du erhältst diese E-Mail, weil Du bereits im Herbstsemester 2025 an &laquo;Student Workload&raquo; teilgenommen hast. Es geht nun weiter mit dem Tracking der Aufwände für die Sommersession 2026 - mit <strong>mETHric</strong>, unserem <strong>neu entwickelten Tracking-Tool</strong>. Wir hoffen sehr, dass Du wieder mit dabei bist!<br /><strong>Jedes Modul, für welches Du den Lernaufwand trackst und anschliessend die Prüfung ablegst, wird mit CHF 10 (in Gutscheinform) vergütet.</strong></p>
-        ${linkSectionDe}
-        <p>Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:</p>
-        <ul>
-            <li>Die Module (Fächer), welche Du tracken möchtest, kannst Du selbstständig unter &laquo;Modulverwaltung / Module Management&raquo; hinzufügen. ACHTUNG: Für die Studie sind nur diejenigen Module relevant, welche Du bereits im Herbstsemester 2025 belegt hast, die Leistungskontrolle aber erst jetzt im Sommer zum ersten Mal ablegen wirst. Das Tracking ist NICHT für andere Module (z.B. aus dem FS2026) oder Repetitionsprüfungen vorgesehen.<br />Sollte dennoch ein Modul in der Auswahl fehlen, melde Dich bitte (Kontakt siehe unten).</li>
-            <li>Dank der Kalenderansicht siehst Du jeweils sofort, wenn noch ein Tag in der Eingabe fehlt und an welchen Tagen Du für welches Modul gearbeitet hast. Tage, an welchen Du nicht fürs Studium gearbeitet hast, kannst Du durch einen Klick auf &laquo;<em>Überspringen</em>&raquo; ohne Aufwand in die Auswertung mit aufnehmen. Eingaben am Wochenende sind weiterhin möglich und erwünscht, sofern Du am Wochenende fürs Studium gearbeitet hast.</li>
-            <li>Bei bereits eingegebenen Tagen kannst Du Ergänzungen machen (z.B., wenn Du abends noch ungeplanterweise gelernt hast), oder auch den Tag löschen und neu eingeben.</li>
-            <li>Die Präferenzen zum generellen, täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit gemeldet werden (Kontakt siehe unten).</li>
-            <li>Der Workload kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Du Deine Aufwände möglichst zeitnah (d.h. möglichst jeden Tag) eingibst. Falls zu lange keine Eingaben erfolgen, wirst Du einen automatisierten Reminder erhalten.</li>
-            <li>Bei der Zuverlässigkeit der Daten kannst Du neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!</li>
-        </ul>
-        <p>Du nutzt nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.</p>
-        <p>Wir wünschen Dir viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Deine engagierte Teilnahme!!</p>
-        <p>Beste Grüsse,</p>
-        <p>mETHric und das Projektteam von &laquo;Student Workload&raquo;</p>
-        ${invitationEmailHtmlFooterDe()}
-    `
+        return `<p>Hallo ${safeName},</p>
+        <p>Du erhältst diese E-Mail, weil Du Dich zum Projekt «Student Workload» angemeldet hast. Für die Zeiterfassung im Rahmen des Projekts verwenden wir <em>mETHric</em> - eine simple, eigens für diesen Zweck entwickelte WebApp.</p>
+        <p>Über folgenden persönlichen Link kannst Du regelmässig Deine Aufwände erfassen: ${linkDe}<br />Speichere ihn am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.</p>
+        <p><em>mETHric</em> ist sehr intuitiv und mehrheitlich selbsterklärend. Wichtige Hinweise zur Datenerfassung erhältst Du direkt vom Projektteam in einer separaten E-Mail. <strong>Bitte lies diese Hinweise unbedingt genau durch, ehe Du ins Tracking startest.</strong> Danke!</p>
+        <p><em>mETHric</em> wurde erst vor Kurzem entwickelt, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.</p>
+        <p>Wir wünschen Dir viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Deine engagierte Teilnahme!</p>
+        <p>Kontakt bei Rückfragen und Anregungen: Katharina Sperger, <strong>${contact}</strong></p>
+        <p>Beste Grüsse,<br /><em>mETHric</em> und das Projektteam von «Student Workload»</p>
+        <p><em>Bitte antworte nicht direkt auf diese E-Mail.</em></p>`
     }
 
     function invitationEmailTextStudent(participantName, participantLink) {
         const safeName = invitationFirstName(participantName) || participantName || "Du"
-        const germanLink = participantLink ? `\n\nÜber folgenden persönlichen Link kannst Du Deine Aufwände erfassen: ${invitationLanguageLink(participantLink, "de")}\nSpeichere ihn am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.` : ""
+        const linkDe = invitationLanguageLink(participantLink, "de")
+        const contact = contactEmail
 
         return `Hallo ${safeName},
 
-Du erhältst diese E-Mail, weil Du bereits im Herbstsemester 2025 an «Student Workload» teilgenommen hast. Es geht nun weiter mit dem Tracking der Aufwände für die Sommersession 2026 - mit mETHric, unserem neu entwickelten Tracking-Tool. Wir hoffen sehr, dass Du wieder mit dabei bist!
-Jedes Modul, für welches Du den Lernaufwand trackst und anschliessend die Prüfung ablegst, wird mit CHF 10 (in Gutscheinform) vergütet.${germanLink}
+Du erhältst diese E-Mail, weil Du Dich zum Projekt «Student Workload» angemeldet hast. Für die Zeiterfassung im Rahmen des Projekts verwenden wir mETHric - eine simple, eigens für diesen Zweck entwickelte WebApp.
 
-Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:
+Über folgenden persönlichen Link kannst Du regelmässig Deine Aufwände erfassen: ${linkDe}
+Speichere ihn am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.
 
-- Die Module (Fächer), welche Du tracken möchtest, kannst Du selbstständig unter «Modulverwaltung / Module Management» hinzufügen. ACHTUNG: Für die Studie sind nur diejenigen Module relevant, welche Du bereits im Herbstsemester 2025 belegt hast, die Leistungskontrolle aber erst jetzt im Sommer zum ersten Mal ablegen wirst. Das Tracking ist NICHT für andere Module (z.B. aus dem FS2026) oder Repetitionsprüfungen vorgesehen. Sollte dennoch ein Modul in der Auswahl fehlen, melde Dich bitte (Kontakt siehe unten).
+mETHric ist sehr intuitiv und mehrheitlich selbsterklärend. Wichtige Hinweise zur Datenerfassung erhältst Du direkt vom Projektteam in einer separaten E-Mail. Bitte lies diese Hinweise unbedingt genau durch, ehe Du ins Tracking startest. Danke!
 
-- Dank der Kalenderansicht siehst Du jeweils sofort, wenn noch ein Tag in der Eingabe fehlt und an welchen Tagen Du für welches Modul gearbeitet hast. Tage, an welchen Du nicht fürs Studium gearbeitet hast, kannst Du durch einen Klick auf "*Überspringen*" ohne Aufwand in die Auswertung mit aufnehmen. Eingaben am Wochenende sind weiterhin möglich und erwünscht, sofern Du am Wochenende fürs Studium gearbeitet hast.
+mETHric wurde erst vor Kurzem entwickelt, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.
 
-- Bei bereits eingegebenen Tagen kannst Du Ergänzungen machen (z.B., wenn Du abends noch ungeplanterweise gelernt hast), oder auch den Tag löschen und neu eingeben.
+Wir wünschen Dir viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Deine engagierte Teilnahme!
 
-- Die Präferenzen zum generellen, täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit gemeldet werden (Kontakt siehe unten).
-
-- Der Workload kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Du Deine Aufwände möglichst zeitnah (d.h. möglichst jeden Tag) eingibst. Falls zu lange keine Eingaben erfolgen, wirst Du einen automatisierten Reminder erhalten.
-
-- Bei der Zuverlässigkeit der Daten kannst Du neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!
-
-Du nutzt nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melde Dich gerne, falls Dir etwas auffällt oder Du Verbesserungsvorschläge zur Weiterentwicklung hast.
-
-Wir wünschen Dir viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Deine engagierte Teilnahme!!
+Kontakt bei Rückfragen und Anregungen: Katharina Sperger, ${contact}
 
 Beste Grüsse,
-
 mETHric und das Projektteam von «Student Workload»
 
-${invitationEmailTextFooterDe()}`
+Bitte antworte nicht direkt auf diese E-Mail.`
     }
 
-    function invitationEmailHtmlFacultyDetailed(participantName, participantLink, subjects, categoryGuideUrl) {
+    function invitationEmailHtmlFacultyDetailed(participantName, participantLink) {
         const safeName = invitationHtmlEscape(participantName || "Sie")
-        const subjectDe = invitationHtmlEscape(invitationSubjectList(subjects, "de") || "Ihr Fach")
-        const subjectEn = invitationHtmlEscape(invitationSubjectList(subjects, "en") || "your course")
-        const participantLinkEn = invitationLanguageLink(participantLink, "en")
-        const participantLinkDe = invitationLanguageLink(participantLink, "de")
-        const safeGuideUrl = invitationHtmlEscape(categoryGuideUrl || defaultCategoryGuideUrl)
-        const linkSectionDe = participantLinkDe
-            ? `<p>Über folgenden <strong>persönlichen Link</strong> können Sie Ihre Aufwände für &laquo;${subjectDe}&raquo; erfassen: <a href="${invitationHtmlEscape(participantLinkDe)}">${invitationHtmlEscape(participantLinkDe)}</a><br />Speichern Sie den Link am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.</p>`
-            : ""
-        const linkSectionEn = participantLinkEn
-            ? `<p>You can use the following <strong>personal link</strong> to record your workload for &ldquo;${subjectEn}&rdquo;: <a href="${invitationHtmlEscape(participantLinkEn)}">${invitationHtmlEscape(participantLinkEn)}</a></p><p>It’s best to save the link directly as a bookmark in your browser - on your phone, tablet, or laptop/PC.</p>`
-            : ""
+        const urlDe = invitationHtmlEscape(invitationLanguageLink(participantLink, "de"))
+        const linkDe = `<a href="${urlDe}">${urlDe}</a>`
+        const urlEn = invitationHtmlEscape(invitationLanguageLink(participantLink, "en"))
+        const linkEn = `<a href="${urlEn}">${urlEn}</a>`
+        const contact = `<a href="mailto:${contactEmail}">${contactEmail}</a>`
 
-        return `
-        <p>*** English version below ***</p>
+        return `<p>*** English version below ***</p>
         <p>Hallo ${safeName},</p>
-        <p>Sie erhalten diese E-Mail, weil Sie bereits im Herbstsemester 2025 an &laquo;Faculty Workload&raquo; teilgenommen haben. Diesen Sommer sind weitere Aufwände in Ihrer Lehre zu erwarten oder sind sogar bereits angefallen - entweder, weil eine weitere Sessionsprüfung für &laquo;${subjectDe}&raquo; ansteht, oder weil die Vorbereitungsarbeiten für das HS26 bereits gestartet haben bzw. dies in Kürze tun. Es geht daher nun weiter mit dem Tracking der Aufwände - mit <strong>mETHric</strong>, unserem <strong>neu entwickelten Tracking-Tool</strong>.</p>
-        ${linkSectionDe}
-        <p>Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:</p>
-        <ul>
-            <li>Aufwände für eine etwaige Prüfungsvorbereitung, -durchführung, und -korrektur bzw. -nachbereitung können Sie genauso in die bestehenden Kategorien einteilen wie bisher den Unterricht. Hinweise dazu finden Sie im Dokument <a href="${safeGuideUrl}">Kategorisierung der Lehraufwände (PDF)</a>.</li>
-            <li>Dank der Kalenderansicht sehen Sie jeweils sofort, wenn noch eine Woche bzw. ein Tag in der Eingabe fehlt. Wochen bzw. Tage, an welchen Sie nicht für &laquo;${subjectDe}&raquo; gearbeitet haben, können Sie durch einen Klick auf &laquo;<em>Überspringen</em>&raquo; ohne Aufwand in die Auswertung mit aufnehmen.</li>
-            <li>Falls Sie Ihren Aufwand wöchentlich erfassen: Bei bereits eingegebenen Wochen können Sie Ergänzungen machen und somit den Aufwand auch die gesamte Woche über fortlaufend ergänzen. Es ist auch möglich, den Aufwand für eine Woche zu löschen und neu einzugeben.</li>
-            <li>Die Präferenzen zum generellen, wöchentlichen bzw. täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an die untenstehende Kontaktadresse gemeldet werden.</li>
-            <li>Der Arbeitsaufwand kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Sie die Aufwände möglichst zeitnah eingeben. Falls zu lange keine Eingaben erfolgen, werden Sie einen automatisierten Reminder erhalten.</li>
-            <li>Bei der Zuverlässigkeit der Daten können Sie neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!</li>
-            <li>Bitte beachten Sie, dass der administrative Aufwand sowie die strukturellen Änderungen (z.B. durch Änderung des Unterrichts-/Prüfungsformats) als Teilmengen des Gesamtaufwandes zu verstehen sind. Eine strukturelle Änderung kann dabei zugleich auch administrativer Natur sein.</li>
-        </ul>
-        <p>Sie nutzen nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne bei der untenstehenden Kontaktadresse, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.</p>
-        <p>Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme! Melden Sie sich gerne jederzeit mit Ihren Fragen (Kontakt siehe unten).</p>
-        <p>Beste Grüsse,</p>
-        <p>mETHric und das Projektteam von &laquo;Faculty Workload&raquo;</p>
-        ${invitationEmailHtmlFooterDe()}
+        <p>Sie erhalten diese E-Mail, weil Ihre Lehrveranstaltung (Modul) am Projekt «Faculty Workload» teilnimmt. Für die Zeiterfassung im Rahmen des Projekts verwenden wir <em>mETHric</em> - eine simple, eigens für diesen Zweck entwickelte WebApp.</p>
+        <p>Über folgenden persönlichen Link können Sie regelmässig Ihre Aufwände erfassen: ${linkDe}<br />Speichern Sie ihn am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.</p>
+        <p><em>mETHric</em> ist sehr intuitiv und mehrheitlich selbsterklärend. Wichtige Hinweise zur Datenerfassung erhalten Sie direkt vom Projektteam in einer separaten E-Mail. <strong>Bitte lesen Sie diese Hinweise unbedingt genau durch, ehe Sie ins Tracking starten.</strong> Danke!</p>
+        <p><em>mETHric</em> wurde erst vor Kurzem entwickelt, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.</p>
+        <p>Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme!</p>
+        <p>Kontakt bei Rückfragen und Anregungen: Katharina Sperger, <strong>${contact}</strong></p>
+        <p>Beste Grüsse,<br /><em>mETHric</em> und das Projektteam von «Faculty Workload»</p>
+        <p><em>Bitte antworten Sie nicht direkt auf diese E-Mail.</em></p>
         <hr />
         <p>*** English version ***</p>
         <p>Hello ${safeName},</p>
-        <p>You are receiving this email because you participated in &ldquo;Faculty Workload&rdquo; during Autumn Semester 2025. This summer, you can expect further teaching commitments, or these may even have already started - either because another session examination for &ldquo;${subjectEn}&rdquo; is due, or because preparations for HS26 have already begun or are due to start shortly. We are therefore continuing with the tracking of workload - with mETHric, our newly developed tracking tool.</p>
-        ${linkSectionEn}
-        <p>The app is very intuitive and mostly self-explanatory. A few notes:</p>
-        <ul>
-            <li>You can categorise exam preparation, conduction, grading and follow-up work in the same way as you have previously categorised teaching. Further details can be found in the document <a href="${safeGuideUrl}">Categorisation of teaching workload (PDF)</a>.</li>
-            <li>Thanks to the calendar view, you can immediately see if a week / day is still missing from your entries. You can easily include weeks / days during which you did not work on &ldquo;${subjectEn}&rdquo; in the evaluation by clicking &ldquo;Skip&rdquo;.</li>
-            <li>In case you track your workload weekly: For weeks that have already been entered, you can make additions and thus continuously update your time spent throughout the entire week. It is also possible to delete the workload for a week and re-enter it.</li>
-            <li>The preferences for the general, weekly or daily data entry reminder will be carried over from Autumn Semester 2025. Requests for changes can be submitted at any time to the contact address listed below.</li>
-            <li>Workload can be recorded retroactively. Nevertheless, it remains essential for data quality that you enter the workload as promptly as possible. If you do not enter data for too long, you will receive an automated reminder.</li>
-            <li>For data reliability, you can now select between 1 and 5 stars, where 5 stars correspond to a 9-10 in Mentimeter (etc.). This is a qualitative assessment, but it helps us greatly with the evaluation!</li>
-            <li>Please note that administrative effort as well as structural changes (e.g., due to changes in the teaching/exam format) should be understood as subsets of the total effort. A structural change can also be of an administrative nature.</li>
-        </ul>
-        <p>You are now using mETHric version 1.0, which means that errors or inconsistencies may still occur. Please feel free to contact us if you notice anything or have suggestions for improvement.</p>
-        <p>We hope you enjoy tracking your workload with mETHric and thank you in advance for your dedicated participation!</p>
-        <p>Best regards,</p>
-        <p>mETHric and the &ldquo;Faculty Workload&rdquo; project team</p>
-        ${invitationEmailHtmlFooterEn()}
-    `
+        <p>You are receiving this email because your course (module) is participating in the project "Faculty Workload". As part of the project, we use <em>mETHric</em> to track working time – a simple web app developed specifically for this purpose.</p>
+        <p>You can use the following personal link to regularly log your workload: ${linkEn}<br />We recommend saving the link as a bookmark in your browser so that you can easily access it from your phone, tablet, laptop, or PC.</p>
+        <p><em>mETHric</em> is very intuitive and largely self-explanatory. You will receive important instructions on how to record your data directly from the project team in a separate email. <strong>Please make sure to read these instructions carefully before you start tracking your workload.</strong> Thank you!</p>
+        <p><em>mETHric</em> was developed only recently, which means that you may still encounter occasional bugs or inconsistencies. Please feel free to contact us if you notice anything or have suggestions for improvements.</p>
+        <p>We hope you enjoy tracking your workload with mETHric, and we would already like to thank you very much for your active participation!</p>
+        <p>For any queries or suggestions, please contact Katharina Sperger, <strong>${contact}</strong></p>
+        <p>Best wishes,<br /><em>mETHric</em> and the project team of «Faculty Workload»</p>
+        <p><em>Please do not reply directly to this email.</em></p>`
     }
 
-    function invitationEmailTextFacultyDetailed(participantName, participantLink, subjects, categoryGuideUrl) {
+    function invitationEmailTextFacultyDetailed(participantName, participantLink) {
         const safeName = participantName || "Sie"
-        const subjectDe = invitationSubjectList(subjects, "de") || "Ihr Fach"
-        const subjectEn = invitationSubjectList(subjects, "en") || "your course"
-        const guideUrl = categoryGuideUrl || defaultCategoryGuideUrl
-        const germanLink = participantLink ? `\n\nÜber folgenden persönlichen Link können Sie Ihre Aufwände für «${subjectDe}» erfassen: ${invitationLanguageLink(participantLink, "de")}\nSpeichern Sie den Link am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.` : ""
-        const englishLink = participantLink ? `\n\nYou can use the following personal link to record your workload for "${subjectEn}": ${invitationLanguageLink(participantLink, "en")}\n\nIt's best to save the link directly as a bookmark in your browser - on your phone, tablet, or laptop/PC.` : ""
+        const linkDe = invitationLanguageLink(participantLink, "de")
+        const linkEn = invitationLanguageLink(participantLink, "en")
+        const contact = contactEmail
 
         return `*** English version below ***
 
 Hallo ${safeName},
 
-Sie erhalten diese E-Mail, weil Sie bereits im Herbstsemester 2025 an «Faculty Workload» teilgenommen haben. Diesen Sommer sind weitere Aufwände in Ihrer Lehre zu erwarten oder sind sogar bereits angefallen - entweder, weil eine weitere Sessionsprüfung für «${subjectDe}» ansteht, oder weil die Vorbereitungsarbeiten für das HS26 bereits gestartet haben bzw. dies in Kürze tun. Es geht daher nun weiter mit dem Tracking der Aufwände - mit mETHric, unserem neu entwickelten Tracking-Tool.${germanLink}
+Sie erhalten diese E-Mail, weil Ihre Lehrveranstaltung (Modul) am Projekt «Faculty Workload» teilnimmt. Für die Zeiterfassung im Rahmen des Projekts verwenden wir mETHric - eine simple, eigens für diesen Zweck entwickelte WebApp.
 
-Die App ist sehr intuitiv und mehrheitlich selbsterklärend. Ein paar Hinweise:
+Über folgenden persönlichen Link können Sie regelmässig Ihre Aufwände erfassen: ${linkDe}
+Speichern Sie ihn am besten direkt als Favorit im Browser - auf dem Handy, Tablet oder Laptop/PC.
 
-- Aufwände für eine etwaige Prüfungsvorbereitung, -durchführung, und -korrektur bzw. -nachbereitung können Sie genauso in die bestehenden Kategorien einteilen wie bisher den Unterricht. Hinweise dazu finden Sie im Dokument «Kategorisierung der Lehraufwände (PDF)»: ${guideUrl}
+mETHric ist sehr intuitiv und mehrheitlich selbsterklärend. Wichtige Hinweise zur Datenerfassung erhalten Sie direkt vom Projektteam in einer separaten E-Mail. Bitte lesen Sie diese Hinweise unbedingt genau durch, ehe Sie ins Tracking starten. Danke!
 
-- Dank der Kalenderansicht sehen Sie jeweils sofort, wenn noch eine Woche bzw. ein Tag in der Eingabe fehlt. Wochen bzw. Tage, an welchen Sie nicht für «${subjectDe}» gearbeitet haben, können Sie durch einen Klick auf "*Überspringen*" ohne Aufwand in die Auswertung mit aufnehmen.
+mETHric wurde erst vor Kurzem entwickelt, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.
 
-- Falls Sie Ihren Aufwand wöchentlich erfassen: Bei bereits eingegebenen Wochen können Sie Ergänzungen machen und somit den Aufwand auch die gesamte Woche über fortlaufend ergänzen. Es ist auch möglich, den Aufwand für eine Woche zu löschen und neu einzugeben.
+Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme!
 
-- Die Präferenzen zum generellen, wöchentlichen bzw. täglichen Reminder zur Dateneingabe werden vom Herbstsemester 2025 übernommen. Änderungswünsche können jederzeit an die untenstehende Kontaktadresse gemeldet werden.
-
-- Der Arbeitsaufwand kann rückwirkend erfasst werden. Dennoch ist es für die Datenqualität weiterhin essentiell, dass Sie die Aufwände möglichst zeitnah eingeben. Falls zu lange keine Eingaben erfolgen, werden Sie einen automatisierten Reminder erhalten.
-
-- Bei der Zuverlässigkeit der Daten können Sie neu zwischen 1 und 5 Sternen auswählen, wobei 5 Sterne einer 9-10 in Mentimeter entsprechen (usw.). Diese Angabe ist qualitativ, hilft uns aber sehr bei der Auswertung!
-
-- Bitte beachten Sie, dass der administrative Aufwand sowie die strukturellen Änderungen (z.B. durch Änderung des Unterrichts-/Prüfungsformats) als Teilmengen des Gesamtaufwandes zu verstehen sind. Eine strukturelle Änderung kann dabei zugleich auch administrativer Natur sein.
-
-Sie nutzen nun mETHric in Version 1.0, was bedeutet, dass durchaus noch Fehler oder Ungereimtheiten auftreten können. Melden Sie sich gerne bei der untenstehenden Kontaktadresse, falls Ihnen etwas auffällt oder Sie Verbesserungsvorschläge zur Weiterentwicklung haben.
-
-Wir wünschen Ihnen viel Freude beim Workload-Tracking mit mETHric und bedanken uns bereits im Voraus herzlich für Ihre engagierte Teilnahme! Melden Sie sich gerne jederzeit mit Ihren Fragen (Kontakt siehe unten).
+Kontakt bei Rückfragen und Anregungen: Katharina Sperger, ${contact}
 
 Beste Grüsse,
-
 mETHric und das Projektteam von «Faculty Workload»
 
-${invitationEmailTextFooterDe()}
-
+Bitte antworten Sie nicht direkt auf diese E-Mail.
 
 *** English version ***
 
 Hello ${safeName},
 
-You are receiving this email because you participated in "Faculty Workload" during Autumn Semester 2025. This summer, you can expect further teaching commitments, or these may even have already started - either because another session examination for "${subjectEn}" is due, or because preparations for HS26 have already begun or are due to start shortly. We are therefore continuing with the tracking of workload - with mETHric, our newly developed tracking tool.${englishLink}
+You are receiving this email because your course (module) is participating in the project "Faculty Workload". As part of the project, we use mETHric to track working time – a simple web app developed specifically for this purpose.
 
-The app is very intuitive and mostly self-explanatory. A few notes:
+You can use the following personal link to regularly log your workload: ${linkEn}
+We recommend saving the link as a bookmark in your browser so that you can easily access it from your phone, tablet, laptop, or PC.
 
-- You can categorise exam preparation, conduction, grading and follow-up work in the same way as you have previously categorised teaching. Further details can be found in the document "Categorisation of teaching workload (PDF)": ${guideUrl}
+mETHric is very intuitive and largely self-explanatory. You will receive important instructions on how to record your data directly from the project team in a separate email. Please make sure to read these instructions carefully before you start tracking your workload. Thank you!
 
-- Thanks to the calendar view, you can immediately see if a week / day is still missing from your entries. You can easily include weeks / days during which you did not work on "${subjectEn}" in the evaluation by clicking "Skip".
+mETHric was developed only recently, which means that you may still encounter occasional bugs or inconsistencies. Please feel free to contact us if you notice anything or have suggestions for improvements.
 
-- In case you track your workload weekly: For weeks that have already been entered, you can make additions and thus continuously update your time spent throughout the entire week. It is also possible to delete the workload for a week and re-enter it.
+We hope you enjoy tracking your workload with mETHric, and we would already like to thank you very much for your active participation!
 
-- The preferences for the general, weekly or daily data entry reminder will be carried over from Autumn Semester 2025. Requests for changes can be submitted at any time to the contact address listed below.
+For any queries or suggestions, please contact Katharina Sperger, ${contact}
 
-- Workload can be recorded retroactively. Nevertheless, it remains essential for data quality that you enter the workload as promptly as possible. If you do not enter data for too long, you will receive an automated reminder.
+Best wishes,
+mETHric and the project team of «Faculty Workload»
 
-- For data reliability, you can now select between 1 and 5 stars, where 5 stars correspond to a 9-10 in Mentimeter (etc.). This is a qualitative assessment, but it helps us greatly with the evaluation!
-
-- Please note that administrative effort as well as structural changes (e.g., due to changes in the teaching/exam format) should be understood as subsets of the total effort. A structural change can also be of an administrative nature.
-
-You are now using mETHric version 1.0, which means that errors or inconsistencies may still occur. Please feel free to contact us if you notice anything or have suggestions for improvement.
-
-We hope you enjoy tracking your workload with mETHric and thank you in advance for your dedicated participation!
-
-Best regards,
-
-mETHric and the "Faculty Workload" project team
-
-${invitationEmailTextFooterEn()}`
+Please do not reply directly to this email.`
     }
 
     function invitationCreateLogRecord(participantId, participantName, participantEmail, participantLink, subject, senderAddress) {
@@ -809,16 +638,14 @@ ${invitationEmailTextFooterEn()}`
     try {
         const config = invitationValidateConfig()
         const participantLink = invitationParticipantLink(participantId, config.appUrl)
-        const participantSubjects = participantRole === "faculty" ? invitationLoadParticipantSubjects(participantId) : []
-        const categoryGuideUrl = config.categoryGuideUrl || defaultCategoryGuideUrl
         const subject = participantRole === "faculty"
             ? "“Faculty Workload”: Einladung zur Datenerhebung mit mETHric / Invitation to the workload tracking with mETHric"
             : "«Student Workload»: Einladung zur Datenerhebung mit mETHric"
         const html = participantRole === "faculty"
-            ? invitationEmailHtmlFacultyDetailed(participantName, participantLink, participantSubjects, categoryGuideUrl)
+            ? invitationEmailHtmlFacultyDetailed(participantName, participantLink)
             : invitationEmailHtmlStudent(participantName, participantLink)
         const text = participantRole === "faculty"
-            ? invitationEmailTextFacultyDetailed(participantName, participantLink, participantSubjects, categoryGuideUrl)
+            ? invitationEmailTextFacultyDetailed(participantName, participantLink)
             : invitationEmailTextStudent(participantName, participantLink)
         const fromValue = config.senderName
             ? `${config.senderName} <${config.senderAddress}>`

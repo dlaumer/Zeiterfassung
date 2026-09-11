@@ -144,7 +144,11 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
         return e.json(400, { error: "reliability must be an integer between 1 and 5" })
     }
 
-    if (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5) {
+    const hasBatteryWorkload = adminEffortMinutes > 0 || structuralChangesMinutes > 0 ||
+        categoryTimes.some(item => Number(item.minutes) > 0) ||
+        (Array.isArray(body.subjectTimes) ? body.subjectTimes : []).some(item =>
+            Number(item.classMinutes) > 0 || Number(item.studyMinutes) > 0)
+    if ((hasBatteryWorkload || socialBattery != null) && (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5)) {
         return e.json(400, { error: "socialBattery must be an integer between 1 and 5" })
     }
 
@@ -171,7 +175,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             const periodEndStr = formatDateTime(periodEnd)
             const periodStartDayEndStr = formatDateTime(endOfDay(periodStart))
 
-            const existingWeekSubmissions = txApp.findRecordsByFilter(
+            const existingWeekSubmissions = review.active(txApp, txApp.findRecordsByFilter(
                 "submissions",
                 [
                     "participant = {:participantId}",
@@ -188,7 +192,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                     periodStart: periodStartStr,
                     periodStartDayEnd: periodStartDayEndStr,
                 }
-            )
+            ))
 
             const changes = review.prepare(txApp, existingWeekSubmissions, body, periodEndStr)
             const submissionMode = existingWeekSubmissions.length > 0 ? "correction" : "initial"
@@ -206,7 +210,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             const submittedAt = formatUtcDateTime(new Date())
             submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
-            submissionRecord.set("socialBattery", socialBattery)
+            submissionRecord.set("socialBattery", socialBattery == null ? 0 : socialBattery)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", changes.field("generalAdminTime", adminEffortMinutes))
             submissionRecord.set("commuteTime", changes.field("commuteTime", participantRole === "student" ? commuteMinutes : 0))
@@ -398,7 +402,7 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
             const periodStartStr = formatDateTime(periodStart)
             const periodStartDayEndStr = formatDateTime(endOfDay(periodStart))
 
-            const weekSubmissions = txApp.findRecordsByFilter(
+            const weekSubmissions = review.active(txApp, txApp.findRecordsByFilter(
                 "submissions",
                 [
                     "participant = {:participantId}",
@@ -415,26 +419,20 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
                     periodStart: periodStartStr,
                     periodStartDayEnd: periodStartDayEndStr,
                 }
-            )
+            ))
 
             const deletedAt = formatUtcDateTime(new Date())
             const latest = weekSubmissions.slice().sort(review.newestFirst)[0]
             if (!latest) throw new Error("Entry no longer exists")
             if (String(body.expectedSubmissionId || "") !== latest.id) throw new Error("This entry has changed. Reload the page before deleting.")
-            const deletion = new Record(txApp.findCollectionByNameOrId("submissions"))
-            for (const field of ["participant", "periodType", "periodStart", "periodEnd", "status"]) deletion.set(field, latest.get(field))
-            deletion.set("submissionMode", "deleted")
-            deletion.set("replacesSubmission", latest.id)
-            deletion.set("submittedAt", deletedAt)
-            deletion.set("deletedAt", deletedAt)
-            txApp.save(deletion)
+            const initial = review.root(txApp, latest)
+            if (initial.get("submissionMode") !== "initial") throw new Error("Initial submission not found")
+            initial.set("modeBeforeDeletion", "initial")
+            initial.set("submissionMode", "deleted")
+            initial.set("deletedAt", deletedAt)
+            txApp.save(initial)
+            deletedSubmissions = 1
 
-            for (const submission of weekSubmissions) {
-                submission.set("submissionMode", "deleted")
-                submission.set("deletedAt", deletedAt)
-                txApp.save(submission)
-                deletedSubmissions++
-            }
         })
     } catch (error) {
         return e.json(400, {
@@ -581,7 +579,11 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
         return e.json(400, { error: "reliability must be an integer between 1 and 5" })
     }
 
-    if (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5) {
+    const hasBatteryWorkload = adminEffortMinutes > 0 || structuralChangesMinutes > 0 ||
+        categoryTimes.some(item => Number(item.minutes) > 0) ||
+        (Array.isArray(body.subjectTimes) ? body.subjectTimes : []).some(item =>
+            Number(item.classMinutes) > 0 || Number(item.studyMinutes) > 0)
+    if ((hasBatteryWorkload || socialBattery != null) && (!Number.isInteger(socialBattery) || socialBattery < 1 || socialBattery > 5)) {
         return e.json(400, { error: "socialBattery must be an integer between 1 and 5" })
     }
 
@@ -606,7 +608,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             const dayStartStr = formatDateTime(dayStart)
             const dayEndStr = formatDateTime(dayEnd)
 
-            const existingDaySubmissions = txApp.findRecordsByFilter(
+            const existingDaySubmissions = review.active(txApp, txApp.findRecordsByFilter(
                 "submissions",
                 [
                     "participant = {:participantId}",
@@ -623,7 +625,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                     dayStart: dayStartStr,
                     dayEnd: dayEndStr,
                 }
-            )
+            ))
 
             const changes = review.prepare(txApp, existingDaySubmissions, body, dayEndStr)
             const submissionMode = existingDaySubmissions.length > 0 ? "correction" : "initial"
@@ -664,7 +666,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             const submittedAt = formatUtcDateTime(new Date())
             submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
-            submissionRecord.set("socialBattery", socialBattery)
+            submissionRecord.set("socialBattery", socialBattery == null ? 0 : socialBattery)
             submissionRecord.set("comment", comment)
             submissionRecord.set("generalAdminTime", changes.field("generalAdminTime", adminEffortMinutes))
             submissionRecord.set("commuteTime", changes.field("commuteTime", participantRole === "student" ? commuteMinutes : 0))
@@ -830,7 +832,7 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
             const dayStartStr = formatDateTime(dayStart)
             const dayEndStr = formatDateTime(dayEnd)
 
-            const daySubmissions = txApp.findRecordsByFilter(
+            const daySubmissions = review.active(txApp, txApp.findRecordsByFilter(
                 "submissions",
                 [
                     "participant = {:participantId}",
@@ -847,26 +849,20 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
                     dayStart: dayStartStr,
                     dayEnd: dayEndStr,
                 }
-            )
+            ))
 
             const deletedAt = formatUtcDateTime(new Date())
             const latest = daySubmissions.slice().sort(review.newestFirst)[0]
             if (!latest) throw new Error("Entry no longer exists")
             if (String(body.expectedSubmissionId || "") !== latest.id) throw new Error("This entry has changed. Reload the page before deleting.")
-            const deletion = new Record(txApp.findCollectionByNameOrId("submissions"))
-            for (const field of ["participant", "periodType", "periodStart", "periodEnd", "status"]) deletion.set(field, latest.get(field))
-            deletion.set("submissionMode", "deleted")
-            deletion.set("replacesSubmission", latest.id)
-            deletion.set("submittedAt", deletedAt)
-            deletion.set("deletedAt", deletedAt)
-            txApp.save(deletion)
+            const initial = review.root(txApp, latest)
+            if (initial.get("submissionMode") !== "initial") throw new Error("Initial submission not found")
+            initial.set("modeBeforeDeletion", "initial")
+            initial.set("submissionMode", "deleted")
+            initial.set("deletedAt", deletedAt)
+            txApp.save(initial)
+            deletedSubmissions = 1
 
-            for (const submission of daySubmissions) {
-                submission.set("submissionMode", "deleted")
-                submission.set("deletedAt", deletedAt)
-                txApp.save(submission)
-                deletedSubmissions++
-            }
         })
     } catch (error) {
         return e.json(400, {

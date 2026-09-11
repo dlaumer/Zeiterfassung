@@ -192,7 +192,7 @@
     "de": "Verwerfen"
   },
   "common.continueEditing": {
-    "en": "Keep Editing",
+    "en": "Continue editing",
     "de": "Weiter bearbeiten"
   },
   "common.continue": {
@@ -312,8 +312,8 @@
     "de": "Datenzuverlässigkeit"
   },
   "dailyEntry.adminEffort": {
-    "en": "General Admin Effort",
-    "de": "Allgemeiner Verwaltungsaufwand"
+    "en": "General administrative workload",
+    "de": "Allgemeiner administrativer Aufwand"
   },
   "dailyEntry.commute": {
     "en": "Commute Time",
@@ -352,15 +352,15 @@
     "de": "Stunden"
   },
   "weeklyEntry.structuralChanges": {
-    "en": "Structural Changes",
-    "de": "Strukturelle Veränderungen"
+    "en": "Structural changes",
+    "de": "Strukturelle Änderungen"
   },
   "weeklyEntry.facultyAllocationInfo": {
-    "en": "What share of the specified total workload (in hours or %) falls into the following two areas of work?",
+    "en": "What proportion of the total workload entered (in hours or %) is attributable to the following two areas of work?",
     "de": "Welcher Anteil des angegebenen Gesamtaufwands (in h bzw. %) entfällt auf die folgenden beiden Arbeitsbereiche?"
   },
   "weeklyEntry.facultyAllocationNote": {
-    "en": "Note: Structural changes can also be administrative in nature; in that case, please adjust both sliders accordingly.",
+    "en": "Note: Structural changes may also involve administrative work. If so, please adjust both sliders accordingly.",
     "de": "Hinweis: Strukturelle Änderungen können auch administrativer Natur sein, bitte dann beide Regler entsprechend einstellen."
   },
   "weeklyEntry.categoryGuide": {
@@ -413,11 +413,11 @@
   },
   "subject.classTime": {
     "en": "Class Time",
-    "de": "Unterrichtszeit"
+    "de": "Unterricht"
   },
   "subject.selfStudy": {
     "en": "Self Study Time",
-    "de": "Selbstlernzeit"
+    "de": "Selbststudium"
   },
   "subject.lessonHint": {
     "en": "1 lesson ≙ 1h",
@@ -432,8 +432,8 @@
     "de": "Für dieses Modul wurden Daten eingetragen. Beim Entfernen gehen die Werte verloren. Bist du sicher?"
   },
   "subject.removeConfirm": {
-    "en": "Are you sure that you want to remove that module?",
-    "de": "Bist du sicher, dass du dieses Modul entfernen möchtest?"
+    "en": "Are you sure you want to remove this module from the view? Your collected data will be retained.",
+    "de": "Bist du sicher, dass du dieses Modul aus der Ansicht entfernen möchtest? Deine gesammelten Daten bleiben erhalten."
   },
   "dailyEntry.closeConfirm": {
     "en": "If you close now, any unsaved changes in this entry will be lost.",
@@ -701,7 +701,7 @@
   },
   "admin.metric.structuralChanges": {
     "en": "{{value}} structural changes",
-    "de": "{{value}} Strukturelle Veränderungen"
+    "de": "{{value}} Strukturelle Änderungen"
   },
   "admin.metric.rating": {
     "en": "{{value}}/5 rating",
@@ -1179,33 +1179,81 @@
     "de": "Informationen zu {{title}}",
     "en": "Information about {{title}}"
   },
+  "fieldHelp.moreInformation.student": {
+    "de": "Für mehr Informationen klicke",
+    "en": "For more information, click"
+  },
+  "fieldHelp.moreInformation.faculty": {
+    "de": "Für mehr Informationen klicken Sie",
+    "en": "For more information, click"
+  },
+  "fieldHelp.here": {
+    "de": "hier",
+    "en": "here"
+  },
+  "fieldHelp.selfStudy.student": {
+    "de": "**Selbststudiumszeit** beinhaltet sämtliche studiumsbezogenen Aktivitäten, welche du alleine oder zusammen mit Mitstudierenden durchführst - ohne die Anwesenheit von Lehrpersonal (Vorbereitung, Übung lösen, Berichte schreiben, diskutieren, lernen etc.)",
+    "en": "**Self-study time** includes all study-related activities that you carry out on your own or together with fellow students, without teaching staff being present (preparing for class, solving exercises, writing reports, discussing, studying, etc.)"
+  },
+  "fieldHelp.classTime.student": {
+    "de": "**Unterrichtszeit** beinhaltet sämtliche Kontaktzeit mit Professor:innen, Dozierenden, Doktorierenden, Hilfsassistierenden (Vorlesung, Übungsstunden, Fragestunden, Prüfung etc.)\n\n**Eine Standardlektion mit 45 Minuten Dauer soll im Rahmen von \"Student Workload\" mit 60 Minuten erfasst werden**. Kurz vor der Lektion sucht man gewöhnlicherweise den Raum und ist auch mal ein paar Minuten früher im Vorlesungssaal. In den Pausen unterhält man sich zwar oft nicht über den Vorlesungsstoff, aber die Zeit kann kaum für andere Dinge genutzt werden. Daher soll generell jede Lektion auf die volle Stunde gerundet werden, auch bei Blöcken von Lektionen (d.h. 1 Lektion = 60 Minuten, 2 Lektionen = 120 Minuten usw.) – ausser natürlich, man verlässt den Unterricht früher.\n\n**Unterrichtsformate, welche sich nicht an die klassischen Vorlesungszeiten (inkl. Pausen) halten, sind von dieser Regel natürlich ausgenommen**. In solchen Fällen wirst du gebeten, die Dauer der Unterrichtszeit nochmals zu bestätigen.",
+    "en": "**Class time** includes all contact time with professors, lecturers, doctoral students, and teaching assistants (lectures, exercise sessions, Q&A sessions, exams etc.).\n\n**For the purposes of “Student Workload”, a standard 45-minute class should be recorded as 60 minutes.** Shortly before class, you usually need some time to find the room and may arrive in the lecture hall a few minutes early. During breaks, you may not always be discussing the course content, but this time can hardly be used for anything else. Therefore, each class should generally be rounded up to a full hour, including blocks of consecutive classes (i.e. 1 class = 60 minutes, 2 classes = 120 minutes, etc.) – unless, of course, you leave class early.\n\n**Teaching formats that do not follow the standard lecture schedule (including breaks) are, of course, exempt from this rule.** In such cases, you will be asked to confirm the duration of the class time separately."
+  },
+  "subject.fractionalClassTimeWarning": {
+    "de": "1 Standard-Lektion soll als 1 volle Stunde erfasst werden. Bitte bestätige die Korrektheit deiner Angaben oder passe den Schieberegler entsprechend an.",
+    "en": "1 standard lesson should be recorded as 1 full hour. Please confirm that your entry is correct or adjust the slider accordingly."
+  },
+  "subject.confirmClassTime": {
+    "de": "Angaben bestätigen",
+    "en": "Confirm entry"
+  },
+  "dailyEntry.pendingClassTimeConfirmations": {
+    "de": "Bitte bestätige oder korrigiere vor dem Absenden die Unterrichtszeit bei folgenden Modulen. Klicke auf ein Modul, um zum Hinweis zu gelangen.",
+    "en": "Before submitting, please confirm or correct the class time for the following modules. Click a module to go to the notice."
+  },
+  "dailyEntry.confirmRatingsTitle": {
+    "de": "Bisherige Bewertungen übernehmen?",
+    "en": "Keep previous ratings?"
+  },
+  "dailyEntry.confirmRatings.student": {
+    "de": "Die folgenden Bewertungen sind unverändert. Kannst du bestätigen, dass du diese bisherigen Bewertungen für diesen Eintrag übernehmen möchtest?",
+    "en": "The following ratings are unchanged. Please confirm that these previous ratings should be kept for this entry."
+  },
+  "dailyEntry.confirmRatings.faculty": {
+    "de": "Die folgenden Bewertungen sind unverändert. Können Sie bestätigen, dass Sie diese bisherigen Bewertungen für diesen Eintrag übernehmen möchten?",
+    "en": "The following ratings are unchanged. Please confirm that these previous ratings should be kept for this entry."
+  },
+  "dailyEntry.confirmRatingsSave": {
+    "de": "Übernehmen und speichern",
+    "en": "Keep and save"
+  },
   "fieldHelp.reliability.faculty": {
-    "de": "Mit der Angabe der Datenzuverlässigkeit geben Sie uns Auskunft darüber, wie sicher Sie sich sind, dass der eingetragene Zeitaufwand mit dem tatsächlich geleisteten Aufwand übereinstimmt. Nachfolgend ein paar Beispiele:\n\n1 Stern (★): Sie können sich kaum noch erinnern, inwieweit Sie in der betrachteten Periode für die Lehre Ihres Moduls gearbeitet haben. Die Aufwände konnten Sie, wenn überhaupt, lediglich grob anhand anderer Anhaltspunkte rekonstruieren.\n\n3 Sterne (★★★): Ihre Angaben stimmen wahrscheinlich recht gut mit dem überein, was Sie tatsächlich gemacht haben. Ganz sicher sind Sie sich jedoch nicht mehr, insbesondere betreffend genaue Höhe des tatsächlich geleisteten Zeitaufwands. Das kann sein, weil Sie zu viel anderes parallel gemacht haben, oder weil die Eingabe in mETHric nicht sehr zeitnah erfolgt ist.\n\n5 Sterne (★★★★★): Sie sind sich sicher, dass die gemachten Eingaben sehr gut mit dem tatsächlich von Ihnen geleisteten Aufwand übereinstimmen, z.B., weil Sie die Eingabe direkt im Anschluss an die Tätigkeit gemacht haben, oder auch, weil Sie Ihre Aufwände separat notiert haben.",
-    "en": "The data reliability rating tells us how confident you are that the time you entered matches the time you actually spent. Here are a few examples:\n\n1 star (★): You can barely remember how much work you did on teaching your module during the period in question. If at all, you could only roughly reconstruct the time spent using other clues.\n\n3 stars (★★★): Your entries probably match what you actually did quite well. However, you are no longer completely sure, particularly about the exact amount of time spent. This may be because you were doing many other things at the same time, or because you did not enter the data in mETHric soon afterwards.\n\n5 stars (★★★★★): You are confident that your entries closely match the time you actually spent, for example because you entered the data immediately after the activity or kept separate notes of your time."
+    "de": "Mit der Angabe der Datenzuverlässigkeit geben Sie uns Auskunft darüber, wie sicher Sie sich sind, dass der eingetragene Zeitaufwand mit dem tatsächlich geleisteten Aufwand übereinstimmt. Nachfolgend ein paar Beispiele:\n\n[stars:1] Sie können sich kaum noch erinnern, inwieweit Sie in der betrachteten Periode für die Lehre Ihres Moduls gearbeitet haben. Die Aufwände konnten Sie, wenn überhaupt, lediglich grob anhand anderer Anhaltspunkte rekonstruieren.\n\n[stars:3] Ihre Angaben stimmen wahrscheinlich recht gut mit dem überein, was Sie tatsächlich gemacht haben. Ganz sicher sind Sie sich jedoch nicht mehr, insbesondere betreffend genaue Höhe des tatsächlich geleisteten Zeitaufwands. Das kann sein, weil Sie zu viel anderes parallel gemacht haben, oder weil die Eingabe in mETHric nicht sehr zeitnah erfolgt ist.\n\n[stars:5] Sie sind sich sicher, dass die gemachten Eingaben sehr gut mit dem tatsächlich von Ihnen geleisteten Aufwand übereinstimmen, z.B., weil Sie die Eingabe direkt im Anschluss an die Tätigkeit gemacht haben, oder auch, weil Sie Ihre Aufwände separat notiert haben.",
+    "en": "The data reliability rating tells us how confident you are that the time you entered matches the time you actually spent. Here are a few examples:\n\n[stars:1] You can barely remember how much work you spent on your module during the period in question. If at all, you could only roughly reconstruct the time spent using other clues.\n\n[stars:3] Your entries probably match quite well what you actually did. However, you are no longer completely sure, particularly about the exact amount of time spent. This may be because you were doing many other things at the same time, or because you did not enter the data in mETHric soon afterwards.\n\n[stars:5] You are confident that your entries closely match the time you actually spent, for example because you entered the data immediately after the activity or kept separate notes of your time."
   },
   "fieldHelp.reliability.student": {
-    "de": "Mit der Angabe der Datenzuverlässigkeit gibst Du uns Auskunft darüber, wie sicher Du Dir bist, dass der eingetragene Zeitaufwand mit dem tatsächlich geleisteten Aufwand übereinstimmt. Nachfolgend ein paar Beispiele:\n\n1 Stern (★): Du kannst Dich kaum noch erinnern, inwieweit Du am betrachteten Tag etwas fürs Studium gemacht hast. Die Aufwände konntest Du, wenn überhaupt, lediglich grob anhand anderer Anhaltspunkte rekonstruieren.\n\n3 Sterne (★★★): Deine Angaben stimmen wahrscheinlich recht gut mit dem überein, was Du tatsächlich gemacht hast. Ganz sicher bist Du Dir jedoch nicht mehr, insbesondere betreffend genaue Höhe des tatsächlich geleisteten Zeitaufwands. Das kann sein, weil Du zu viel anderes parallel gemacht hast, oder weil die Eingabe in mETHric nicht sehr zeitnah erfolgt ist.\n\n5 Sterne (★★★★★): Du bist Dir sicher, dass die gemachten Eingaben sehr gut mit dem tatsächlich von Dir geleisteten Aufwand übereinstimmen, z.B., weil Du die Eingabe direkt im Anschluss an die Tätigkeit gemacht hast, oder auch, weil Du Deine Aufwände separat notiert hast.",
-    "en": "The data reliability rating tells us how confident you are that the time you entered matches the time you actually spent. Here are a few examples:\n\n1 star (★): You can barely remember how much studying you did on the day in question. If at all, you could only roughly reconstruct the time spent using other clues.\n\n3 stars (★★★): Your entries probably match what you actually did quite well. However, you are no longer completely sure, particularly about the exact amount of time spent. This may be because you were doing many other things at the same time, or because you did not enter the data in mETHric soon afterwards.\n\n5 stars (★★★★★): You are confident that your entries closely match the time you actually spent, for example because you entered the data immediately after the activity or kept separate notes of your time."
+    "de": "Mit der Angabe der Datenzuverlässigkeit gibst du uns Auskunft darüber, wie sicher du dir bist, dass der eingetragene Zeitaufwand mit dem tatsächlich geleisteten Aufwand übereinstimmt. Nachfolgend ein paar Beispiele:\n\n[stars:1] Du kannst dich kaum noch erinnern, inwieweit du am betrachteten Tag etwas fürs Studium gemacht hast. Die Aufwände konntest du, wenn überhaupt, lediglich grob anhand anderer Anhaltspunkte rekonstruieren.\n\n[stars:3] Deine Angaben stimmen wahrscheinlich recht gut mit dem überein, was du tatsächlich gemacht hast. Ganz sicher bist du dir jedoch nicht mehr, insbesondere betreffend genaue Höhe des tatsächlich geleisteten Zeitaufwands. Das kann sein, weil du zu viel anderes parallel gemacht hast, oder weil die Eingabe in mETHric nicht sehr zeitnah erfolgt ist.\n\n[stars:5] Du bist dir sicher, dass die gemachten Eingaben sehr gut mit dem tatsächlich von dir geleisteten Aufwand übereinstimmen, z.B., weil du die Eingabe direkt im Anschluss an die Tätigkeit gemacht hast, oder auch, weil du deine Aufwände separat notiert hast.",
+    "en": "The data reliability rating tells us how confident you are that the time you entered matches the time you actually spent. Here are a few examples:\n\n[stars:1] You can barely remember how much studying you did on the day in question. If at all, you could only roughly reconstruct the time spent using other clues.\n\n[stars:3] Your entries probably match quite well what you actually did. However, you are no longer completely sure, particularly about the exact amount of time spent. This may be because you were doing many other things at the same time, or because you did not enter the data in mETHric soon afterwards.\n\n[stars:5] You are confident that your entries closely match the time you actually spent, for example because you entered the data immediately after the activity or kept separate notes of your time."
   },
   "fieldHelp.battery.faculty": {
-    "de": "Mit dem «Batteriestand» teilen Sie uns mit, wie Sie Ihre Arbeit während der konkreten Lehrtätigkeit(en) im betrachteten Zeitraum erlebt haben – von stark erschöpfend und belastend bis hin zu ausgesprochen motivierend und energiegebend. Schlechte Nacht, private Sorgen oder andere Belastungen ausserhalb der Lehre sollten dabei möglichst ausgeblendet werden.\n\nAm Beispiel «Vorbereitung neuer Unterrichtsmaterialien»:\n\n1 – Batterie praktisch leer: Sie sitzen vor dem Bildschirm und versuchen zum dritten Mal, denselben Abschnitt zu lesen – aber Sie kommen kaum mehr weiter. Jeder nächste Schritt kostet Überwindung. Sie fühlen sich von der Aufgabe ausgelaugt, gestresst, gelangweilt oder frustriert und würden am liebsten einfach aufhören. Ihre Batterie ist praktisch leer.\n\n3 – Batterie halbvoll: Sie arbeiten die Inhalte durch, verstehen, was Sie brauchen, und kommen Schritt für Schritt voran. Natürlich braucht die Vorbereitung Zeit und Konzentration, aber die Aufgabe fühlt sich gut machbar an. Sie fühlen sich weder besonders erschöpft noch besonders beflügelt.\n\n5 – Batterie voll geladen: Sie gehen richtig in der Arbeit auf. Die Gedanken fliessen, eine Idee führt zur nächsten und die Zeit vergeht im Flug. Die Erarbeitung der Materialien macht Ihnen richtig Freude und motiviert Sie. Statt danach erschöpft zu sein, würden Sie am liebsten gleich weitermachen. Ihre Batterie fühlt sich voller an als vorher.",
-    "en": "Your “battery level” tells us how you experienced your work during the specific teaching activity or activities in the period in question – from very draining and stressful to highly motivating and energizing. Try to set aside a poor night's sleep, personal worries, or other pressures outside teaching as much as possible.\n\nTaking “preparing new teaching materials” as an example:\n\n1 – Battery almost empty: You are sitting in front of the screen, trying to read the same section for the third time, but barely making progress. Every next step takes an effort. The task leaves you feeling drained, stressed, bored, or frustrated, and you would rather just stop. Your battery is almost empty.\n\n3 – Battery half full: You work through the content, understand what you need, and make progress step by step. Preparing the materials takes time and concentration, of course, but the task feels manageable. You feel neither particularly drained nor particularly inspired.\n\n5 – Battery fully charged: You are completely absorbed in your work. Your thoughts flow, one idea leads to the next, and time flies. Developing the materials is enjoyable and motivating. Instead of feeling exhausted afterwards, you would like to keep going straight away. Your battery feels fuller than before."
+    "de": "Mit dem «Batteriestand» teilen Sie uns mit, wie Sie Ihre Arbeit während der konkreten Lehrtätigkeit(en) im betrachteten Zeitraum erlebt haben – von stark erschöpfend und belastend bis hin zu ausgesprochen motivierend und energiegebend. Schlechte Nacht, private Sorgen oder andere Belastungen ausserhalb der Lehre sollten dabei möglichst ausgeblendet werden.\n\nAm Beispiel «Vorbereitung neuer Unterrichtsmaterialien»:\n\n[battery:1] Sie sitzen vor dem Bildschirm und versuchen zum dritten Mal, denselben Abschnitt zu lesen – aber Sie kommen kaum mehr weiter. Jeder nächste Schritt kostet Überwindung. Sie fühlen sich von der Aufgabe ausgelaugt, gestresst, gelangweilt oder frustriert und würden am liebsten einfach aufhören. Ihre Batterie ist praktisch leer.\n\n[battery:3] Sie arbeiten die Inhalte durch, verstehen, was Sie brauchen, und kommen Schritt für Schritt voran. Natürlich braucht die Vorbereitung Zeit und Konzentration, aber die Aufgabe fühlt sich gut machbar an. Sie fühlen sich weder besonders erschöpft noch besonders beflügelt.\n\n[battery:5] Sie gehen richtig in der Arbeit auf. Die Gedanken fliessen, eine Idee führt zur nächsten und die Zeit vergeht im Flug. Die Erarbeitung der Materialien macht Ihnen richtig Freude und motiviert Sie. Statt danach erschöpft zu sein, würden Sie am liebsten gleich weitermachen. Ihre Batterie fühlt sich voller an als vorher.",
+    "en": "Your “battery level” tells us how you experienced your work during the specific teaching activity or activities in the period in question – from very draining and stressful to highly motivating and energizing. Try to set aside a poor night's sleep, personal worries, or other pressures outside teaching as much as possible.\n\nTaking “Preparation of new teaching materials” as an example:\n\n[battery:1] You are sitting in front of the screen, trying to read the same section for the third time, but barely making progress. Every next step takes an effort. The task leaves you feeling drained, stressed, bored, or frustrated, and you would rather just stop. Your battery is almost empty.\n\n[battery:3] You work through the content, understand what you need, and make progress step by step. Preparing the materials takes time and concentration, of course, but the task feels manageable. You feel neither particularly drained nor particularly inspired.\n\n[battery:5] You are completely absorbed in your work. Your thoughts flow, one idea leads to the next, and time flies. Developing the materials is enjoyable and motivating. Instead of feeling exhausted afterwards, you would like to keep going straight away. Your battery feels fuller than before."
   },
   "fieldHelp.battery.student": {
-    "de": "Mit dem «Batteriestand» teilst Du uns mit, wie Du das Studium am betrachteten Tag erlebt hast – von stark erschöpfend und belastend bis hin zu ausgesprochen motivierend und energiegebend. Schlechte Nacht, private Sorgen oder andere Belastungen ausserhalb des Studiums sollten dabei möglichst ausgeblendet werden.\n\nAm Beispiel «Erarbeiten eines Berichts»:\n\n1 – Batterie praktisch leer: Du sitzt vor dem Bildschirm und versuchst zum dritten Mal, denselben Abschnitt zu lesen – aber Du kommst kaum mehr weiter. Jeder nächste Schritt kostet Überwindung. Du fühlst Dich von der Aufgabe ausgelaugt, gestresst, gelangweilt oder frustriert und würdest am liebsten einfach aufhören. Deine Batterie ist praktisch leer.\n\n3 – Batterie halbvoll: Du arbeitest die Inhalte durch, verstehst, was Du brauchst, und kommst Schritt für Schritt voran. Natürlich braucht das Erarbeiten Zeit und Konzentration, aber die Aufgabe fühlt sich gut machbar an. Du fühlst Dich weder besonders erschöpft noch besonders beflügelt.\n\n5 – Batterie voll geladen: Du gehst richtig in der Arbeit auf. Die Gedanken fliessen, eine Idee führt zur nächsten und die Zeit vergeht im Flug. Die Aufgabe macht Dir richtig Freude und motiviert Dich. Statt danach erschöpft zu sein, würdest Du am liebsten gleich weitermachen. Deine Batterie fühlt sich voller an als vorher.",
-    "en": "Your “battery level” tells us how you experienced studying on the day in question – from very draining and stressful to highly motivating and energizing. Try to set aside a poor night's sleep, personal worries, or other pressures outside your studies as much as possible.\n\nTaking “working on a report” as an example:\n\n1 – Battery almost empty: You are sitting in front of the screen, trying to read the same section for the third time, but barely making progress. Every next step takes an effort. The task leaves you feeling drained, stressed, bored, or frustrated, and you would rather just stop. Your battery is almost empty.\n\n3 – Battery half full: You work through the content, understand what you need, and make progress step by step. Working on the report takes time and concentration, of course, but the task feels manageable. You feel neither particularly drained nor particularly inspired.\n\n5 – Battery fully charged: You are completely absorbed in your work. Your thoughts flow, one idea leads to the next, and time flies. The task is enjoyable and motivating. Instead of feeling exhausted afterwards, you would like to keep going straight away. Your battery feels fuller than before."
+    "de": "Mit dem «Batteriestand» teilst du uns mit, wie du das Studium am betrachteten Tag erlebt hast – von stark erschöpfend und belastend bis hin zu ausgesprochen motivierend und energiegebend. Schlechte Nacht, private Sorgen oder andere Belastungen ausserhalb des Studiums sollten dabei möglichst ausgeblendet werden.\n\nAm Beispiel «Erarbeiten eines Berichts»:\n\n[battery:1] Du sitzt vor dem Bildschirm und versuchst zum dritten Mal, denselben Abschnitt zu lesen – aber du kommst kaum mehr weiter. Jeder nächste Schritt kostet Überwindung. Du fühlst dich von der Aufgabe ausgelaugt, gestresst, gelangweilt oder frustriert und würdest am liebsten einfach aufhören. Deine Batterie ist praktisch leer.\n\n[battery:3] Du arbeitest die Inhalte durch, verstehst, was du brauchst, und kommst Schritt für Schritt voran. Natürlich braucht das Erarbeiten Zeit und Konzentration, aber die Aufgabe fühlt sich gut machbar an. Du fühlst dich weder besonders erschöpft noch besonders beflügelt.\n\n[battery:5] Du gehst richtig in der Arbeit auf. Die Gedanken fliessen, eine Idee führt zur nächsten und die Zeit vergeht im Flug. Die Aufgabe macht dir richtig Freude und motiviert dich. Statt danach erschöpft zu sein, würdest du am liebsten gleich weitermachen. Deine Batterie fühlt sich voller an als vorher.",
+    "en": "Your “battery level” tells us how you experienced studying on the day in question – from very draining and stressful to highly motivating and energizing. Try to set aside a poor night's sleep, personal worries, or other pressures outside your studies as much as possible.\n\nTaking “working on a report” as an example:\n\n[battery:1] You are sitting in front of the screen, trying to read the same section for the third time, but barely making progress. Every next step takes an effort. The task leaves you feeling drained, stressed, bored, or frustrated, and you would rather just stop. Your battery is almost empty.\n\n[battery:3] You work through the content, understand what you need, and make progress step by step. Working on the report takes time and concentration, of course, but the task feels manageable. You feel neither particularly drained nor particularly inspired.\n\n[battery:5] You are completely absorbed in your work. Your thoughts flow, one idea leads to the next, and time flies. The task is enjoyable and motivating. Instead of feeling exhausted afterwards, you would like to keep going straight away. Your battery feels fuller than before."
   },
   "dailyEntry.commentPlaceholder.faculty": {
     "de": "Raum für Ihre persönlichen Notizen, z.B.: Gibt es etwas, was Ihre Batterie rückblickend besonders stark “geladen” oder “entladen” hat?",
     "en": "Space for your personal notes, e.g.: Looking back, was there anything that particularly “charged” or “drained” your battery?"
   },
   "dailyEntry.commentPlaceholder.student": {
-    "de": "Raum für Deine persönlichen Notizen, z.B.: Gibt es etwas, was Deine Batterie am getrackten Tag rückblickend besonders stark “geladen” oder “entladen” hat?",
+    "de": "Raum für deine persönlichen Notizen, z.B.: Gibt es etwas, was deine Batterie am getrackten Tag rückblickend besonders stark “geladen” oder “entladen” hat?",
     "en": "Space for your personal notes, e.g.: Looking back at the day you tracked, was there anything that particularly “charged” or “drained” your battery?"
   },
   "dailyEntry.socialBatteryRequired": {
-    "en": "Please select a battery level before submitting.",
-    "de": "Bitte wähle vor dem Absenden einen Batteriestand aus."
+    "en": "Please enter a battery level.",
+    "de": "Bitte Batteriestand erfassen."
   },
   "admin.metric.socialBattery": {
     "en": "{{value}}/5 battery level",
@@ -1260,7 +1308,47 @@
     "de": "Eintrag löschen"
   },
   "dailyEntry.deleteConfirm": {
-    "en": "Delete this entry? Its submission history will be retained.",
-    "de": "Diesen Eintrag löschen? Der Einreichungsverlauf bleibt erhalten."
+    "en": "Delete this entry?",
+    "de": "Diesen Eintrag löschen?"
+  },
+  "dailyEntry.restoreSubmissionHelp": {
+    "en": "If you would like to restore an earlier submission, please get in touch with us via the general contact address.",
+    "de": "Falls du eine frühere Einreichung wiederherstellen möchtest, melde dich bitte über die allgemeine Kontaktadresse bei uns."
+  },
+  "admin.restore.pending": {
+    "de": "Wird wiederhergestellt …",
+    "en": "Restoring …"
+  },
+  "admin.restore.title": {
+    "de": "Wiederherstellen",
+    "en": "Restore"
+  },
+  "admin.restore.confirm": {
+    "de": "Willst du diese Einreichung wirklich wiederherstellen?",
+    "en": "Do you really want to restore this submission?"
+  },
+  "admin.restore.success": {
+    "de": "Die Einreichung wurde wiederhergestellt.",
+    "en": "The submission has been restored."
+  },
+  "admin.restore.failed": {
+    "de": "Die Einreichung konnte nicht wiederhergestellt werden. Bitte lade die Ansicht neu und versuche es erneut.",
+    "en": "The submission could not be restored. Please reload and try again."
+  },
+  "admin.restore.conflict": {
+    "de": "Für diesen Zeitraum existiert bereits eine aktive Einreichung.",
+    "en": "An active submission already exists for this period."
+  },
+  "admin.restore.legacy": {
+    "de": "Bei dieser älteren Löschung wurde die ursprüngliche Einreichungsart nicht gespeichert. Die Wiederherstellung muss manuell geprüft werden.",
+    "en": "This older deletion did not preserve the original submission types. Restoration requires manual review."
+  },
+  "fieldHelp.comment.faculty": {
+    "de": "Sie können das Kommentarfeld nutzen, um mehr Kontext zu Ihren Daten herzustellen (z.B. Hinweise zu konkreten Tätigkeiten) oder auch, um zu erläutern, wie die Datenzuverlässigkeit oder Ihr persönlicher «Batteriestand» zustande gekommen ist. Die Kommentarfunktion können Sie auch als eine Art persönliches Lehr-Tagebuch nutzen – nach Abschluss des Projekts werden wir Ihnen die Informationen dann zusammen mit Ihren Daten zur Verfügung stellen.\n\n*Hinweis*: Für allgemeine Fragen bzw. bei technischen Problemen wenden Sie sich bitte direkt an die angegebene Kontaktadresse (beim Fragezeichen im Hauptfenster rechts oben verlinkt). Bitte nutzen Sie dafür *nicht* das Kommentarfeld.",
+    "en": "You can use the comment box to provide additional context for your data (e.g. notes on specific activities), or to explain how you chose the data reliability or your personal “battery level”. You can also use the comment function as a kind of personal teaching diary. At the end of the project, we will provide these entries to you together with your data.\n\n*Note*: For general questions or technical issues, please contact the email address provided (linked via the question mark in the top-right corner of the main window). Please *do not* use the comment function for these purposes."
+  },
+  "fieldHelp.comment.student": {
+    "de": "Du kannst das Kommentarfeld nutzen, um mehr Kontext zu deinen Daten herzustellen (z.B. Hinweise zu konkreten Tätigkeiten) oder auch, um zu erläutern, wie die Datenzuverlässigkeit oder dein persönlicher «Batteriestand» zustande gekommen ist. Die Kommentarfunktion kannst du auch als eine Art persönliches Tagebuch fürs Studium nutzen – nach Abschluss des Projekts werden wir dir die Informationen dann zusammen mit deinen Daten zur Verfügung stellen.\n\n*Hinweis*: Für allgemeine Fragen bzw. bei technischen Problemen wende dich bitte direkt an die angegebene Kontaktadresse (beim Fragezeichen im Hauptfenster rechts oben verlinkt). Bitte nutze dafür *nicht* das Kommentarfeld.",
+    "en": "You can use the comment box to provide additional context for your data (e.g. notes on specific activities), or to explain how you chose the data reliability or your personal “battery level”. You can also use the comment function as a kind of personal study-related diary. At the end of the project, we will provide these entries to you together with your data.\n\n*Note*: For general questions or technical issues, please contact the email address provided (linked via the question mark in the top-right corner of the main window). Please *do not* use the comment function for these purposes."
   }
 }

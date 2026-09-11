@@ -70,3 +70,36 @@ function prepare(app, group, body, periodEnd) {
 }
 
 module.exports = { newestFirst, effective, fieldValue, settings, assertEditable, prepare }
+
+// PocketBase assigns submittedAt automatically, so it can differ from deletedAt
+// by milliseconds. Use the payload and predecessor as well as the timestamp.
+module.exports.isDeletionMarker = function (submission, previous, hasItems) {
+    const mode = String(submission.get("modeBeforeDeletion") || "")
+    if (mode === "deletion") return true
+    if (mode || submission.get("submissionMode") !== "deleted") return false
+    return !!previous && !!submission.get("deletedAt") &&
+        String(submission.get("submittedAt")).slice(0, 19) === String(submission.get("deletedAt")).slice(0, 19) &&
+        !hasItems &&
+        !["dataRating", "socialBattery", "generalAdminTime", "commuteTime", "structuralChanges"].some(field => Number(submission.get(field) || 0)) &&
+        !String(submission.get("comment") || "")
+}
+
+// Existing corrections may link to the previous correction rather than directly
+// to the initial submission. Follow either shape without rewriting history.
+module.exports.root = function (app, submission) {
+    const visited = {}
+    while (submission.get("replacesSubmission")) {
+        if (visited[submission.id]) throw new Error("Cyclic submission history")
+        visited[submission.id] = true
+        submission = app.findRecordById("submissions", String(submission.get("replacesSubmission")))
+    }
+    return submission
+}
+module.exports.active = function (app, submissions) {
+    const roots = {}
+    return submissions.filter(s => {
+        if (s.get("submissionMode") === "deleted") return false
+        if (!roots[s.id]) roots[s.id] = module.exports.root(app, s)
+        return roots[s.id].get("submissionMode") !== "deleted"
+    })
+}

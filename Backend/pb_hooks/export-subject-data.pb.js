@@ -426,14 +426,14 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         submissionFilterParams.rangeStart = formatDateTime(rangeStart)
     }
 
-    const submissions = $app.findRecordsByFilter(
+    const submissions = require(`${__hooks}/submission-review.js`).active($app, $app.findRecordsByFilter(
         "submissions",
         submissionFilterParts.join(" && "),
         "periodStart",
         50000,
         0,
         submissionFilterParams
-    )
+    ))
 
     const relevantSubmissions = []
     const relevantSubmissionIds = {}

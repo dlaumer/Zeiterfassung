@@ -269,8 +269,32 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         }
     }
 
+    // One visible deletion per operation; markers are internal bookkeeping.
+    const review = require(`${__hooks}/submission-review.js`)
+    const activeSubmissionIds = {}
+    for (const record of review.active($app, submissions)) activeSubmissionIds[record.id] = true
+    const submissionsById = {}
+    for (const submission of submissions) submissionsById[submission.id] = submission
+    function isDeletionMarker(submission) {
+        return review.isDeletionMarker(submission,
+            submissionsById[String(submission.get("replacesSubmission") || "")],
+            (itemsBySubmissionId[submission.id] || []).length > 0)
+    }
+
+    function deletionKey(submission) {
+        return ["participant", "periodType", "periodStart", "deletedAt"].map(field => String(submission.get(field) || "")).join("|")
+    }
+    const visibleSubmissions = submissions.filter(submission => !isDeletionMarker(submission))
+    const deletionRepresentatives = {}
+    for (const submission of visibleSubmissions) {
+        if (submission.get("submissionMode") !== "deleted") continue
+        const key = deletionKey(submission)
+        if (!deletionRepresentatives[key] || review.newestFirst(submission, deletionRepresentatives[key]) < 0) {
+            deletionRepresentatives[key] = submission
+        }
+    }
     const events = []
-    for (const submission of submissions) {
+    for (const submission of visibleSubmissions) {
         const participantId = adminStringValue(submission, "participant")
         const submissionMode = adminStringValue(submission, "submissionMode")
         const submittedAt = adminDateValue(submission, "submittedAt") || adminDateValue(submission, "created")
@@ -279,7 +303,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         const totalMinutes = items.reduce((sum, item) => sum + item.durationMinutes, 0)
 
         if (participantStatsById[participantId]) {
-            if (submissionMode !== "deleted") {
+            if (activeSubmissionIds[submission.id]) {
                 if (submissionMode !== "appendum" && submissionMode !== "correction") {
                     participantStatsById[participantId].submissionCount++
                 }
@@ -308,7 +332,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         events.push({
             id: "submission:" + submission.id,
             kind: "submission",
-            eventType: submissionMode === "deleted" ? "submitted" : submissionMode || "submitted",
+            eventType: submissionMode === "deleted" ? adminStringValue(submission, "modeBeforeDeletion") || "submitted" : submissionMode || "submitted",
             happenedAt: submittedAt,
             participantId: participantId,
             participantName: adminFindParticipantName(participantById, participantId),
@@ -330,9 +354,10 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             items: items,
         })
 
-        if (submissionMode === "deleted" && deletedAt) {
+        if (submissionMode === "deleted" && deletedAt && deletionRepresentatives[deletionKey(submission)].id === submission.id) {
             events.push({
                 id: "submission-deleted:" + submission.id,
+                canRestore: !submissions.some(s => s.get("participant") === submission.get("participant") && s.get("periodType") === submission.get("periodType") && String(s.get("periodStart")) === String(submission.get("periodStart")) && activeSubmissionIds[s.id]),
                 kind: "submission",
                 eventType: "deleted",
                 happenedAt: deletedAt,
@@ -676,6 +701,12 @@ routerAdd("PATCH", "/api/admin/participant", (e) => {
             txParticipant.set("role", participantRole === "faculty" ? role : "")
             txApp.save(txParticipant)
 
+            // Student module assignments are managed separately from this form.
+            // Status and profile edits must preserve their enrollments and metadata.
+            if (participantRole !== "faculty") {
+                return
+            }
+
             const participantSubjects = txApp.findRecordsByFilter(
                 "participant_subjects",
                 "participant = {:participantId}",
@@ -685,11 +716,16 @@ routerAdd("PATCH", "/api/admin/participant", (e) => {
                 { participantId }
             )
 
+            let hasSelectedSubject = false
             for (const enrollment of participantSubjects) {
-                txApp.delete(enrollment)
+                if (adminStringValue(enrollment, "subject") === subjectId) {
+                    hasSelectedSubject = true
+                } else {
+                    txApp.delete(enrollment)
+                }
             }
 
-            if (participantRole === "faculty") {
+            if (!hasSelectedSubject) {
                 const participantSubjectCollection = txApp.findCollectionByNameOrId("participant_subjects")
                 const participantSubject = new Record(participantSubjectCollection)
                 participantSubject.set("participant", participantId)

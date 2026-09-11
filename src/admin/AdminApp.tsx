@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Shield,
   ArrowUpAZ,
@@ -99,6 +100,7 @@ interface AdminEventItem {
 }
 
 interface AdminEvent {
+  canRestore?: boolean;
   id: string;
   kind: 'submission' | 'deletion' | 'reminder' | 'invitation' | string;
   eventType: string;
@@ -683,6 +685,8 @@ function AdminContent() {
   const [loginStatus, setLoginStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [actionStatus, setActionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [actionMessage, setActionMessage] = useState('');
+  const [submissionToRestore, setSubmissionToRestore] = useState<AdminEvent | null>(null);
+  const [restoringSubmission, setRestoringSubmission] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<AdminParticipant | null>(null);
   const [subjectToRemove, setSubjectToRemove] = useState<AdminSubject | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<AdminMobileTab>('participants');
@@ -712,6 +716,26 @@ function AdminContent() {
   const [newSubjectCredits, setNewSubjectCredits] = useState('0');
 
   const isAdminAuthenticated = pb.authStore.isValid && authRecord?.collectionName === 'admins';
+
+  async function restoreSubmission() {
+    if (!submissionToRestore || restoringSubmission) return;
+    setRestoringSubmission(true);
+    try {
+      await pb.send('/api/admin/submissions/restore', {
+        method: 'POST', body: { submissionId: submissionToRestore.submissionId },
+      });
+      setActionStatus('success');
+      setActionMessage(t('admin.restore.success'));
+      await loadOverview();
+    } catch (error: any) {
+      const key = error?.response?.error;
+      setActionStatus('error');
+      setActionMessage(t(['admin.restore.conflict', 'admin.restore.legacy'].includes(key) ? key : 'admin.restore.failed'));
+    } finally {
+      setRestoringSubmission(false);
+      setSubmissionToRestore(null);
+    }
+  }
 
   async function loadOverview() {
     if (!isAdminAuthenticated) {
@@ -1612,6 +1636,14 @@ function AdminContent() {
                           {(event.kind === 'deletion' || event.eventType === 'deleted') && <Trash2 className="mr-1 h-3.5 w-3.5" />}
                           {getEventLabel(event.eventType, t)}
                         </span>
+                        {event.canRestore && <button
+                          type="button"
+                          title={t('admin.restore.title')}
+                          aria-label={t('admin.restore.title')}
+                          disabled={restoringSubmission}
+                          onClick={() => setSubmissionToRestore(event)}
+                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
+                        ><RotateCcw aria-hidden="true" className="h-4 w-4" /></button>}
                         <span className="truncate text-sm font-semibold text-gray-950">
                           {event.participantName || event.participantId || t('admin.unknownParticipant')}
                         </span>
@@ -2076,6 +2108,16 @@ function AdminContent() {
           </button>
         </div>
       </nav>
+
+      <ConfirmDialog
+        open={submissionToRestore !== null}
+        title={t('admin.restore.title')}
+        description={<>{t('admin.restore.confirm')}<br />{submissionToRestore?.participantName} · {submissionToRestore ? formatPeriodLabel(submissionToRestore, language, t) : ''}</>}
+        confirmLabel={t(restoringSubmission ? 'admin.restore.pending' : 'admin.restore.title')}
+        cancelLabel={t('common.cancel')}
+        onCancel={() => { if (!restoringSubmission) setSubmissionToRestore(null); }}
+        onConfirm={restoreSubmission}
+      />
 
       <ConfirmDialog
         open={participantToRemove !== null}

@@ -322,7 +322,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>('day');
   const [participantRole, setParticipantRole] = useState<ParticipantRole>('student');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
-  const [submissionHistory, setSubmissionHistory] = useState<WorkloadStatusHistoryEntry[]>([]);
+
   const [missingSubmissionDates, setMissingSubmissionDates] = useState<Set<string>>(new Set());
   const [missingReminderDate, setMissingReminderDate] = useState<Date | null>(null);
   const [subjectPendingRemoval, setSubjectPendingRemoval] = useState<Subject | null>(null);
@@ -470,7 +470,6 @@ function AppContent({ participantId }: AppContentProps) {
       const history = response.submissionHistory ?? [];
       setEntryMode(responseEntryMode);
       setParticipantRole(responseParticipantRole);
-      setSubmissionHistory(history);
       setReviewTime(response.reviewTime);
       setReviewCutoff(response.reviewCutoff);
       setMissingSubmissionDates(
@@ -514,7 +513,6 @@ function AppContent({ participantId }: AppContentProps) {
     }
 
     if (!participantId || participantStatus !== 'valid') {
-      setSubmissionHistory([]);
       setMissingSubmissionDates(new Set());
       setEntries(new Map());
       return;
@@ -525,7 +523,6 @@ function AppContent({ participantId }: AppContentProps) {
       if (!isMounted) {
         return;
       }
-      setSubmissionHistory([]);
       setMissingSubmissionDates(new Set());
       setEntries(new Map());
     });
@@ -544,7 +541,7 @@ function AppContent({ participantId }: AppContentProps) {
       ? {
         participantId,
         weekStart: entry.date,
-        reliability: entry.skipped ? 5 : entry.reliability,
+        reliability: entry.reliability,
         socialBattery: entry.socialBattery || undefined,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
         commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
@@ -566,7 +563,7 @@ function AppContent({ participantId }: AppContentProps) {
       : {
         participantId,
         date: entry.date,
-        reliability: entry.skipped ? 5 : entry.reliability,
+        reliability: entry.reliability,
         socialBattery: entry.socialBattery || undefined,
         adminEffortMinutes: entry.skipped ? 0 : Math.round(entry.adminEffort * 60),
         commuteMinutes: participantRole === 'student' && !entry.skipped ? Math.round(entry.commuteTime * 60) : 0,
@@ -591,8 +588,15 @@ function AppContent({ participantId }: AppContentProps) {
       body: { ...payload, inputMode: 'totals', expectedSubmissionId: entries.get(entry.date)?.latestSubmissionId ?? '' },
     });
 
+    // The API preserves omitted modules. Keep their data locally as well so
+    // reselecting a removed module restores its history without a page reload.
+    const hiddenSubjectTimes = participantRole === 'student'
+      ? (entries.get(entry.date)?.subjectTimes ?? []).filter(time => !subjects.some(subject => subject.id === time.subjectId))
+      : [];
     const savedEntry: DailyEntry = {
       ...entry,
+      subjectTimes: [...entry.subjectTimes, ...hiddenSubjectTimes],
+      skipped: entry.skipped && !hiddenSubjectTimes.some(time => time.classTime > 0 || time.selfStudyTime > 0),
       submittedAt: response.submittedAt,
       initialSubmittedAt: entries.get(entry.date)?.initialSubmittedAt ?? response.submittedAt,
       latestSubmissionId: response.submissionId,
@@ -800,7 +804,8 @@ function AppContent({ participantId }: AppContentProps) {
     !reviewCutoff || format(entryMode === 'week' ? endOfWeek(selectedDate, { weekStartsOn: 1 }) : selectedDate, 'yyyy-MM-dd') < reviewCutoff
   );
   const sortedSubjects = [...subjects].sort(compareSubjectsByDisplayName(language));
-  const activeSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : [...sortedSubjects, ...availableSubjects.filter(subject => !sortedSubjects.some(s => s.id === subject.id) && existingEntry?.subjectTimes.some(s => s.subjectId === subject.id))];
+  const calendarSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects;
+  const activeSubjects = calendarSubjects;
   const participantSubjectLabel = participantRole === 'faculty'
     ? sortedSubjects
       .map((subject) => getSubjectDisplayName(subject, language))
@@ -859,7 +864,7 @@ function AppContent({ participantId }: AppContentProps) {
                 entriesMap={entries}
                 missingSubmissionDates={missingSubmissionDates}
                 reviewCutoff={reviewCutoff}
-                subjects={activeSubjects}
+                subjects={calendarSubjects}
                 entryMode={entryMode}
               />
             </div>

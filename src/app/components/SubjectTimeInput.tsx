@@ -1,5 +1,6 @@
 import { Slider } from '@radix-ui/react-slider';
 import { EditableTimeDisplay } from './EditableTimeDisplay';
+import { FieldHelp } from './FieldHelp';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { useI18n } from '../i18n/i18n';
@@ -16,10 +17,12 @@ interface SubjectTimeInputProps {
   isFaded?: boolean;
   onRemove?: () => void;
   isAdditionalHours?: boolean;
-  singleTimeLabel?: string;
+  isSingleTimeMode?: boolean;
   timeSliderMax?: number;
   previousClassTime?: number;
   previousSelfStudyTime?: number;
+  classTimeConfirmationId?: string;
+  onConfirmClassTime?: () => void;
 }
 
 export function SubjectTimeInput({
@@ -34,14 +37,15 @@ export function SubjectTimeInput({
   isFaded = false,
   onRemove,
   isAdditionalHours = false,
-  singleTimeLabel,
+  isSingleTimeMode = false,
   previousClassTime,
   previousSelfStudyTime,
+  classTimeConfirmationId,
+  onConfirmClassTime,
   timeSliderMax = 8
 }: SubjectTimeInputProps) {
   const { t } = useI18n();
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const isSingleTimeMode = !!singleTimeLabel;
   const hasStatusTag = !!classStatusTag || !!studyStatusTag;
   const classHasExistingEntry = classStatusTag === t('dailyEntry.filledBefore');
   const studyHasExistingEntry = studyStatusTag === t('dailyEntry.filledBefore');
@@ -101,11 +105,12 @@ export function SubjectTimeInput({
         </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-600 flex items-center gap-2">
-            {singleTimeLabel ?? t('subject.classTime')}
+        <div className="flex items-center justify-end">
+          {!isSingleTimeMode && <div className="mr-auto text-sm text-gray-600 flex items-center gap-2">
+            <label>{t('subject.classTime')}</label>
+            <FieldHelp title={t('subject.classTime')} text={t('fieldHelp.classTime.student')} />
             {renderStatusTag(classStatusTag)}
-          </label>
+          </div>}
           <EditableTimeDisplay
             value={classTime}
             previousValue={previousClassTime}
@@ -140,15 +145,21 @@ export function SubjectTimeInput({
             }}
           />
         </Slider>
-        {!isSingleTimeMode && <p className="text-xs text-gray-500 italic">{t('subject.lessonHint')}</p>}
+        {onConfirmClassTime && <div id={classTimeConfirmationId} tabIndex={-1} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <p>{t('subject.fractionalClassTimeWarning')}</p>
+          <button type="button" onClick={onConfirmClassTime} className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+            {t('subject.confirmClassTime')}
+          </button>
+        </div>}
       </div>
 
       {!isSingleTimeMode && <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-600 flex items-center gap-2">
-            {t('subject.selfStudy')}
+          <div className="text-sm text-gray-600 flex items-center gap-2">
+            <label>{t('subject.selfStudy')}</label>
+            <FieldHelp title={t('subject.selfStudy')} text={t('fieldHelp.selfStudy.student')} />
             {renderStatusTag(studyStatusTag)}
-          </label>
+          </div>
           <EditableTimeDisplay
             value={selfStudyTime}
             previousValue={previousSelfStudyTime}

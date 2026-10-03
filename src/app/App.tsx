@@ -276,35 +276,6 @@ function ContactInfoButton() {
   );
 }
 
-function WeeklyCategoryPanel({ categories, title }: { categories: Subject[]; title?: string }) {
-  const { t, language } = useI18n();
-  const categoryTitle = title || "";
-
-  return (
-    <div className="h-full min-h-0 bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col">
-      <div className="flex items-center justify-between mb-4 shrink-0">
-        <h3 className="font-semibold text-gray-900">{categoryTitle}</h3>
-      </div>
-      <div className="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
-        {categories.map((category) => (
-          <div
-            key={category.id}
-            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-          >
-            <div
-              className="w-3 h-3 shrink-0 rounded-full"
-              style={{ backgroundColor: category.color }}
-            />
-            <span className="text-sm font-medium text-gray-700">
-              {getSubjectDisplayName(category, language)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function AppContent({ participantId }: AppContentProps) {
   const pb = new PocketBase('https://api.methric.ch');
 
@@ -684,13 +655,39 @@ function AppContent({ participantId }: AppContentProps) {
   };
 
   const renderMissingReminderDescription = () => {
-    const missingCount = missingReminderDate ? getEarlierMissingDates(missingReminderDate).length : 0;
+    const missingDates = missingReminderDate ? getEarlierMissingDates(missingReminderDate) : [];
+    const missingCount = missingDates.length;
+    const oldestDate = missingDates[0] ? new Date(`${missingDates[0]}T00:00:00`) : null;
+    const oldestPeriod = oldestDate
+      ? entryMode === 'week'
+        ? `${format(oldestDate, 'dd.MM.yyyy')} – ${format(endOfWeek(oldestDate, { weekStartsOn: 1 }), 'dd.MM.yyyy')}`
+        : format(oldestDate, 'dd.MM.yyyy')
+      : '';
 
     return (
       <div className="space-y-3">
         <div className="rounded-lg bg-amber-50 px-3 py-2 font-medium text-amber-900">
           <p>{t(getMissingReminderMainTranslationKey(missingCount), { count: missingCount })}</p>
         </div>
+        {oldestDate && (
+          <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 px-4 py-4 text-center">
+            <p className="text-sm font-semibold text-indigo-950">
+              {t(entryMode === 'week' ? 'dailyEntry.oldestMissingWeek' : 'dailyEntry.oldestMissingDay')}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setMissingReminderDate(null);
+                setCurrentDate(oldestDate);
+                handleDateSelect(oldestDate);
+              }}
+              className="mt-1 rounded px-1 py-2 text-center text-lg font-bold text-indigo-700 underline decoration-2 underline-offset-4 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            >
+              {oldestPeriod}
+            </button>
+            <p className="mt-1 text-xs text-indigo-900">{t('dailyEntry.openMissingDateHint')}</p>
+          </div>
+        )}
         <p>
           {t(getMissingReminderSkipTranslationKey())}
           <br />
@@ -872,7 +869,12 @@ function AppContent({ participantId }: AppContentProps) {
 
           <div className="min-w-0 min-h-0">
             {participantRole === 'faculty' ? (
-              <WeeklyCategoryPanel categories={WEEKLY_CATEGORIES} title={participantSubjectLabel} />
+              <CourseManagement
+                subjects={WEEKLY_CATEGORIES}
+                title={participantSubjectLabel}
+                availableSubjects={[]}
+                showCredits={false}
+              />
             ) : (
               <CourseManagement
                 subjects={sortedSubjects}
@@ -927,21 +929,13 @@ function AppContent({ participantId }: AppContentProps) {
 
       <ConfirmDialog
         open={!!missingReminderDate}
+        centered
         title={t('dailyEntry.missingBeforeTitle')}
         description={renderMissingReminderDescription()}
-        confirmLabel={t('common.continue')}
-        cancelLabel={t('common.cancel')}
+        cancelLabel={t('common.close')}
         onCancel={() => {
           setMissingReminderDate(null);
           setSelectedDate(null);
-        }}
-        onConfirm={() => {
-          const dateToOpen = missingReminderDate;
-          setMissingReminderDate(null);
-
-          if (dateToOpen) {
-            openEntryModalForDate(dateToOpen);
-          }
         }}
       />
     </div>

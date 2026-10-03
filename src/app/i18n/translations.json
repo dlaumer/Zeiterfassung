@@ -223,41 +223,53 @@
     "en": "Skip",
     "de": "Überspringen"
   },
+  "dailyEntry.oldestMissingDay": {
+    "en": "Oldest missing day",
+    "de": "Ältester fehlender Tag"
+  },
+  "dailyEntry.oldestMissingWeek": {
+    "en": "Oldest missing week",
+    "de": "Älteste fehlende Woche"
+  },
+  "dailyEntry.openMissingDateHint": {
+    "en": "Click the date to open this entry.",
+    "de": "Auf das Datum klicken, um diesen Eintrag zu öffnen."
+  },
   "dailyEntry.missingBeforeTitle": {
     "en": "Earlier entries are still missing",
     "de": "Frühere Einträge fehlen noch"
   },
   "dailyEntry.missingBeforeMainStudentDaySingular": {
-    "en": "There is still 1 earlier red day in the calendar. Please fill in the missing day if possible.",
-    "de": "Im Kalender gibt es noch 1 früheren roten Tag. Bitte fülle den fehlenden Tag nach Möglichkeit aus."
+    "en": "There is still 1 earlier red day in the calendar. Complete earlier entries, starting with the oldest, before entering a newer day.",
+    "de": "Im Kalender gibt es noch 1 früheren roten Tag. Bitte fülle die älteren Einträge beginnend mit dem ältesten aus. Erst danach kannst du einen neueren Tag erfassen."
   },
   "dailyEntry.missingBeforeMainStudentDayPlural": {
-    "en": "There are still {{count}} earlier red days in the calendar. Please fill in the missing days if possible.",
-    "de": "Im Kalender gibt es noch {{count}} frühere rote Tage. Bitte fülle die fehlenden Tage nach Möglichkeit aus."
+    "en": "There are still {{count}} earlier red days in the calendar. Complete earlier entries, starting with the oldest, before entering a newer day.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Tage. Bitte fülle die älteren Einträge beginnend mit dem ältesten aus. Erst danach kannst du einen neueren Tag erfassen."
   },
   "dailyEntry.missingBeforeMainStudentWeekSingular": {
-    "en": "There is still 1 earlier red week in the calendar. Please fill in the missing week if possible.",
-    "de": "Im Kalender gibt es noch 1 frühere rote Woche. Bitte fülle die fehlende Woche nach Möglichkeit aus."
+    "en": "There is still 1 earlier red week in the calendar. Complete earlier entries, starting with the oldest, before entering a newer week.",
+    "de": "Im Kalender gibt es noch 1 frühere rote Woche. Bitte fülle die älteren Einträge beginnend mit dem ältesten aus. Erst danach kannst du eine neuere Woche erfassen."
   },
   "dailyEntry.missingBeforeMainStudentWeekPlural": {
-    "en": "There are still {{count}} earlier red weeks in the calendar. Please fill in the missing weeks if possible.",
-    "de": "Im Kalender gibt es noch {{count}} frühere rote Wochen. Bitte fülle die fehlenden Wochen nach Möglichkeit aus."
+    "en": "There are still {{count}} earlier red weeks in the calendar. Complete earlier entries, starting with the oldest, before entering a newer week.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Wochen. Bitte fülle die älteren Einträge beginnend mit dem ältesten aus. Erst danach kannst du eine neuere Woche erfassen."
   },
   "dailyEntry.missingBeforeMainFacultyDaySingular": {
-    "en": "There is still 1 earlier red day in the calendar. Please fill in the missing day if possible.",
-    "de": "Im Kalender gibt es noch 1 früheren roten Tag. Bitte füllen Sie den fehlenden Tag nach Möglichkeit aus."
+    "en": "There is still 1 earlier red day in the calendar. Complete earlier entries, starting with the oldest, before entering a newer day.",
+    "de": "Im Kalender gibt es noch 1 früheren roten Tag. Bitte füllen Sie die älteren Einträge beginnend mit dem ältesten aus. Erst danach können Sie einen neueren Tag erfassen."
   },
   "dailyEntry.missingBeforeMainFacultyDayPlural": {
-    "en": "There are still {{count}} earlier red days in the calendar. Please fill in the missing days if possible.",
-    "de": "Im Kalender gibt es noch {{count}} frühere rote Tage. Bitte füllen Sie die fehlenden Tage nach Möglichkeit aus."
+    "en": "There are still {{count}} earlier red days in the calendar. Complete earlier entries, starting with the oldest, before entering a newer day.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Tage. Bitte füllen Sie die älteren Einträge beginnend mit dem ältesten aus. Erst danach können Sie einen neueren Tag erfassen."
   },
   "dailyEntry.missingBeforeMainFacultyWeekSingular": {
-    "en": "There is still 1 earlier red week in the calendar. Please fill in the missing week if possible.",
-    "de": "Im Kalender gibt es noch 1 frühere rote Woche. Bitte füllen Sie die fehlende Woche nach Möglichkeit aus."
+    "en": "There is still 1 earlier red week in the calendar. Complete earlier entries, starting with the oldest, before entering a newer week.",
+    "de": "Im Kalender gibt es noch 1 frühere rote Woche. Bitte füllen Sie die älteren Einträge beginnend mit dem ältesten aus. Erst danach können Sie eine neuere Woche erfassen."
   },
   "dailyEntry.missingBeforeMainFacultyWeekPlural": {
-    "en": "There are still {{count}} earlier red weeks in the calendar. Please fill in the missing weeks if possible.",
-    "de": "Im Kalender gibt es noch {{count}} frühere rote Wochen. Bitte füllen Sie die fehlenden Wochen nach Möglichkeit aus."
+    "en": "There are still {{count}} earlier red weeks in the calendar. Complete earlier entries, starting with the oldest, before entering a newer week.",
+    "de": "Im Kalender gibt es noch {{count}} frühere rote Wochen. Bitte füllen Sie die älteren Einträge beginnend mit dem ältesten aus. Erst danach können Sie eine neuere Woche erfassen."
   },
   "dailyEntry.missingBeforeSkipStudentDay": {
     "en": "Days on which you did not work for your studies can be included by clicking \"Skip\".",
@@ -276,8 +288,8 @@
     "de": "Wochen, in denen Sie keine Lehraufgaben für dieses Modul übernommen haben, können Sie durch einen Klick auf \"Überspringen\" in die Auswertung aufnehmen."
   },
   "dailyEntry.missingBeforeSkipLocation": {
-    "en": "After you continue, the Skip button is in the top right of the entry window.",
-    "de": "Nach dem Fortfahren befindet sich der Button \"Überspringen\" oben rechts im Eingabefenster."
+    "en": "The Skip button is in the top right of the entry window for the missing period.",
+    "de": "Der Button \"Überspringen\" befindet sich oben rechts im Eingabefenster des fehlenden Zeitraums."
   },
   "dailyEntry.tip": {
     "en": "Tips:",
@@ -743,6 +755,30 @@
     "en": "Sort participants by",
     "de": "Teilnehmende sortieren nach"
   },
+  "admin.participants.sort.lastReminder": {
+    "en": "Last reminder (newest first)",
+    "de": "Letzter Reminder (neueste zuerst)"
+  },
+  "admin.participants.sort.lastPeriod": {
+    "en": "Last recorded day / week (newest first)",
+    "de": "Letzter erfasster Tag / Woche (neueste zuerst)"
+  },
+  "admin.participants.sort.lastSubmission": {
+    "en": "Last submission (newest first)",
+    "de": "Zuletzt abgeschickt (neueste zuerst)"
+  },
+  "admin.participant.lastReminder": {
+    "en": "Last reminder sent through mETHric, with date and time. Invitations are excluded.",
+    "de": "Letzter über mETHric verschickter Reminder mit Datum und Uhrzeit. Einladungen zählen nicht dazu."
+  },
+  "admin.participant.lastPeriod": {
+    "en": "Latest recorded day or week. Deleted periods are excluded.",
+    "de": "Letzter erfasster Tag oder letzte erfasste Woche. Gelöschte Zeiträume zählen nicht dazu."
+  },
+  "admin.participant.lastSubmission": {
+    "en": "Date and time of the person's last submitted entry or correction, regardless of the recorded period.",
+    "de": "Datum und Uhrzeit des zuletzt abgeschickten Eintrags oder einer Korrektur der Person, unabhängig vom erfassten Zeitraum."
+  },
   "admin.participants.sort.missing": {
     "en": "Missing submissions",
     "de": "Fehlende Einreichungen"
@@ -1015,6 +1051,14 @@
     "en": "Could not create the participant.",
     "de": "Teilnehmende Person konnte nicht erstellt werden."
   },
+  "admin.participant.duplicateName": {
+    "en": "A participant with this first and last name already exists.",
+    "de": "Ein Participant mit diesem Vor- und Nachnamen existiert bereits."
+  },
+  "admin.participant.duplicateEmail": {
+    "en": "A participant with this email address already exists.",
+    "de": "Ein Participant mit dieser E-Mail-Adresse existiert bereits."
+  },
   "admin.participant.updated": {
     "en": "Participant updated.",
     "de": "Teilnehmende Person wurde aktualisiert."
@@ -1022,6 +1066,26 @@
   "admin.participant.updateFailed": {
     "en": "Could not update the participant.",
     "de": "Teilnehmende Person konnte nicht aktualisiert werden."
+  },
+  "admin.subject.edit": {
+    "en": "Edit module",
+    "de": "Modul bearbeiten"
+  },
+  "admin.subject.editTitle": {
+    "en": "Edit module",
+    "de": "Modul bearbeiten"
+  },
+  "admin.subject.editDescription": {
+    "en": "Update the module details.",
+    "de": "Bearbeite die Angaben zum Modul."
+  },
+  "admin.subject.updated": {
+    "en": "Module updated.",
+    "de": "Modul wurde aktualisiert."
+  },
+  "admin.subject.updateFailed": {
+    "en": "Could not update the module.",
+    "de": "Modul konnte nicht aktualisiert werden."
   },
   "admin.subject.add": {
     "en": "Add module",
@@ -1207,9 +1271,17 @@
     "de": "Angaben bestätigen",
     "en": "Confirm entry"
   },
+  "subject.weekendContactTimeWarning.faculty": {
+    "de": "Kontaktzeit am Wochenende erfasst. Bitte Korrektheit bestätigen oder Schieberegler entsprechend anpassen.",
+    "en": "Contact time recorded on the weekend. Please confirm that it is correct or adjust the slider accordingly."
+  },
+  "subject.weekendContactTimeWarning.student": {
+    "de": "Unterrichtszeit am Wochenende erfasst. Bitte Korrektheit bestätigen oder Schieberegler entsprechend anpassen.",
+    "en": "Class time recorded on the weekend. Please confirm that it is correct or adjust the slider accordingly."
+  },
   "dailyEntry.pendingClassTimeConfirmations": {
-    "de": "Bitte bestätige oder korrigiere vor dem Absenden die Unterrichtszeit bei folgenden Modulen. Klicke auf ein Modul, um zum Hinweis zu gelangen.",
-    "en": "Before submitting, please confirm or correct the class time for the following modules. Click a module to go to the notice."
+    "de": "Bitte bestätige oder korrigiere vor dem Absenden die Kontakt- bzw. Unterrichtszeit bei folgenden Modulen oder Kategorien. Klicke auf einen Eintrag, um zum Hinweis zu gelangen.",
+    "en": "Before submitting, please confirm or correct the contact or class time for the following modules or categories. Click an entry to go to the notice."
   },
   "dailyEntry.confirmRatingsTitle": {
     "de": "Bisherige Bewertungen übernehmen?",

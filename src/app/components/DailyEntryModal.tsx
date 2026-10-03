@@ -4,6 +4,7 @@ import { format, endOfWeek } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import { SocialBatteryInput } from './SocialBatteryInput';
 import { SubjectTimeInput } from './SubjectTimeInput';
+import { getClassTimeWarnings } from './classTimeConfirmation.mjs';
 import { Slider } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
 import { getDateLocale } from '../i18n/dateLocale';
@@ -298,26 +299,30 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   const hasEnteredCourseLikeWorkload =
     courses.some((course) => course.hours > 0) ||
     hasEnteredSubjectTime;
-  const pendingClassTimes = !isFaculty && !readOnly ? subjectTimes.filter(st =>
-    st.classTime > 0 && Math.abs(st.classTime - Math.round(st.classTime)) > 0.000001 &&
-    confirmedClassTimes[st.subjectId] !== st.classTime
-  ) : [];
+  const classTimeWarnings = (st: SubjectTime) => getClassTimeWarnings(
+      st.classTime,
+      existingEntry?.subjectTimes.find(previous => previous.subjectId === st.subjectId)?.classTime,
+      confirmedClassTimes[st.subjectId],
+      { date, entryMode, participantRole, subjectKey: subjects.find(subject => subject.id === st.subjectId)?.key },
+    );
+  const pendingClassTimes = !readOnly ? subjectTimes.filter(st => classTimeWarnings(st).length > 0) : [];
   const unchangedRatings = isCorrection ? [
     ...(reliability > 0 && reliability === existingEntry.reliability
       ? [`${t('dailyEntry.reliability')}: ${reliability}/5`] : []),
     ...(socialBattery > 0 && socialBattery === existingEntry.socialBattery
       ? [`${t(`socialBattery.${participantRole}`)}: ${socialBattery}/5`] : []),
   ] : [];
-  const shouldShowCloseWarning = !readOnly && (
+  const hasChanges = (
     subjectTimes.some(st => {
       const old = existingEntry?.subjectTimes.find(item => item.subjectId === st.subjectId);
       return st.classTime !== (old?.classTime ?? 0) || st.selfStudyTime !== (old?.selfStudyTime ?? 0);
     }) || reliability !== (existingEntry?.reliability ?? 0) ||
     socialBattery !== (existingEntry?.socialBattery ?? 0) ||
     adminEffort !== (existingEntry?.adminEffort ?? 0) ||
-    commuteTime !== (existingEntry?.commuteTime ?? defaultCommuteTime) ||
+    commuteTime !== (isFaculty ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime) ||
     structuralChanges !== (existingEntry?.structuralChanges ?? 0) || comment !== ''
   );
+  const shouldShowCloseWarning = !readOnly && hasChanges;
 
   const handleCloseRequest = () => {
     if (shouldShowCloseWarning) {
@@ -329,7 +334,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   };
 
   const handleSubmit = async (ratingsConfirmed = false) => {
-    if (readOnly || isSaving) return;
+    if (readOnly || isSaving || (isCorrection && !hasChanges)) return;
     setShowClassTimeWarnings(true);
     setSaveError(null);
     setShowReliabilityError(reliability <= 0);
@@ -375,7 +380,10 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
 
   if (isSubmitted) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={event => { if (event.target === event.currentTarget) onClose(); }}
+      >
         <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
@@ -397,7 +405,10 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto pt-8">
+      <div
+        className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto pt-8"
+        onClick={event => { if (event.target === event.currentTarget && !isSaving) handleCloseRequest(); }}
+      >
         <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl my-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -486,6 +497,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
                     subjectName={getSubjectDisplayName(subject, language)}
                     subjectColor={subject.color}
                     classTimeConfirmationId={`class-time-confirmation-${subject.id}`}
+                    classTimeWarningKeys={subjectTime ? classTimeWarnings(subjectTime) : []}
                     onConfirmClassTime={showClassTimeWarnings && pendingClassTimes.some(st => st.subjectId === subject.id) ? () => setConfirmedClassTimes(prev => ({ ...prev, [subject.id]: subjectTime?.classTime ?? 0 })) : undefined}
                     classTime={subjectTime?.classTime || 0}
                     previousClassTime={isCorrection ? existingEntry.subjectTimes.find(st => st.subjectId === subject.id)?.classTime ?? 0 : undefined}
@@ -723,7 +735,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
           {existingEntry && !readOnly && <button disabled={isSaving} onClick={() => setShowDeleteWarning(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />{t('dailyEntry.delete')}</button>}
           {!readOnly && <button
             onClick={() => handleSubmit()}
-            disabled={isSaving}
+            disabled={isSaving || (isCorrection && !hasChanges)}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isSaving ? `${t('dailyEntry.submit')}...` : existingEntry ? t('dailyEntry.saveCorrection') : t('dailyEntry.submit')}

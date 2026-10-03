@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
 import { AdminSettingsDialog } from './AdminSettingsDialog';
+import { matchesEventSearch } from './eventSearch.mjs';
 import {
   BookOpen,
+  CalendarDays,
   ChevronDown,
   Clock3,
   Download,
@@ -67,6 +69,12 @@ interface AdminParticipant {
   submissionCount: number;
   missingCount: number;
   lastActivityAt: string;
+  lastReminderAt?: string;
+  lastSubmissionAt?: string;
+  lastPeriodStart?: string;
+  lastPeriodEnd?: string;
+  lastPeriodType?: string;
+  lastPeriodSubmittedAt?: string;
 }
 
 interface AdminParticipantSubject {
@@ -92,6 +100,8 @@ interface AdminSubject {
 
 interface AdminEventItem {
   id: string;
+  subjectId?: string;
+  subjectNumber?: string;
   subjectKey: string;
   subjectLabelEn: string;
   subjectLabelDe: string;
@@ -144,7 +154,7 @@ type AdminMobileTab = 'log' | 'participants' | 'subjects';
 type AdminEntryModeFilter = 'all' | 'day' | 'week';
 type AdminParticipantEntryModeTab = 'day' | 'week';
 type AdminRoleFilter = 'all' | 'student' | 'faculty';
-type AdminParticipantSort = 'missing' | 'created' | 'firstName' | 'lastName';
+type AdminParticipantSort = 'missing' | 'created' | 'firstName' | 'lastName' | 'lastReminder' | 'lastPeriod' | 'lastSubmission';
 
 const facultyRoleOptions = [
   { value: 'professor', translationKey: 'professor' },
@@ -418,6 +428,10 @@ function compareParticipantsByName(a: AdminParticipant, b: AdminParticipant, lan
 
 function compareParticipants(a: AdminParticipant, b: AdminParticipant, sortBy: AdminParticipantSort, language: Language) {
   const locale = getIntlLocale(language);
+  const dateField = sortBy === 'lastReminder' ? 'lastReminderAt' : sortBy === 'lastPeriod' ? 'lastPeriodStart' : sortBy === 'lastSubmission' ? 'lastSubmissionAt' : null;
+  if (dateField) {
+    return (b[dateField] || '').localeCompare(a[dateField] || '') || compareParticipantsByName(a, b, language);
+  }
 
   if (sortBy === 'created') {
     const createdDiff = getParticipantCreatedTime(b) - getParticipantCreatedTime(a);
@@ -638,10 +652,11 @@ function ParticipantActionMenu({
 interface SubjectActionMenuProps {
   subject: AdminSubject;
   onExportData: (subject: AdminSubject) => void;
+  onEdit: (subject: AdminSubject) => void;
   onRemove: (subject: AdminSubject) => void;
 }
 
-function SubjectActionMenu({ subject, onExportData, onRemove }: SubjectActionMenuProps) {
+function SubjectActionMenu({ subject, onExportData, onEdit, onRemove }: SubjectActionMenuProps) {
   const { t } = useI18n();
 
   return (
@@ -659,6 +674,10 @@ function SubjectActionMenu({ subject, onExportData, onRemove }: SubjectActionMen
         <DropdownMenuItem onSelect={() => onExportData(subject)} className="cursor-pointer">
           <Download className="h-4 w-4" />
           {t('admin.subject.downloadData')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(subject)} className="cursor-pointer">
+          <Pencil className="h-4 w-4" />
+          {t('admin.subject.edit')}
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-gray-100" />
         <DropdownMenuItem
@@ -699,6 +718,7 @@ function AdminContent() {
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [participantToEdit, setParticipantToEdit] = useState<AdminParticipant | null>(null);
   const [createStatus, setCreateStatus] = useState<'idle' | 'loading'>('idle');
+  const [participantFormError, setParticipantFormError] = useState('');
   const [subjectImportStatus, setSubjectImportStatus] = useState<'idle' | 'loading'>('idle');
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
@@ -710,6 +730,8 @@ function AdminContent() {
   const [newParticipantReferenceDate, setNewParticipantReferenceDate] = useState(getTodayDateInputValue());
   const [newParticipantInactive, setNewParticipantInactive] = useState(false);
   const [showInactiveParticipants, setShowInactiveParticipants] = useState(false);
+  const [subjectToEdit, setSubjectToEdit] = useState<AdminSubject | null>(null);
+  const [newSubjectLabelDe, setNewSubjectLabelDe] = useState('');
   const [newSubjectNumber, setNewSubjectNumber] = useState('');
   const [newSubjectKey, setNewSubjectKey] = useState('');
   const [newSubjectLabel, setNewSubjectLabel] = useState('');
@@ -908,11 +930,13 @@ function AdminContent() {
       await loadOverview();
     } catch (error) {
       console.error('Subject removal failed:', error);
+      setSubjectToRemove(null);
       showActionMessage('error', t('admin.subject.removeFailed'));
     }
   }
 
   function resetParticipantForm() {
+    setParticipantFormError('');
     setNewParticipantName('');
     setNewParticipantEmail('');
     setNewParticipantComment('');
@@ -926,6 +950,8 @@ function AdminContent() {
   }
 
   function resetSubjectForm() {
+    setSubjectToEdit(null);
+    setNewSubjectLabelDe('');
     setNewSubjectNumber('');
     setNewSubjectKey('');
     setNewSubjectLabel('');
@@ -938,6 +964,7 @@ function AdminContent() {
   }
 
   function openEditParticipantDialog(participant: AdminParticipant) {
+    setParticipantFormError('');
     const participantRole = participant.participantRole === 'faculty' ? 'faculty' : 'student';
     setParticipantToEdit(participant);
     setNewParticipantName(participant.name || '');
@@ -954,6 +981,7 @@ function AdminContent() {
 
   async function handleSaveParticipant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setParticipantFormError('');
     setCreateStatus('loading');
 
     try {
@@ -980,35 +1008,51 @@ function AdminContent() {
       await loadOverview();
     } catch (error) {
       console.error('Participant save failed:', error);
-      showActionMessage('error', t(participantToEdit ? 'admin.participant.updateFailed' : 'admin.participant.createFailed'));
+      const duplicateFields = (error as { response?: { duplicateFields?: string[] } }).response?.duplicateFields;
+      const message = !participantToEdit && duplicateFields?.length
+        ? duplicateFields.map((field) => t(field === 'name' ? 'admin.participant.duplicateName' : 'admin.participant.duplicateEmail')).join(' ')
+        : t(participantToEdit ? 'admin.participant.updateFailed' : 'admin.participant.createFailed');
+      setParticipantFormError(message);
     } finally {
       setCreateStatus('idle');
     }
   }
 
-  async function handleCreateSubject(event: FormEvent<HTMLFormElement>) {
+  function openEditSubjectDialog(subject: AdminSubject) {
+    setSubjectToEdit(subject);
+    setNewSubjectKey(subject.key || '');
+    setNewSubjectNumber(subject.number || '');
+    setNewSubjectLabel(subject.labelEn || '');
+    setNewSubjectLabelDe(subject.labelDe || '');
+    setNewSubjectCredits(String(subject.credits ?? 0));
+    setShowSubjectDialog(true);
+  }
+
+  async function handleSaveSubject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateStatus('loading');
 
     try {
-      await pb.send('/api/admin/subjects', {
-        method: 'POST',
+      const isEditingSubject = subjectToEdit !== null;
+      await pb.send(isEditingSubject ? '/api/admin/subject' : '/api/admin/subjects', {
+        method: isEditingSubject ? 'PATCH' : 'POST',
+        ...(subjectToEdit ? { query: { subjectId: subjectToEdit.id } } : {}),
         body: {
           key: newSubjectKey,
           number: newSubjectNumber,
           labelEn: newSubjectLabel,
-          labelDe: newSubjectLabel,
+          labelDe: subjectToEdit ? newSubjectLabelDe : newSubjectLabel,
           credits: Number(newSubjectCredits || 0),
         },
       });
 
       setShowSubjectDialog(false);
       resetSubjectForm();
-      showActionMessage('success', t('admin.subject.created'));
+      showActionMessage('success', t(isEditingSubject ? 'admin.subject.updated' : 'admin.subject.created'));
       await loadOverview();
     } catch (error) {
-      console.error('Subject creation failed:', error);
-      showActionMessage('error', t('admin.subject.createFailed'));
+      console.error('Subject save failed:', error);
+      showActionMessage('error', t(subjectToEdit ? 'admin.subject.updateFailed' : 'admin.subject.createFailed'));
     } finally {
       setCreateStatus('idle');
     }
@@ -1113,6 +1157,13 @@ function AdminContent() {
           participant.name,
           participant.email,
           participant.id,
+          participant.lastReminderAt,
+          participant.lastPeriodStart,
+          participant.lastPeriodEnd,
+          participant.lastSubmissionAt,
+          formatDateTime(participant.lastReminderAt || '', language, t),
+          formatDateTime(participant.lastSubmissionAt || '', language, t),
+          formatDate(participant.lastPeriodStart || '', language, t),
           ...(participant.subjects ?? []).map((subject) => `${subject.number} ${subject.key} ${subject.labelEn} ${subject.labelDe}`),
         ].join(' ').toLowerCase().includes(normalizedQuery);
       })
@@ -1169,22 +1220,9 @@ function AdminContent() {
         return true;
       }
 
-      return [
-        event.participantName,
-        event.participantId,
-        event.submissionId,
-        event.participantEmail,
-        event.sentByEmail,
-        event.eventType,
-        event.periodDate,
-        event.comment,
-        ...event.items.map((item) => `${item.subjectKey} ${item.subjectLabelEn} ${item.subjectLabelDe}`),
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedQuery);
+      return matchesEventSearch(event, normalizedQuery, overview.subjects);
     });
-  }, [overview.events, query, selectedEntryMode, selectedRole, showInactiveParticipants]);
+  }, [overview.events, overview.subjects, query, selectedEntryMode, selectedRole, showInactiveParticipants]);
 
   const displayedEvents = useMemo(() => {
     if (!selectedLogDate) {
@@ -1454,7 +1492,7 @@ function AdminContent() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-52 border-gray-200 bg-white text-gray-900">
-                  {(['missing', 'created', 'firstName', 'lastName'] as const).map((sortOption) => (
+                  {(['missing', 'created', 'firstName', 'lastName', 'lastReminder', 'lastPeriod', 'lastSubmission'] as const).map((sortOption) => (
                     <DropdownMenuItem
                       key={sortOption}
                       onSelect={() => setParticipantSort(sortOption)}
@@ -1523,10 +1561,11 @@ function AdminContent() {
                     className={`flex min-w-0 items-start justify-between gap-3 overflow-hidden border-l-4 p-4 transition-colors ${participantToneClasses}`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <div className={`truncate text-sm font-bold ${participant.inactive ? 'text-gray-500' : 'text-gray-950'}`}>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_13rem] md:items-start">
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_9rem] items-stretch gap-3">
+                          <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div title={participant.name || participant.id} className={`min-w-0 flex-1 break-words text-sm font-bold ${participant.inactive ? 'text-gray-500' : 'text-gray-950'}`}>
                               {participant.name || participant.id}
                             </div>
                             {participant.inactive && (
@@ -1534,10 +1573,12 @@ function AdminContent() {
                                 {t('admin.participant.inactiveBadge')}
                               </span>
                             )}
-                            <span className="shrink-0 text-xs font-medium text-gray-500">
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="w-14 shrink-0 text-xs font-medium text-gray-500">
                               {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
                             </span>
-                            <span className="shrink-0 text-xs font-medium text-gray-500">
+                            <span className="w-20 shrink-0 text-xs font-medium text-gray-500">
                               {participant.participantRole === 'faculty' ? t('admin.participantRole.faculty') : t('admin.participantRole.student')}
                             </span>
                           </div>
@@ -1547,6 +1588,33 @@ function AdminContent() {
                               {participant.comment}
                             </div>
                           )}
+
+                          </div>
+                            <div className="flex min-w-0 flex-col items-start justify-between gap-1 self-stretch text-[10px] font-normal tabular-nums text-gray-500">
+                              <span title={t('admin.participant.lastReminder')} aria-label={t('admin.participant.lastReminder')} className="inline-flex items-center gap-1">
+                                <Mail aria-hidden="true" className="h-3 w-3 shrink-0" />
+                                {participant.lastReminderAt ? formatDateTime(participant.lastReminderAt, language, t) : '—'}
+                              </span>
+                              <span title={t('admin.participant.lastPeriod')} aria-label={t('admin.participant.lastPeriod')} className="inline-flex items-center gap-1">
+                                <CalendarDays aria-hidden="true" className="h-3 w-3 shrink-0" />
+                                {participant.lastPeriodStart ? (
+                                  <span>
+                                    {formatDate(participant.lastPeriodStart, language, t)}
+                                    {participant.lastPeriodType === 'week' && participant.lastPeriodEnd && ` – ${formatDate(participant.lastPeriodEnd, language, t)}`}
+                                  </span>
+                                ) : '—'}
+                              </span>
+                              <span title={t('admin.participant.lastSubmission')} aria-label={t('admin.participant.lastSubmission')} className="inline-flex items-center gap-1">
+                                <Clock3 aria-hidden="true" className="h-3 w-3 shrink-0" />
+                                {participant.lastSubmissionAt ? formatDateTime(participant.lastSubmissionAt, language, t) : '—'}
+                              </span>
+                          </div>
+                        </div>
+
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-xs tabular-nums text-gray-600">
+                          <div className="min-w-0 space-y-1">
+                            <div>{t('admin.subjects.count', { count: participant.subjectCount })}</div>
+                            <div>{t('admin.submissions.count', { count: participant.submissionCount })}</div>
                           {participant.participantRole === 'faculty' && (participant.subjects ?? []).length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {[...participant.subjects].sort(compareAdminSubjectsByDisplayName(language)).map((subject) => (
@@ -1560,27 +1628,11 @@ function AdminContent() {
                               ))}
                             </div>
                           )}
-                        </div>
-
-                        <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 text-xs text-gray-600 md:flex">
-                          <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
-                          <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 font-semibold ${missingBadgeClasses}`}
-                          >
+                          </div>
+                          <span className={`whitespace-nowrap rounded-full px-2 py-0.5 font-semibold ${missingBadgeClasses}`}>
                             {t('admin.missing.count', { count: adjustedMissingCount })}
                           </span>
                         </div>
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600 md:hidden">
-                        <span>{t('admin.subjects.count', { count: participant.subjectCount })}</span>
-                        <span>{t('admin.submissions.count', { count: participant.submissionCount })}</span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 font-semibold ${missingBadgeClasses}`}
-                        >
-                          {t('admin.missing.count', { count: adjustedMissingCount })}
-                        </span>
                       </div>
                     </div>
                     <div className="shrink-0">
@@ -1728,7 +1780,7 @@ function AdminContent() {
                 <span className="text-sm text-gray-500">{filteredSubjects.length}</span>
                 <button
                   type="button"
-                  onClick={() => setShowSubjectDialog(true)}
+                  onClick={() => { resetSubjectForm(); setShowSubjectDialog(true); }}
                   title={t('admin.subject.add')}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900"
                 >
@@ -1778,6 +1830,7 @@ function AdminContent() {
                         <SubjectActionMenu
                           subject={subject}
                           onExportData={handleExportSubjectData}
+                          onEdit={openEditSubjectDialog}
                           onRemove={setSubjectToRemove}
                         />
                       </div>
@@ -1810,6 +1863,11 @@ function AdminContent() {
           </DialogHeader>
 
           <form className="grid gap-4" onSubmit={handleSaveParticipant}>
+            {participantFormError && (
+              <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                {participantFormError}
+              </p>
+            )}
             <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
               {t('admin.participant.name')}
               <input
@@ -1964,11 +2022,11 @@ function AdminContent() {
       >
         <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('admin.subject.addTitle')}</DialogTitle>
-            <DialogDescription>{t('admin.subject.addDescription')}</DialogDescription>
+            <DialogTitle>{t(subjectToEdit ? 'admin.subject.editTitle' : 'admin.subject.addTitle')}</DialogTitle>
+            <DialogDescription>{t(subjectToEdit ? 'admin.subject.editDescription' : 'admin.subject.addDescription')}</DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4">
+          {!subjectToEdit && <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-gray-700 ring-1 ring-gray-200">
                 <Upload className="h-4 w-4" />
@@ -1988,9 +2046,9 @@ function AdminContent() {
                 </label>
               </div>
             </div>
-          </div>
+          </div>}
 
-          <form className="grid gap-4" onSubmit={handleCreateSubject}>
+          <form className="grid gap-4" onSubmit={handleSaveSubject}>
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
                 {t('admin.subject.key')}
@@ -2014,7 +2072,7 @@ function AdminContent() {
 
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-gray-700">
-                {t('admin.subject.label')}
+                {t(subjectToEdit ? 'admin.subject.labelEn' : 'admin.subject.label')}
                 <input
                   value={newSubjectLabel}
                   onChange={(event) => setNewSubjectLabel(event.target.value)}
@@ -2035,6 +2093,17 @@ function AdminContent() {
               </label>
             </div>
 
+            {subjectToEdit && (
+              <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
+                {t('admin.subject.labelDe')}
+                <input
+                  value={newSubjectLabelDe}
+                  onChange={(event) => setNewSubjectLabelDe(event.target.value)}
+                  className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm font-normal text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                />
+              </label>
+            )}
+
             <DialogFooter>
               <button
                 type="button"
@@ -2048,7 +2117,7 @@ function AdminContent() {
                 disabled={createStatus === 'loading'}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
-                {createStatus === 'loading' ? t('admin.creating') : t('admin.create')}
+                {createStatus === 'loading' ? t(subjectToEdit ? 'admin.saving' : 'admin.creating') : t(subjectToEdit ? 'admin.save' : 'admin.create')}
               </button>
             </DialogFooter>
           </form>

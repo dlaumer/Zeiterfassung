@@ -23,6 +23,7 @@ interface SubjectTimeInputProps {
   previousSelfStudyTime?: number;
   classTimeConfirmationId?: string;
   onConfirmClassTime?: () => void;
+  classTimeWarningKeys?: string[];
 }
 
 export function SubjectTimeInput({
@@ -42,6 +43,7 @@ export function SubjectTimeInput({
   previousSelfStudyTime,
   classTimeConfirmationId,
   onConfirmClassTime,
+  classTimeWarningKeys = ['subject.fractionalClassTimeWarning'],
   timeSliderMax = 8
 }: SubjectTimeInputProps) {
   const { t } = useI18n();
@@ -146,7 +148,7 @@ export function SubjectTimeInput({
           />
         </Slider>
         {onConfirmClassTime && <div id={classTimeConfirmationId} tabIndex={-1} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-          <p>{t('subject.fractionalClassTimeWarning')}</p>
+          {classTimeWarningKeys.map(key => <p key={key}>{t(key)}</p>)}
           <button type="button" onClick={onConfirmClassTime} className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
             {t('subject.confirmClassTime')}
           </button>
@@ -200,7 +202,10 @@ export function SubjectTimeInput({
     </div>
 
     {showRemoveConfirm && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={event => { if (event.target === event.currentTarget) setShowRemoveConfirm(false); }}
+      >
         <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
           <h3 className="font-semibold text-gray-900 mb-3">{t('subject.removeTitle')}</h3>
           <p className="text-sm text-gray-600 mb-6">{t('subject.removeInfo')}</p>

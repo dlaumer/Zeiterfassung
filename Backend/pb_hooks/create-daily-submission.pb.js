@@ -194,6 +194,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                 }
             ))
 
+            require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "week", periodStart, existingWeekSubmissions)
             const changes = review.prepare(txApp, existingWeekSubmissions, body, periodEndStr)
             const submissionMode = existingWeekSubmissions.length > 0 ? "correction" : "initial"
             const replacesSubmissionId = changes.latestId
@@ -627,6 +628,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                 }
             ))
 
+            require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "day", dayStart, existingDaySubmissions)
             const changes = review.prepare(txApp, existingDaySubmissions, body, dayEndStr)
             const submissionMode = existingDaySubmissions.length > 0 ? "correction" : "initial"
             const replacesSubmissionId = changes.latestId

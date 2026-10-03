@@ -203,6 +203,12 @@ routerAdd("GET", "/api/admin/overview", (e) => {
             submissionCount: 0,
             missingCount: 0,
             lastActivityAt: "",
+            lastReminderAt: "",
+            lastSubmissionAt: "",
+            lastPeriodStart: "",
+            lastPeriodEnd: "",
+            lastPeriodType: "",
+            lastPeriodSubmittedAt: "",
         }
         validSubmittedPeriodKeysByParticipant[participant.id] = {}
         participantSubjectsById[participant.id] = []
@@ -257,6 +263,7 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         itemsBySubmissionId[submissionId].push({
             id: item.id,
             subjectId: subjectId,
+            subjectNumber: subject ? subject.number : "",
             subjectKey: subject ? subject.key : "",
             subjectLabelEn: subject ? subject.labelEn : "",
             subjectLabelDe: subject ? subject.labelDe : "",
@@ -303,7 +310,16 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         const totalMinutes = items.reduce((sum, item) => sum + item.durationMinutes, 0)
 
         if (participantStatsById[participantId]) {
+            const stats = participantStatsById[participantId]
+            if (submittedAt > stats.lastSubmissionAt) stats.lastSubmissionAt = submittedAt
             if (activeSubmissionIds[submission.id]) {
+                const periodStart = adminDateValue(submission, "periodStart")
+                if (periodStart > stats.lastPeriodStart || (periodStart === stats.lastPeriodStart && submittedAt > stats.lastPeriodSubmittedAt)) {
+                    stats.lastPeriodStart = periodStart
+                    stats.lastPeriodEnd = adminDateValue(submission, "periodEnd")
+                    stats.lastPeriodType = adminStringValue(submission, "periodType")
+                    stats.lastPeriodSubmittedAt = submittedAt
+                }
                 if (submissionMode !== "appendum" && submissionMode !== "correction") {
                     participantStatsById[participantId].submissionCount++
                 }
@@ -425,6 +441,9 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         const subject = adminStringValue(reminderRecord, "subject")
         const normalizedSubject = subject.toLowerCase()
         const eventType = normalizedSubject.indexOf("invitation") === -1 && normalizedSubject.indexOf("einladung") === -1 ? "reminder" : "invitation"
+        if (eventType === "reminder" && participantStatsById[participantId] && happenedAt > participantStatsById[participantId].lastReminderAt) {
+            participantStatsById[participantId].lastReminderAt = happenedAt
+        }
 
         if (participantStatsById[participantId] && (!participantStatsById[participantId].lastActivityAt || String(happenedAt).localeCompare(participantStatsById[participantId].lastActivityAt) > 0)) {
             participantStatsById[participantId].lastActivityAt = happenedAt
@@ -558,8 +577,17 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     }
 
     let participantId = ""
+    let duplicateFields = []
     try {
         $app.runInTransaction((txApp) => {
+            const normalizeName = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase()
+            const normalizeEmail = (value) => String(value || "").trim().toLowerCase()
+            const existingParticipants = txApp.findAllRecords("participants")
+            const duplicateName = existingParticipants.some((record) => normalizeName(record.get("name")) === normalizeName(name))
+            const duplicateEmail = !!email && existingParticipants.some((record) => normalizeEmail(record.get("email")) === normalizeEmail(email))
+            duplicateFields = [duplicateName ? "name" : "", duplicateEmail ? "email" : ""].filter(Boolean)
+            if (duplicateFields.length) return
+
             const collection = txApp.findCollectionByNameOrId("participants")
             const participant = new Record(collection)
 
@@ -588,6 +616,10 @@ routerAdd("POST", "/api/admin/participants", (e) => {
     } catch (error) {
         console.error("Failed to create admin participant:", error)
         return e.json(400, { error: "Failed to create participant" })
+    }
+
+    if (duplicateFields.length) {
+        return e.json(409, { error: "Duplicate participant", duplicateFields: duplicateFields })
     }
 
     return e.json(200, {

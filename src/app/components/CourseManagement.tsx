@@ -32,8 +32,10 @@ const formatSubjectCredits = (credits: number, language: 'en' | 'de') => `${cred
 
 interface CourseManagementProps {
   subjects: Subject[];
-  onAddSubject: (subject: Subject) => void;
-  onRemoveSubject: (id: string) => void;
+  onAddSubject?: (subject: Subject) => void;
+  onRemoveSubject?: (id: string) => void;
+  title?: string;
+  showCredits?: boolean;
   availableSubjects: Subject[];
 }
 
@@ -41,14 +43,16 @@ export function CourseManagement({
   subjects,
   onAddSubject,
   onRemoveSubject,
-  availableSubjects
+  availableSubjects,
+  title,
+  showCredits = true
 }: CourseManagementProps) {
   const { t, language } = useI18n();
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddSubject = (subject: Subject) => {
-    onAddSubject(subject);
+    onAddSubject?.(subject);
     setShowAddSubject(false);
     setSearchQuery('');
   };
@@ -64,7 +68,7 @@ export function CourseManagement({
       .includes(searchQuery.toLowerCase())
   );
 
-  const canAddMore = subjects.length < 12;
+  const canAddMore = !!onAddSubject && subjects.length < 12;
 
   const closeAddSubjectOverlay = () => {
     setShowAddSubject(false);
@@ -77,7 +81,7 @@ export function CourseManagement({
         type="button"
         aria-label={t('common.close')}
         onClick={closeAddSubjectOverlay}
-        className="hidden md:block absolute inset-0 cursor-default"
+        className="hidden md:block absolute inset-0"
       />
 
       <div className="relative flex h-dvh w-full flex-col bg-white p-5 shadow-xl md:h-auto md:max-h-[min(34rem,calc(100dvh-3rem))] md:max-w-md md:rounded-xl md:border md:border-gray-200 md:p-5">
@@ -166,7 +170,7 @@ export function CourseManagement({
   return (
     <div className="h-full min-h-0 min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6 flex flex-col">
       <div className="mb-4 flex min-w-0 items-center justify-between gap-3 shrink-0">
-        <h3 className="min-w-0 truncate font-semibold text-gray-900">{t('courseManagement.title')}</h3>
+        <h3 className="min-w-0 font-semibold text-gray-900">{title ?? t('courseManagement.title')}</h3>
         {canAddMore && (
           <button
             onClick={() => setShowAddSubject(true)}
@@ -178,31 +182,29 @@ export function CourseManagement({
         )}
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
       {subjects.length === 0 && !showAddSubject ? (
         <div className="text-center py-8">
           <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50 text-gray-400" />
           <p className="text-sm text-gray-400 mb-3">{t('courseManagement.none')}</p>
-          <button
+          {canAddMore && <button
             onClick={() => setShowAddSubject(true)}
             className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors text-sm font-medium"
           >
             {t('courseManagement.first')}
-          </button>
+          </button>}
         </div>
       ) : subjects.length > 0 ? (
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+        <div className="space-y-2">
           {[...subjects].sort(compareSubjectsByDisplayName(language)).map(subject => (
-            <div
-              key={subject.id}
-              className="group flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
-            >
+            <div key={subject.id} className="group flex min-w-0 items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-3">
                 <div
                   className="w-3 h-3 shrink-0 rounded-full"
                   style={{ backgroundColor: subject.color }}
                 />
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-gray-700">
+                  <div className="text-sm font-medium text-gray-700 break-words">
                     {getSubjectDisplayName(subject, language)}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
@@ -211,24 +213,27 @@ export function CourseManagement({
                         {subject.number}
                       </span>
                     )}
-                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
+                    {showCredits && <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
                       {formatSubjectCredits(subject.credits, language)}
-                    </span>
+                    </span>}
                   </div>
                 </div>
               </div>
-              <button
+              {onRemoveSubject && <button
+                type="button"
+                aria-label={`${t('common.remove')}: ${getSubjectDisplayName(subject, language)}`}
                 onClick={() => onRemoveSubject(subject.id)}
-                className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 md:opacity-0 md:group-hover:opacity-100"
+                className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
-              </button>
+              </button>}
             </div>
           ))}
         </div>
       ) : null}
+      </div>
 
-      {!canAddMore && (
+      {onAddSubject && !canAddMore && (
         <p className="text-xs text-gray-500 mt-3 text-center">
           {t('courseManagement.maxReached')}
         </p>

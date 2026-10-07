@@ -1,8 +1,10 @@
+import { SubmissionPanels } from './components/SubmissionPanels';
+import { SubjectAnalyticsPanel } from './components/analytics/SubjectAnalyticsPanel';
 import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ReviewExpiredModal } from './components/ReviewExpiredModal';
-import { CourseManagement, Subject, compareSubjectsByDisplayName, getSubjectDisplayName } from './components/CourseManagement';
+import { Subject, compareSubjectsByDisplayName, getSubjectDisplayName } from './components/CourseManagement';
 import { format, endOfWeek } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import { LanguageSelector } from './i18n/LanguageSelector';
@@ -284,6 +286,7 @@ function AppContent({ participantId }: AppContentProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
   const [showEntryModal, setShowEntryModal] = useState(false);
+  const [analyticsStatus, setAnalyticsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [reviewTime, setReviewTime] = useState(14);
   const [reviewCutoff, setReviewCutoff] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -443,6 +446,7 @@ function AppContent({ participantId }: AppContentProps) {
       setParticipantRole(responseParticipantRole);
       setReviewTime(response.reviewTime);
       setReviewCutoff(response.reviewCutoff);
+      setAnalyticsStatus(Number.isInteger(response.reviewTime) && response.reviewTime >= 0 ? 'ready' : 'error');
       setMissingSubmissionDates(
         new Set(
           (response.missingPeriods ?? [])
@@ -489,11 +493,13 @@ function AppContent({ participantId }: AppContentProps) {
       return;
     }
 
+    setAnalyticsStatus('loading');
     loadSubmissionHistory(participantId).catch((error) => {
       console.error('Workload status lookup failed:', error);
       if (!isMounted) {
         return;
       }
+      setAnalyticsStatus('error');
       setMissingSubmissionDates(new Set());
       setEntries(new Map());
     });
@@ -827,15 +833,15 @@ function AppContent({ participantId }: AppContentProps) {
   }
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
+    <div className="submission-page relative h-dvh overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-2 md:p-4">
       <div className="max-w-7xl h-full mx-auto flex flex-col min-h-0">
-        <div className="mb-2 shrink-0 md:mb-4">
+        <div className="submission-page-header mb-2 shrink-0 md:mb-4">
           <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)]">
             <div className="flex min-w-0 items-center gap-2 md:gap-3">
               <img
                 src={logoMethric}
                 alt={t('app.title')}
-                className="h-9 w-auto max-w-[8.5rem] shrink-0 object-contain sm:max-w-[10rem] md:h-12 md:max-w-[12rem]"
+                className="submission-logo h-9 w-auto max-w-[8.5rem] shrink-0 object-contain sm:max-w-[10rem] md:h-12 md:max-w-[12rem]"
               />
               {participantName && (
                 <span className="line-clamp-2 min-w-0 overflow-hidden text-sm font-semibold leading-tight text-gray-600 md:text-base">
@@ -850,10 +856,9 @@ function AppContent({ participantId }: AppContentProps) {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 grid grid-rows-[minmax(0,1.3fr)_minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)] lg:grid-rows-1">
-          <div className="min-h-0 lg:pr-2">
-            <div className="h-full w-full max-w-5xl mx-auto">
+        <SubmissionPanels calendar={collapsed => (
               <Calendar
+                collapsed={collapsed}
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
                 selectedDate={selectedDate}
@@ -864,19 +869,24 @@ function AppContent({ participantId }: AppContentProps) {
                 subjects={calendarSubjects}
                 entryMode={entryMode}
               />
-            </div>
-          </div>
-
-          <div className="min-w-0 min-h-0">
+        )}>
+          <div className="h-full min-w-0 min-h-0">
             {participantRole === 'faculty' ? (
-              <CourseManagement
+              <SubjectAnalyticsPanel
+                entries={entries}
+                policy={{ reviewDays: analyticsStatus === 'ready' ? reviewTime : 0, restricted: true }}
+                status={analyticsStatus}
                 subjects={WEEKLY_CATEGORIES}
                 title={participantSubjectLabel}
                 availableSubjects={[]}
                 showCredits={false}
+                singleTime
               />
             ) : (
-              <CourseManagement
+              <SubjectAnalyticsPanel
+                entries={entries}
+                policy={{ reviewDays: analyticsStatus === 'ready' ? reviewTime : 0, restricted: true }}
+                status={analyticsStatus}
                 subjects={sortedSubjects}
                 onAddSubject={handleAddSubject}
                 onRemoveSubject={handleRemoveSubject}
@@ -884,7 +894,7 @@ function AppContent({ participantId }: AppContentProps) {
               />
             )}
           </div>
-        </div>
+        </SubmissionPanels>
       </div>
 
       {showEntryModal && isSelectedEntryExpired && (

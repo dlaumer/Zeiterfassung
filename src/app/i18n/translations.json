@@ -1,4 +1,27 @@
 {
+  "panels.expandModules": { "en": "Expand modules", "de": "Module vergrößern" },
+  "panels.restoreCalendar": { "en": "Show calendar", "de": "Kalender anzeigen" },
+  "analytics.totalCompact": { "en": "Total", "de": "Total" },
+  "analytics.weeklyCompact": { "en": "Ø week", "de": "Ø Woche" },
+  "analytics.show": { "en": "Show statistics", "de": "Statistiken anzeigen" },
+  "analytics.hide": { "en": "Hide statistics", "de": "Statistiken ausblenden" },
+  "analytics.period": { "en": "Statistics period", "de": "Statistikzeitraum" },
+  "analytics.today": { "en": "Today", "de": "Heute" },
+  "analytics.week": { "en": "Week", "de": "Woche" },
+  "analytics.month": { "en": "Month", "de": "Monat" },
+  "analytics.all": { "en": "All", "de": "Alle" },
+  "analytics.weeks": { "en": "{{count}} weeks", "de": "{{count}} Wochen" },
+  "analytics.days": { "en": "{{count}} days", "de": "{{count}} Tage" },
+  "analytics.start": { "en": "Start date", "de": "Startdatum" },
+  "analytics.end": { "en": "End date", "de": "Enddatum" },
+  "analytics.restricted": { "en": "During data collection, only the configured review period is available.", "de": "Während der Datenerhebung ist nur die eingestellte Überprüfungsfrist verfügbar." },
+  "analytics.total": { "en": "Total hours", "de": "Totale Stunden" },
+  "analytics.weeklyAverage": { "en": "Weekly average", "de": "Schnitt pro Woche" },
+  "analytics.selfStudyTime": { "en": "Self-study", "de": "Selbststudium" },
+  "analytics.classTime": { "en": "Class time", "de": "Unterricht" },
+  "analytics.loading": { "en": "Loading statistics…", "de": "Statistiken werden geladen…" },
+  "analytics.error": { "en": "Statistics could not be loaded. Please reload the page.", "de": "Statistiken konnten nicht geladen werden. Bitte lade die Seite neu." },
+
   "admin.settings.title": { "en": "Settings", "de": "Einstellungen" },
   "admin.settings.description": { "en": "Manage application settings.", "de": "Anwendungseinstellungen verwalten." },
   "admin.settings.reviewPeriod": { "en": "Review period (days)", "de": "Überprüfungsfrist (Tage)" },
@@ -562,6 +585,10 @@
   "admin.searchPlaceholder": {
     "en": "Search participants, modules, or activity",
     "de": "Teilnehmende, Module oder Aktivitäten suchen"
+  },
+  "admin.clearSearch": {
+    "en": "Clear search",
+    "de": "Suche leeren"
   },
   "admin.filters.title": {
     "en": "Filters",
@@ -1264,24 +1291,28 @@
     "en": "**Class time** includes all contact time with professors, lecturers, doctoral students, and teaching assistants (lectures, exercise sessions, Q&A sessions, exams etc.).\n\n**For the purposes of “Student Workload”, a standard 45-minute class should be recorded as 60 minutes.** Shortly before class, you usually need some time to find the room and may arrive in the lecture hall a few minutes early. During breaks, you may not always be discussing the course content, but this time can hardly be used for anything else. Therefore, each class should generally be rounded up to a full hour, including blocks of consecutive classes (i.e. 1 class = 60 minutes, 2 classes = 120 minutes, etc.) – unless, of course, you leave class early.\n\n**Teaching formats that do not follow the standard lecture schedule (including breaks) are, of course, exempt from this rule.** In such cases, you will be asked to confirm the duration of the class time separately."
   },
   "subject.fractionalClassTimeWarning": {
-    "de": "1 Standard-Lektion soll als 1 volle Stunde erfasst werden. Bitte bestätige die Korrektheit deiner Angaben oder passe den Schieberegler entsprechend an.",
+    "de": "1 Standard-Lektion soll als 1 volle Stunde erfasst werden. Bitte bestätige die Korrektheit deiner Angabe oder passe den Schieberegler entsprechend an.",
     "en": "1 standard lesson should be recorded as 1 full hour. Please confirm that your entry is correct or adjust the slider accordingly."
   },
   "subject.confirmClassTime": {
-    "de": "Angaben bestätigen",
+    "de": "Angabe bestätigen",
     "en": "Confirm entry"
   },
   "subject.weekendContactTimeWarning.faculty": {
-    "de": "Kontaktzeit am Wochenende erfasst. Bitte Korrektheit bestätigen oder Schieberegler entsprechend anpassen.",
-    "en": "Contact time recorded on the weekend. Please confirm that it is correct or adjust the slider accordingly."
+    "de": "Kontaktzeit am Wochenende erfasst. Bitte bestätige die Korrektheit deiner Angabe oder passe den Schieberegler entsprechend an.",
+    "en": "Contact time recorded on the weekend. Please confirm that your entry is correct or adjust the slider accordingly."
   },
   "subject.weekendContactTimeWarning.student": {
-    "de": "Unterrichtszeit am Wochenende erfasst. Bitte Korrektheit bestätigen oder Schieberegler entsprechend anpassen.",
-    "en": "Class time recorded on the weekend. Please confirm that it is correct or adjust the slider accordingly."
+    "de": "Unterrichtszeit am Wochenende erfasst. Bitte bestätige die Korrektheit deiner Angabe oder passe den Schieberegler entsprechend an.",
+    "en": "Class time recorded on the weekend. Please confirm that your entry is correct or adjust the slider accordingly."
   },
   "dailyEntry.pendingClassTimeConfirmations": {
-    "de": "Bitte bestätige oder korrigiere vor dem Absenden die Kontakt- bzw. Unterrichtszeit bei folgenden Modulen oder Kategorien. Klicke auf einen Eintrag, um zum Hinweis zu gelangen.",
-    "en": "Before submitting, please confirm or correct the contact or class time for the following modules or categories. Click an entry to go to the notice."
+    "de": "Bitte bestätige oder korrigiere vor dem Absenden die Unterrichtszeit bei folgenden Modulen. Klicke auf einen Eintrag, um zum Hinweis zu gelangen.",
+    "en": "Before submitting, please confirm or correct the class time for the following modules. Click an entry to go to the notice."
+  },
+  "dailyEntry.pendingClassTimeConfirmation": {
+    "de": "Bitte bestätige oder korrigiere vor dem Absenden die Unterrichtszeit bei folgendem Modul. Klicke auf den Eintrag, um zum Hinweis zu gelangen.",
+    "en": "Before submitting, please confirm or correct the class time for the following module. Click the entry to go to the notice."
   },
   "dailyEntry.confirmRatingsTitle": {
     "de": "Bisherige Bewertungen übernehmen?",

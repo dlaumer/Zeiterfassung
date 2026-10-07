@@ -1,5 +1,6 @@
+import { StatisticsCard } from './analytics/StatisticsCard';
 import { Plus, X, BookOpen, Search } from 'lucide-react';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { useI18n } from '../i18n/i18n';
 
 export interface Subject {
@@ -37,6 +38,9 @@ interface CourseManagementProps {
   title?: string;
   showCredits?: boolean;
   availableSubjects: Subject[];
+  beforeSubjects?: ReactNode;
+  headerControls?: ReactNode;
+  renderSubjectDetails?: (subject: Subject) => ReactNode;
 }
 
 export function CourseManagement({
@@ -44,6 +48,9 @@ export function CourseManagement({
   onAddSubject,
   onRemoveSubject,
   availableSubjects,
+  beforeSubjects,
+  headerControls,
+  renderSubjectDetails,
   title,
   showCredits = true
 }: CourseManagementProps) {
@@ -168,7 +175,7 @@ export function CourseManagement({
   );
 
   return (
-    <div className="h-full min-h-0 min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6 flex flex-col">
+    <div className="module-management h-full min-h-0 min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 pt-8 shadow-sm md:p-6 md:pt-8 lg:pt-6 flex flex-col">
       <div className="mb-4 flex min-w-0 items-center justify-between gap-3 shrink-0">
         <h3 className="min-w-0 font-semibold text-gray-900">{title ?? t('courseManagement.title')}</h3>
         {canAddMore && (
@@ -182,7 +189,9 @@ export function CourseManagement({
         )}
       </div>
 
+      {headerControls && <div className="shrink-0">{headerControls}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      {beforeSubjects}
       {subjects.length === 0 && !showAddSubject ? (
         <div className="text-center py-8">
           <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50 text-gray-400" />
@@ -197,7 +206,14 @@ export function CourseManagement({
       ) : subjects.length > 0 ? (
         <div className="space-y-2">
           {[...subjects].sort(compareSubjectsByDisplayName(language)).map(subject => (
-            <div key={subject.id} className="group flex min-w-0 items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
+            <StatisticsCard key={subject.id} statistics={renderSubjectDetails?.(subject)} actions={onRemoveSubject && <button
+                type="button"
+                aria-label={`${t('common.remove')}: ${getSubjectDisplayName(subject, language)}`}
+                onClick={() => onRemoveSubject(subject.id)}
+                className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>}>
               <div className="flex min-w-0 items-center gap-3">
                 <div
                   className="w-3 h-3 shrink-0 rounded-full"
@@ -219,15 +235,8 @@ export function CourseManagement({
                   </div>
                 </div>
               </div>
-              {onRemoveSubject && <button
-                type="button"
-                aria-label={`${t('common.remove')}: ${getSubjectDisplayName(subject, language)}`}
-                onClick={() => onRemoveSubject(subject.id)}
-                className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>}
-            </div>
+
+            </StatisticsCard>
           ))}
         </div>
       ) : null}

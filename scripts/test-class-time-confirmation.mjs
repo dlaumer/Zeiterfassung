@@ -18,7 +18,7 @@ assert.deepEqual(getClassTimeWarnings(3, undefined, undefined, weekend), [warnin
 assert.deepEqual(getClassTimeWarnings(3, 3, undefined, weekend), []);
 assert.deepEqual(getClassTimeWarnings(3, undefined, 3, weekend), []);
 assert.deepEqual(getClassTimeWarnings(0, undefined, undefined, weekend), []);
-assert.deepEqual(getClassTimeWarnings(3.5, 3, undefined, weekend), ['subject.fractionalClassTimeWarning', warning]);
+assert.deepEqual(getClassTimeWarnings(3.5, 3, undefined, weekend), [warning, 'subject.fractionalClassTimeWarning']);
 assert.deepEqual(getClassTimeWarnings(3, undefined, undefined, { ...weekend, date: new Date(2026, 9, 4) }), [warning]);
 assert.deepEqual(getClassTimeWarnings(3, undefined, undefined, { ...weekend, date: new Date(2026, 9, 5) }), []);
 assert.deepEqual(getClassTimeWarnings(3, undefined, undefined, { ...weekend, entryMode: 'week' }), []);

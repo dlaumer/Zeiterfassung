@@ -1,3 +1,4 @@
+import { WORKLOAD_OPACITY } from '../analytics/workloadColors';
 import { Slider } from '@radix-ui/react-slider';
 import { EditableTimeDisplay } from './EditableTimeDisplay';
 import { FieldHelp } from './FieldHelp';
@@ -183,7 +184,7 @@ export function SubjectTimeInput({
               className="absolute h-full rounded-full transition-all"
               style={{
                 backgroundColor: subjectColor,
-                opacity: 0.35,
+                opacity: WORKLOAD_OPACITY.selfStudyTime,
                 width: `${(Math.min(selfStudyTime, timeSliderMax) / timeSliderMax) * 100}%`
               }}
             />

@@ -1,3 +1,52 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+.submission-panels {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 0.75rem;
+  grid-template-rows: minmax(4.5rem, 1.3fr) minmax(0, 1fr);
+  transition: grid-template-rows 320ms ease-in-out;
+}
+.submission-panels-expanded {
+  grid-template-rows: minmax(4.5rem, 0fr) minmax(0, 1fr);
+}
+@media (min-width: 768px) {
+  .submission-panels { gap: 1rem; }
+}
+@media (min-width: 1024px) {
+  .submission-panels {
+    grid-template-columns: minmax(0, 1fr) clamp(18rem, 26vw, 24rem);
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .submission-panels { transition: none; }
+}
+
+/* Short landscape screens need both panels visible, regardless of width. */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .submission-page {
+    padding: 0.5rem max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+  }
+  .submission-page-header { margin-bottom: 0.25rem; }
+  .submission-page-header .submission-logo { height: 2rem; max-width: 8rem; }
+  .submission-panels {
+    grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0.5rem;
+    transition: none;
+  }
+  .module-drag-handle { display: none; }
+  .module-management,
+  .submission-calendar { padding: 0.625rem; }
+  .module-management > :first-child { margin-bottom: 0.5rem; }
+  .submission-calendar > :first-child { margin-bottom: 0.25rem; }
+  .submission-calendar h2 { font-size: 1rem; }
+  .submission-calendar button { padding: 0.125rem; }
+  .submission-calendar .grid { gap: 0.125rem; }
+  .submission-calendar .calendar-subject-dot { width: 0.25rem; height: 0.25rem; }
+  .submission-calendar .grid > div { padding-block: 0.125rem; font-size: 0.6875rem; }
+}

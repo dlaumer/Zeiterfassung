@@ -716,7 +716,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
 
         </fieldset>
         {showClassTimeWarnings && pendingClassTimes.length > 0 && <div role="alert" className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          <p>{t('dailyEntry.pendingClassTimeConfirmations')}</p>
+          <p>{t(pendingClassTimes.length === 1 ? 'dailyEntry.pendingClassTimeConfirmation' : 'dailyEntry.pendingClassTimeConfirmations')}</p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
             {pendingClassTimes.map(st => {
               const subject = subjects.find(item => item.id === st.subjectId);

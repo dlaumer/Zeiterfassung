@@ -14,6 +14,7 @@ interface CalendarProps {
   subjects: Subject[];
   entryMode?: 'day' | 'week';
   reviewCutoff: string | null;
+  collapsed?: boolean;
 }
 
 interface DotColor {
@@ -21,7 +22,7 @@ interface DotColor {
   opacity: number;
 }
 
-export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff }: CalendarProps) {
+export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff, collapsed = false }: CalendarProps) {
   const { t, language } = useI18n();
   const dateLocale = getDateLocale(language);
   const monthStart = startOfMonth(currentDate);
@@ -101,7 +102,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         {colors.map(({ color, opacity }, index) => (
           <div
             key={`${color}-${index}`}
-            className="w-1 h-1 md:w-2 md:h-2 rounded-full shrink-0"
+            className="calendar-subject-dot w-1 h-1 md:w-2 md:h-2 rounded-full shrink-0"
             style={{ backgroundColor: color, opacity }}
           />
         ))}
@@ -110,8 +111,8 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   );
 
   return (
-    <div className="h-full bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 flex flex-col min-h-0">
-      <div className="flex items-center justify-between mb-2 md:mb-3 shrink-0">
+    <div className={`submission-calendar h-full bg-white rounded-2xl p-3 ${collapsed ? '' : 'md:p-5'} shadow-sm border border-gray-100 flex flex-col min-h-0`}>
+      <div className={`flex items-center justify-between ${collapsed ? '' : 'mb-2 md:mb-3'} shrink-0`}>
         <h2 className="font-semibold text-gray-900 text-lg md:text-xl">
           {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
         </h2>
@@ -131,6 +132,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         </div>
       </div>
 
+      <div aria-hidden={collapsed} className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 motion-reduce:transition-none ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
       {entryMode !== 'week' && (
         <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
           {weekDays.map(day => (
@@ -232,6 +234,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         })}
         </div>
       )}
+      </div>
     </div>
   );
 }

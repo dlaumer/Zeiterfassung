@@ -1220,9 +1220,9 @@ function AdminContent() {
         return true;
       }
 
-      return matchesEventSearch(event, normalizedQuery, overview.subjects);
+      return matchesEventSearch(event, normalizedQuery, overview.subjects, overview.participants);
     });
-  }, [overview.events, overview.subjects, query, selectedEntryMode, selectedRole, showInactiveParticipants]);
+  }, [overview.events, overview.subjects, overview.participants, query, selectedEntryMode, selectedRole, showInactiveParticipants]);
 
   const displayedEvents = useMemo(() => {
     if (!selectedLogDate) {
@@ -1313,8 +1313,22 @@ function AdminContent() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={t('admin.searchPlaceholder')}
-                  className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                  className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-10 text-sm text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
                 />
+                {query && (
+                  <button
+                    type="button"
+                    title={t('admin.clearSearch')}
+                    aria-label={t('admin.clearSearch')}
+                    onClick={(event) => {
+                      setQuery('');
+                      event.currentTarget.parentElement?.querySelector('input')?.focus();
+                    }}
+                    className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                  >
+                    <X aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               <Popover>

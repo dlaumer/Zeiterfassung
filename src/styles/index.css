@@ -2,6 +2,58 @@
 @import './tailwind.css';
 @import './theme.css';
 
+@media (max-width: 639px) {
+  html, body {
+    touch-action: pan-x pan-y;
+  }
+
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+.chart-controls-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.chart-controls-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+.workload-chart-scroll { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+.workload-chart-scroll::-webkit-scrollbar { height: 5px; width: 5px; }
+.workload-chart-scroll::-webkit-scrollbar-track { background: transparent; }
+.workload-chart-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.workload-chart-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.workload-chart-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+@supports selector(::-webkit-scrollbar) { .workload-chart-scroll { scrollbar-width: auto; scrollbar-color: auto; } }
+
+@media (max-width: 1023px) and (orientation: portrait) {
+  .workload-chart-scroll { overflow-x: hidden; }
+  .workload-chart-canvas { width: 100% !important; }
+  .workload-chart-zoom { display: none; }
+}
+
+@media (max-width: 1023px) and (orientation: landscape) {
+  .workload-chart-panel { padding: 0.625rem; }
+  .workload-chart-panel > :first-child { margin-bottom: 0.25rem; }
+  .workload-chart-panel h2 { font-size: 1rem; }
+  .workload-chart-panel > :first-child button { padding-block: 0.25rem; }
+  .workload-chart-scroll { min-height: 120px; padding: 0.375rem; }
+  .workload-chart-canvas { min-height: 120px; }
+}
+.chart-zoom-slider { appearance: none; background: transparent; }
+.chart-zoom-slider::-webkit-slider-runnable-track { height: 3px; border-radius: 999px; background: #e5e7eb; }
+.chart-zoom-slider::-webkit-slider-thumb { appearance: none; height: 10px; width: 10px; margin-top: -3.5px; border-radius: 50%; background: #4f46e5; }
+.chart-zoom-slider::-moz-range-track { height: 3px; border-radius: 999px; background: #e5e7eb; }
+.chart-zoom-slider::-moz-range-thumb { height: 10px; width: 10px; border: 0; border-radius: 50%; background: #4f46e5; }
+
+.workload-bar-segment { cursor: pointer; transition: filter 150ms ease, transform 150ms ease; }
+.workload-bar-segment:hover, .workload-bar-segment:focus-visible { filter: brightness(1.12); transform: translateY(-2px); stroke: #374151; stroke-width: 1; outline: none; }
+@media (prefers-reduced-motion: reduce) { .workload-bar-segment { transition: none; } .workload-bar-segment:hover, .workload-bar-segment:focus-visible { transform: none; } }
+
+.calendar-flip { height: 100%; width: 100%; perspective: 1600px; }
+.calendar-flip-inner { position: relative; height: 100%; width: 100%; transform-style: preserve-3d; transition: transform 650ms cubic-bezier(.22,.7,.2,1); }
+.calendar-flip-open { transform: rotateY(180deg); }
+.calendar-flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.calendar-flip-back { transform: rotateY(180deg); }
+@media (prefers-reduced-motion: reduce) { .calendar-flip-inner { transition: none; } }
+
 .period-filter-scroll {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;

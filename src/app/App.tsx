@@ -1,4 +1,4 @@
-import { SubmissionPanels } from './components/SubmissionPanels';
+
 import { SubjectAnalyticsPanel } from './components/analytics/SubjectAnalyticsPanel';
 import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
@@ -296,6 +296,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [defaultCommuteTime, setDefaultCommuteTime] = useState(0);
   const [participantName, setParticipantName] = useState<string>('');
+  const [participantReferenceDate, setParticipantReferenceDate] = useState<string>();
   const [entryMode, setEntryMode] = useState<EntryMode>('day');
   const [participantRole, setParticipantRole] = useState<ParticipantRole>('student');
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>('loading');
@@ -326,6 +327,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
         }
 
         setParticipantName(participant.name ?? '');
+        setParticipantReferenceDate(participant.referenceDate ? String(participant.referenceDate).slice(0, 10) : undefined);
         setEntryMode(participant.entryMode === 'week' ? 'week' : 'day');
         setParticipantRole(participant.type === 'faculty' ? 'faculty' : 'student');
         setParticipantStatus('valid');
@@ -447,6 +449,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
       const history = response.submissionHistory ?? [];
       setEntryMode(responseEntryMode);
       setParticipantRole(responseParticipantRole);
+      setParticipantReferenceDate(response.referenceDate ? response.referenceDate.slice(0, 10) : undefined);
       setReviewTime(response.reviewTime);
       const authorized = adminView && response.adminViewAuthorized === true;
       setReviewCutoff(authorized ? '0001-01-01' : response.reviewCutoff);
@@ -862,9 +865,22 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
           </div>
         </div>
 
-        <SubmissionPanels calendar={collapsed => (
+        <SubjectAnalyticsPanel
+          entries={entries}
+          policy={{ restricted: !adminView, referenceDate: participantRole === 'student' ? participantReferenceDate : undefined }}
+          status={analyticsStatus}
+          subjects={participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects}
+          title={participantRole === 'faculty' ? participantSubjectLabel : undefined}
+          availableSubjects={participantRole === 'faculty' ? [] : availableSubjects}
+          showCredits={participantRole !== 'faculty'}
+          singleTime={participantRole === 'faculty'}
+          daily={entryMode === 'day'}
+          onAddSubject={participantRole === 'faculty' ? undefined : handleAddSubject}
+          onRemoveSubject={participantRole === 'faculty' ? undefined : handleRemoveSubject}
+          calendar={(collapsed, headerAction) => (
               <Calendar
                 collapsed={collapsed}
+                headerAction={headerAction}
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
                 selectedDate={selectedDate}
@@ -875,32 +891,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
                 subjects={calendarSubjects}
                 entryMode={entryMode}
               />
-        )}>
-          <div className="h-full min-w-0 min-h-0">
-            {participantRole === 'faculty' ? (
-              <SubjectAnalyticsPanel
-                entries={entries}
-                policy={{ restricted: !adminView }}
-                status={analyticsStatus}
-                subjects={WEEKLY_CATEGORIES}
-                title={participantSubjectLabel}
-                availableSubjects={[]}
-                showCredits={false}
-                singleTime
-              />
-            ) : (
-              <SubjectAnalyticsPanel
-                entries={entries}
-                policy={{ restricted: !adminView }}
-                status={analyticsStatus}
-                subjects={sortedSubjects}
-                onAddSubject={handleAddSubject}
-                onRemoveSubject={handleRemoveSubject}
-                availableSubjects={availableSubjects}
-              />
-            )}
-          </div>
-        </SubmissionPanels>
+        )} />
       </div>
 
       {showEntryModal && isSelectedEntryExpired && (

@@ -1,4 +1,4 @@
-// Both frontends use the same build; the deployed hostname selects the API.
-export const pocketBaseUrl = window.location.hostname === 'dev.methric.ch'
-  ? 'https://api-dev.methric.ch'
-  : 'https://api.methric.ch';
+// Vite replaces MODE at build time. Local development uses the dev API too.
+export const pocketBaseUrl = import.meta.env.MODE === 'production'
+  ? 'https://api.methric.ch'
+  : 'https://api-dev.methric.ch';

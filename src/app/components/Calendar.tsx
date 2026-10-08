@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, LockKeyhole } from 'lucide-react';
+import { ReactNode, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
 import { getDateLocale } from '../i18n/dateLocale';
@@ -15,6 +16,7 @@ interface CalendarProps {
   entryMode?: 'day' | 'week';
   reviewCutoff: string | null;
   collapsed?: boolean;
+  headerAction?: ReactNode;
 }
 
 interface DotColor {
@@ -22,7 +24,9 @@ interface DotColor {
   opacity: number;
 }
 
-export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff, collapsed = false }: CalendarProps) {
+export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff, collapsed = false, headerAction }: CalendarProps) {
+  const swipeStart = useRef<{ x: number; y: number; id: number } | null>(null);
+  const suppressClickUntil = useRef(0);
   const { t, language } = useI18n();
   const dateLocale = getDateLocale(language);
   const monthStart = startOfMonth(currentDate);
@@ -112,27 +116,46 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
 
   return (
     <div className={`submission-calendar h-full bg-white rounded-2xl p-3 ${collapsed ? '' : 'md:p-5'} shadow-sm border border-gray-100 flex flex-col min-h-0`}>
-      <div className={`flex items-center justify-between ${collapsed ? '' : 'mb-2 md:mb-3'} shrink-0`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${collapsed ? '' : 'mb-2 md:mb-3'} shrink-0`}>
+        <div className="flex min-w-0 items-center gap-1 md:gap-2">
         <h2 className="font-semibold text-gray-900 text-lg md:text-xl">
           {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
         </h2>
         <div className="flex gap-1 md:gap-2">
           <button
+            type="button" aria-label={t('calendar.previousMonth')}
             onClick={handlePrevMonth}
             className="p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </button>
           <button
+            type="button" aria-label={t('calendar.nextMonth')}
             onClick={handleNextMonth}
             className="p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </button>
         </div>
+        </div>
+        {headerAction}
       </div>
 
-      <div aria-hidden={collapsed} className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 motion-reduce:transition-none ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
+      <div aria-hidden={collapsed} style={{ touchAction: 'pan-y' }}
+        onPointerDown={event => { if (event.isPrimary && event.button === 0) swipeStart.current = { x: event.clientX, y: event.clientY, id: event.pointerId }; }}
+        onPointerCancel={() => { swipeStart.current = null; }}
+        onPointerUp={event => {
+          const start = swipeStart.current;
+          swipeStart.current = null;
+          if (!start || start.id !== event.pointerId) return;
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+          suppressClickUntil.current = Date.now() + 500;
+          if (dx < 0) handleNextMonth(); else handlePrevMonth();
+        }}
+        onClickCapture={event => { if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 motion-reduce:transition-none ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
       {entryMode !== 'week' && (
         <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
           {weekDays.map(day => (

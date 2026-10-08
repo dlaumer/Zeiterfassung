@@ -2,14 +2,17 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/i18n';
 
 /** Keep gestures on the handle so scrolling module content remains native. */
-export function SubmissionPanels({ calendar, children }: {
+export function SubmissionPanels({ calendar, children, chartActive = false, expandRequest = 0 }: {
   calendar: (collapsed: boolean) => ReactNode;
   children: ReactNode;
+  chartActive?: boolean;
+  expandRequest?: number;
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1023px) and (orientation: portrait)').matches);
   const startY = useRef<number | null>(null);
+  useEffect(() => { setExpanded(false); startY.current = null; }, [expandRequest]);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 1023px) and (orientation: portrait)');
     const update = () => { setMobile(query.matches); setExpanded(false); };
@@ -25,7 +28,7 @@ export function SubmissionPanels({ calendar, children }: {
       <div className="relative flex min-w-0 min-h-0 flex-col">
         <div role="separator" tabIndex={0} aria-orientation="horizontal"
           aria-valuemin={0} aria-valuemax={1} aria-valuenow={collapsed ? 1 : 0}
-          aria-label={t(collapsed ? 'panels.restoreCalendar' : 'panels.expandModules')}
+          aria-label={t(collapsed ? chartActive ? 'panels.restoreStatistics' : 'panels.restoreCalendar' : 'panels.expandModules')}
           onPointerDown={event => {
             if (!event.isPrimary || event.button !== 0) return;
             startY.current = event.clientY;

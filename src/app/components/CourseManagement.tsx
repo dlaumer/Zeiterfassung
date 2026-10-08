@@ -41,6 +41,9 @@ interface CourseManagementProps {
   beforeSubjects?: ReactNode;
   headerControls?: ReactNode;
   renderSubjectDetails?: (subject: Subject) => ReactNode;
+  onOpenStatistics?: (subject: Subject) => void;
+  renderSubjectActions?: (subject: Subject) => ReactNode;
+  isSubjectHidden?: (subject: Subject) => boolean;
 }
 
 export function CourseManagement({
@@ -51,6 +54,9 @@ export function CourseManagement({
   beforeSubjects,
   headerControls,
   renderSubjectDetails,
+  onOpenStatistics,
+  renderSubjectActions,
+  isSubjectHidden,
   title,
   showCredits = true
 }: CourseManagementProps) {
@@ -206,15 +212,15 @@ export function CourseManagement({
       ) : subjects.length > 0 ? (
         <div className="space-y-2">
           {[...subjects].sort(compareSubjectsByDisplayName(language)).map(subject => (
-            <StatisticsCard key={subject.id} statistics={renderSubjectDetails?.(subject)} actions={onRemoveSubject && <button
+            <StatisticsCard key={subject.id} statistics={renderSubjectDetails?.(subject)} onOpenStatistics={onOpenStatistics ? () => onOpenStatistics(subject) : undefined} statisticsLabel={`${t('analytics.show')}: ${getSubjectDisplayName(subject, language)}`} actions={<>{renderSubjectActions?.(subject)}{onRemoveSubject && <button
                 type="button"
                 aria-label={`${t('common.remove')}: ${getSubjectDisplayName(subject, language)}`}
                 onClick={() => onRemoveSubject(subject.id)}
                 className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
-              </button>}>
-              <div className="flex min-w-0 items-center gap-3">
+              </button>}</>}>
+              <div className={`flex min-w-0 items-center gap-3 ${isSubjectHidden?.(subject) ? 'opacity-40 grayscale' : ''}`}>
                 <div
                   className="w-3 h-3 shrink-0 rounded-full"
                   style={{ backgroundColor: subject.color }}

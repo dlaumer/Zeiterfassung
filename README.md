@@ -11,14 +11,21 @@
 
 ## Frontend API routing
 
-The shared configuration in `src/pocketbaseConfig.ts` selects
-`https://api-dev.methric.ch` when served from `dev.methric.ch`.
-Other hosts, including localhost, retain `https://api.methric.ch`.
-This applies to both the participant frontend and the admin panel.
+The shared configuration in `src/pocketbaseConfig.ts` selects the backend at
+build time for both the participant frontend and the admin panel.
 
-Run `npm run build` and upload the contents of `dist` to
-`/var/www/methric-dev` for the development frontend. The same build can be
-deployed to production; the hostname determines which backend it uses.
+| Command | Backend | Output |
+| --- | --- | --- |
+| `npm run dev` | `https://api-dev.methric.ch` | Local development server |
+| `npm run build:dev` | `https://api-dev.methric.ch` | `dist/dev` |
+| `npm run build:prod` (or `npm run build`) | `https://api.methric.ch` | `dist/prod` |
+| `npm run build:all` | Both builds above | `dist/dev` and `dist/prod` |
+
+Upload only the contents of `dist/dev` to `/var/www/methric-dev`.
+Upload only the contents of `dist/prod` to the production frontend directory.
+Do not upload the entire `dist` directory: older files may remain at its root.
+The build determines the backend regardless of hostname, including when previewed
+locally. `npm run dev` always uses the dev API with its default development mode.
 
 ## Reviewing submissions
 

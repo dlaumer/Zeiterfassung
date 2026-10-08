@@ -637,7 +637,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
           </div>}
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-base font-medium text-gray-700 flex items-center gap-2">
                 {t('dailyEntry.reliability')}
                 <FieldHelp title={t('dailyEntry.reliability')} text={t(`fieldHelp.reliability.${participantRole}`)} />

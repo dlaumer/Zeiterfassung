@@ -139,7 +139,7 @@ export function SubjectTimeInput({
               }}
             />
           </div>
-          <Thumb aria-label={singleTimeLabel ?? `${subjectName}: ${t('subject.classTime')}`}
+          <Thumb aria-label={isSingleTimeMode ? subjectName : `${subjectName}: ${t('subject.classTime')}`}
             className="block w-5 h-5 bg-white border-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             style={{
               borderColor: subjectColor,

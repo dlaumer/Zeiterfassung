@@ -1,19 +1,21 @@
 import { AnalyticsPolicy, DateRange, PeriodPreset } from '../../analytics/workload';
 import { useI18n } from '../../i18n/i18n';
+import { ReactNode } from 'react';
 
 interface Props {
   policy: AnalyticsPolicy;
   value: PeriodPreset;
   range: DateRange;
   onChange: (preset: PeriodPreset, range?: DateRange) => void;
+  trailingControl?: ReactNode;
 }
 
-export function TimeRangeFilter({ policy, value, range, onChange }: Props) {
+export function TimeRangeFilter({ policy, value, range, onChange, trailingControl }: Props) {
   const { t } = useI18n();
   return (
-    <div className="mb-3 space-y-1.5" role="group" aria-label={t('analytics.period')}
+    <div className="chart-controls-scroll mb-1 flex shrink-0 flex-nowrap items-center gap-x-2 overflow-x-auto lg:mb-3 lg:flex-wrap lg:gap-y-2" role="group" aria-label={t('analytics.period')} tabIndex={0}
       title={policy.restricted ? t('analytics.restricted') : undefined}>
-      <div className="period-filter-scroll flex flex-nowrap gap-1.5 overflow-x-auto pb-1" tabIndex={0} aria-label={t('analytics.period')}>
+      <div className="flex shrink-0 flex-nowrap gap-1.5" aria-label={t('analytics.period')}>
         {(['last7', 'last14', 'last30', 'all'] as PeriodPreset[]).map(preset => (
           <button key={preset} type="button" disabled={policy.restricted && preset !== 'last14'}
             aria-pressed={value === preset} onClick={() => onChange(preset)}
@@ -22,8 +24,8 @@ export function TimeRangeFilter({ policy, value, range, onChange }: Props) {
           </button>
         ))}
       </div>
-      <div className="flex min-w-0 items-center gap-1.5">
-        <input type="date" aria-label={t('analytics.start')} value={range.start} max={range.end}
+      <div className="flex w-64 shrink-0 items-center gap-1.5">
+        <input type="date" aria-label={t('analytics.start')} value={range.start} min={policy.referenceDate} max={range.end}
           disabled={policy.restricted} onChange={event => event.target.value && onChange('custom', { ...range, start: event.target.value })}
           className="w-0 min-w-0 max-w-32 flex-1 rounded-lg border border-gray-200 px-1.5 py-1.5 text-xs disabled:bg-gray-50 disabled:text-gray-400" />
         <span aria-hidden="true" className="text-gray-400">–</span>
@@ -31,6 +33,7 @@ export function TimeRangeFilter({ policy, value, range, onChange }: Props) {
           disabled={policy.restricted} onChange={event => event.target.value && onChange('custom', { ...range, end: event.target.value })}
           className="w-0 min-w-0 max-w-32 flex-1 rounded-lg border border-gray-200 px-1.5 py-1.5 text-xs disabled:bg-gray-50 disabled:text-gray-400" />
       </div>
+      {trailingControl}
     </div>
   );
 }

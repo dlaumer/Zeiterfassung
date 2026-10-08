@@ -116,6 +116,8 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
 
     const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
+    const adminOverride = body.adminView === true && !!e.auth && e.auth.collection().name === "admins"
+    if (body.adminView === true && !adminOverride) return e.json(401, { message: "Admin authentication required" })
 
     const participantId = String(body.participantId || "").trim()
     const weekStart = String(body.weekStart || "").trim()
@@ -195,7 +197,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             ))
 
             require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "week", periodStart, existingWeekSubmissions)
-            const changes = review.prepare(txApp, existingWeekSubmissions, body, periodEndStr)
+            const changes = review.prepare(txApp, existingWeekSubmissions, body, periodEndStr, adminOverride)
             const submissionMode = existingWeekSubmissions.length > 0 ? "correction" : "initial"
             const replacesSubmissionId = changes.latestId
 
@@ -373,6 +375,8 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
 
     const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
+    const adminOverride = body.adminView === true && !!e.auth && e.auth.collection().name === "admins"
+    if (body.adminView === true && !adminOverride) return e.json(401, { message: "Admin authentication required" })
 
     const participantId = String(body.participantId || "").trim()
     const weekStart = String(body.weekStart || "").trim()
@@ -551,6 +555,8 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
 
     const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
+    const adminOverride = body.adminView === true && !!e.auth && e.auth.collection().name === "admins"
+    if (body.adminView === true && !adminOverride) return e.json(401, { message: "Admin authentication required" })
 
     const participantId = String(body.participantId || "").trim()
     const date = String(body.date || "").trim()
@@ -629,7 +635,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             ))
 
             require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "day", dayStart, existingDaySubmissions)
-            const changes = review.prepare(txApp, existingDaySubmissions, body, dayEndStr)
+            const changes = review.prepare(txApp, existingDaySubmissions, body, dayEndStr, adminOverride)
             const submissionMode = existingDaySubmissions.length > 0 ? "correction" : "initial"
             const replacesSubmissionId = changes.latestId
 
@@ -802,6 +808,8 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
 
     const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
+    const adminOverride = body.adminView === true && !!e.auth && e.auth.collection().name === "admins"
+    if (body.adminView === true && !adminOverride) return e.json(401, { message: "Admin authentication required" })
 
     const participantId = String(body.participantId || "").trim()
     const date = String(body.date || "").trim()

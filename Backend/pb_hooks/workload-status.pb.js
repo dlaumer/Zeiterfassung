@@ -5,6 +5,9 @@
 
 
 routerAdd("GET", "/api/workload-status", (e) => {
+    const adminRequested = String(e.requestInfo().query["adminView"] || "") === "true"
+    const adminViewAuthorized = adminRequested && !!e.auth && e.auth.collection().name === "admins"
+    if (adminRequested && !adminViewAuthorized) return e.json(401, { message: "Admin authentication required" })
 
 
     const startOfDay = function (date) {
@@ -479,6 +482,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
     return e.json(200, {
         ...reviewSettings,
+        adminViewAuthorized,
         participant: {
             id: participant.id,
             entryMode: entryMode,

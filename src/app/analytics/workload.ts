@@ -1,8 +1,8 @@
-import { addDays, differenceInCalendarDays, format, parseISO, startOfMonth, startOfWeek } from 'date-fns';
+import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 
 export interface DateRange { start: string; end: string }
-export type PeriodPreset = 'review' | 'today' | 'week' | 'month' | 'all' | 'custom';
-export interface AnalyticsPolicy { reviewDays: number; restricted: boolean }
+export type PeriodPreset = 'last7' | 'last14' | 'last30' | 'all' | 'custom';
+export interface AnalyticsPolicy { restricted: boolean }
 export interface WorkloadEntry {
   date: string;
   skipped?: boolean;
@@ -15,21 +15,21 @@ export interface WorkloadMetrics {
 
 const dateKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
-/** Calendar days, inclusive of today. A zero-day review setting means today only. */
-export function resolveDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, today: string, earliest: string, custom?: DateRange): DateRange {
-  const end = today;
-  const anchor = parseISO(today);
-  if (policy.restricted || preset === 'review') {
-    if (!Number.isInteger(policy.reviewDays) || policy.reviewDays < 0) throw new Error('Invalid review period');
-    return { start: dateKey(addDays(anchor, 1 - Math.max(1, policy.reviewDays))), end };
-  }
-  switch (preset) {
-    case 'today': return { start: end, end };
-    case 'week': return { start: dateKey(startOfWeek(anchor, { weekStartsOn: 1 })), end };
-    case 'month': return { start: dateKey(startOfMonth(anchor)), end };
-    case 'all': return { start: earliest < today ? earliest : today, end };
-    case 'custom': return custom && custom.start <= custom.end ? custom : { start: end, end };
-  }
+export const ROLLING_PERIOD_DAYS = { last7: 7, last14: 14, last30: 30 } as const;
+
+/** Rolling calendar days inclusive of the latest recorded entry date. */
+export function resolveDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, latest: string, earliest: string, custom?: DateRange): DateRange {
+  const selected = policy.restricted ? 'last14' : preset;
+  if (selected === 'all') return { start: earliest < latest ? earliest : latest, end: latest };
+  if (selected === 'custom') return custom && custom.start <= custom.end ? custom : { start: latest, end: latest };
+  return { start: dateKey(addDays(parseISO(latest), 1 - ROLLING_PERIOD_DAYS[selected])), end: latest };
+}
+
+/** Corrections to older entries must not move the window back. Skipped entries
+ * still count as submitted dates; only an empty history uses the fallback date. */
+export function resolveEntryDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, entries: Iterable<WorkloadEntry>, fallbackDate: string, custom?: DateRange): DateRange {
+  const dates = Array.from(entries, entry => entry.date).sort();
+  return resolveDateRange(preset, policy, dates[dates.length - 1] ?? fallbackDate, dates[0] ?? fallbackDate, custom);
 }
 
 /** Input contains effective totals, never raw correction records. Weekly entries

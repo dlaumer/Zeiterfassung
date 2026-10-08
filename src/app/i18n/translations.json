@@ -1,4 +1,8 @@
 {
+  "analytics.last7": { "en": "Last 7 days", "de": "Letzte 7 Tage" },
+  "analytics.last14": { "en": "Last 14 days", "de": "Letzte 14 Tage" },
+  "analytics.last30": { "en": "Last 30 days", "de": "Letzte 30 Tage" },
+  "admin.participant.openAsAdmin": { "en": "Open link as administrator", "de": "Link als Administrator öffnen" },
   "panels.expandModules": { "en": "Expand modules", "de": "Module vergrößern" },
   "panels.restoreCalendar": { "en": "Show calendar", "de": "Kalender anzeigen" },
   "analytics.totalCompact": { "en": "Total", "de": "Total" },
@@ -14,7 +18,7 @@
   "analytics.days": { "en": "{{count}} days", "de": "{{count}} Tage" },
   "analytics.start": { "en": "Start date", "de": "Startdatum" },
   "analytics.end": { "en": "End date", "de": "Enddatum" },
-  "analytics.restricted": { "en": "During data collection, only the configured review period is available.", "de": "Während der Datenerhebung ist nur die eingestellte Überprüfungsfrist verfügbar." },
+  "analytics.restricted": { "en": "Only the last 14 days are available in the participant view.", "de": "In der Teilnehmeransicht sind nur die letzten 14 Tage verfügbar." },
   "analytics.total": { "en": "Total hours", "de": "Totale Stunden" },
   "analytics.weeklyAverage": { "en": "Weekly average", "de": "Schnitt pro Woche" },
   "analytics.selfStudyTime": { "en": "Self-study", "de": "Selbststudium" },

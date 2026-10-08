@@ -1,5 +1,5 @@
 import { WORKLOAD_OPACITY } from '../analytics/workloadColors';
-import { Slider } from '@radix-ui/react-slider';
+import { Slider, Thumb } from '@radix-ui/react-slider';
 import { EditableTimeDisplay } from './EditableTimeDisplay';
 import { FieldHelp } from './FieldHelp';
 import { X } from 'lucide-react';
@@ -139,12 +139,10 @@ export function SubjectTimeInput({
               }}
             />
           </div>
-          <div
-            className="block w-5 h-5 bg-white border-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+          <Thumb aria-label={singleTimeLabel ?? `${subjectName}: ${t('subject.classTime')}`}
+            className="block w-5 h-5 bg-white border-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             style={{
               borderColor: subjectColor,
-              position: 'absolute',
-              left: `calc(${(Math.min(classTime, timeSliderMax) / timeSliderMax) * 100}% - 10px)`
             }}
           />
         </Slider>
@@ -189,13 +187,11 @@ export function SubjectTimeInput({
               }}
             />
           </div>
-          <div
-            className="block w-5 h-5 bg-white border-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+          <Thumb aria-label={`${subjectName}: ${t('subject.selfStudy')}`}
+            className="block w-5 h-5 bg-white border-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             style={{
               borderColor: subjectColor,
               opacity: 0.65,
-              position: 'absolute',
-              left: `calc(${(Math.min(selfStudyTime, timeSliderMax) / timeSliderMax) * 100}% - 10px)`
             }}
           />
         </Slider>

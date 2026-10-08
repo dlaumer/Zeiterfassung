@@ -2,6 +2,34 @@
 @import './tailwind.css';
 @import './theme.css';
 
+.period-filter-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.period-filter-scroll::-webkit-scrollbar { height: 4px; }
+.period-filter-scroll::-webkit-scrollbar-track { background: transparent; }
+.period-filter-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.period-filter-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+@supports selector(::-webkit-scrollbar) {
+  .period-filter-scroll { scrollbar-width: auto; scrollbar-color: auto; }
+}
+
+.module-list-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.module-list-scroll::-webkit-scrollbar { width: 5px; }
+.module-list-scroll::-webkit-scrollbar-track { background: transparent; }
+.module-list-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.module-list-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.module-list-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+@supports selector(::-webkit-scrollbar) {
+  .module-list-scroll { scrollbar-width: auto; scrollbar-color: auto; }
+}
+
 .submission-panels {
   display: grid;
   flex: 1;

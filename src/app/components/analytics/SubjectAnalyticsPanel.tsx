@@ -1,7 +1,7 @@
 import { ComponentProps, useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ChartNoAxesColumn, ChevronDown, ChevronUp } from 'lucide-react';
-import { aggregateWorkload, AnalyticsPolicy, DateRange, PeriodPreset, resolveDateRange, WorkloadEntry } from '../../analytics/workload';
+import { aggregateWorkload, AnalyticsPolicy, DateRange, PeriodPreset, resolveEntryDateRange, WorkloadEntry } from '../../analytics/workload';
 import { CourseManagement } from '../CourseManagement';
 import { TimeRangeFilter } from './TimeRangeFilter';
 import { SubjectStatistics } from './SubjectStatistics';
@@ -17,7 +17,7 @@ type Props = ComponentProps<typeof CourseManagement> & {
 export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = false, ...courseProps }: Props) {
   const { t } = useI18n();
   const [showStatistics, setShowStatistics] = useState(false);
-  const [preset, setPreset] = useState<PeriodPreset>('review');
+  const [preset, setPreset] = useState<PeriodPreset>('last14');
   const [custom, setCustom] = useState<DateRange>();
   const [today, setToday] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   useEffect(() => {
@@ -26,9 +26,8 @@ export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = fa
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, []);
-  const selectedPreset = policy.restricted ? 'review' : preset;
-  const earliest = [...entries.keys()].sort()[0] ?? today;
-  const range = resolveDateRange(selectedPreset, policy, today, earliest, custom);
+  const selectedPreset = policy.restricted ? 'last14' : preset;
+  const range = resolveEntryDateRange(selectedPreset, policy, entries.values(), today, custom);
   const metrics = aggregateWorkload(entries.values(), range);
   return <CourseManagement {...courseProps}
     headerControls={

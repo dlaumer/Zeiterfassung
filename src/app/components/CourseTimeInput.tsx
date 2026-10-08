@@ -1,4 +1,4 @@
-import { Slider } from '@radix-ui/react-slider';
+import { Slider, Thumb } from '@radix-ui/react-slider';
 import { Clock } from 'lucide-react';
 import { EditableTimeDisplay } from './EditableTimeDisplay';
 
@@ -51,12 +51,8 @@ export function CourseTimeInput({ courseName, hours, onChange, onRemove }: Cours
               style={{ width: `${(hours / 12) * 100}%` }}
             />
           </div>
-          <div
-            className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-            style={{
-              position: 'absolute',
-              left: `calc(${(hours / 12) * 100}% - 10px)`
-            }}
+          <Thumb aria-label={courseName}
+            className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           />
         </Slider>
       </div>

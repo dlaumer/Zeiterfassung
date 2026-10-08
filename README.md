@@ -9,7 +9,33 @@
 
   Run `npm run dev` to start the development server.
 
+## Frontend API routing
+
+The shared configuration in `src/pocketbaseConfig.ts` selects
+`https://api-dev.methric.ch` when served from `dev.methric.ch`.
+Other hosts, including localhost, retain `https://api.methric.ch`.
+This applies to both the participant frontend and the admin panel.
+
+Run `npm run build` and upload the contents of `dist` to
+`/var/www/methric-dev` for the development frontend. The same build can be
+deployed to production; the hostname determines which backend it uses.
+
 ## Reviewing submissions
+
+### Administrator participant view
+
+The participant action **Open link as administrator** opens `/admin/<participantId>/`.
+It reuses the dashboard's saved admin session; other browsers must sign in with an
+`admins` account. The normal participant URL keeps its existing restrictions.
+The admin view enables every statistics period and corrections to older entries.
+Correction validation and stale-submission checks still apply.
+
+Deploy the frontend together with `Backend/pb_hooks/create-daily-submission.pb.js`,
+`Backend/pb_hooks/submission-review.js`, and `Backend/pb_hooks/workload-status.pb.js`.
+No new migration is needed for this feature. The API checks the authenticated
+record's collection before honoring `adminView`; a URL or request flag alone does
+not grant the override. Run `node scripts/test-admin-entry-view.mjs` for the
+disposable-database authorization and correction tests.
 
 Deploy the frontend together with `Backend/pb_hooks` and apply migration
 `1788912000_submission_corrections.js`. It adds the `correction` submission mode,

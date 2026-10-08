@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { SocialBatteryInput } from './SocialBatteryInput';
 import { SubjectTimeInput } from './SubjectTimeInput';
 import { getClassTimeWarnings } from './classTimeConfirmation.mjs';
-import { Slider } from '@radix-ui/react-slider';
+import { Slider, Thumb } from '@radix-ui/react-slider';
 import { useI18n } from '../i18n/i18n';
 import { getDateLocale } from '../i18n/dateLocale';
 import { Subject, getSubjectDisplayName } from './CourseManagement';
@@ -556,9 +556,8 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
                   style={{ width: `${adminEffortMax > 0 ? (adminEffort / adminEffortMax) * 100 : 0}%` }}
                 />
               </div>
-              <div
-                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{ position: 'absolute', left: `calc(${adminEffortMax > 0 ? (adminEffort / adminEffortMax) * 100 : 0}% - 10px)` }}
+              <Thumb aria-label={t('dailyEntry.adminEffort')}
+                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
               />
             </Slider>
           </div>}
@@ -593,9 +592,8 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
                   style={{ width: `${(commuteTime / commuteTimeSliderMax) * 100}%` }}
                 />
               </div>
-              <div
-                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{ position: 'absolute', left: `calc(${(commuteTime / commuteTimeSliderMax) * 100}% - 10px)` }}
+              <Thumb aria-label={t('dailyEntry.commute')}
+                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
               />
             </Slider>
           </div>}
@@ -632,9 +630,8 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
                   style={{ width: `${facultyWorkloadTotal > 0 ? (structuralChanges / facultyWorkloadTotal) * 100 : 0}%` }}
                 />
               </div>
-              <div
-                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                style={{ position: 'absolute', left: `calc(${facultyWorkloadTotal > 0 ? (structuralChanges / facultyWorkloadTotal) * 100 : 0}% - 10px)` }}
+              <Thumb aria-label={t('weeklyEntry.structuralChanges')}
+                className="block w-5 h-5 bg-white border-2 border-indigo-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
               />
             </Slider>
           </div>}

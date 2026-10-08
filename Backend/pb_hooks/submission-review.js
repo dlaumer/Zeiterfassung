@@ -40,12 +40,12 @@ function assertEditable(app, periodEnd) {
     }
 }
 
-function prepare(app, group, body, periodEnd) {
+function prepare(app, group, body, periodEnd, adminOverride) {
     const latest = group.slice().sort(newestFirst)[0]
     if (String(body.expectedSubmissionId || "") !== (latest ? latest.id : "")) {
         throw new Error("This entry has changed. Reload the page before saving.")
     }
-    if (latest) assertEditable(app, periodEnd)
+    if (latest && !adminOverride) assertEditable(app, periodEnd)
     if (body.inputMode !== "totals") throw new Error("Please reload the page to use the updated entry form.")
     const selected = effective(group)
     const totals = {}

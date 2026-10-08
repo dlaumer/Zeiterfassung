@@ -25,6 +25,6 @@ favicon.href = logoSmall;
 document.head.appendChild(favicon);
 
 createRoot(document.getElementById("root")!).render(
-  isAdminRoute ? <AdminApp /> : routeSegment ? <App participantId={routeSegment} /> : <LandingPage />,
+  isAdminRoute ? <AdminApp participantId={window.location.pathname.split('/').filter(Boolean)[1]} /> : routeSegment ? <App participantId={routeSegment} /> : <LandingPage />,
 );
   

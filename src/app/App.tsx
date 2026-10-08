@@ -9,6 +9,7 @@ import { format, endOfWeek } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import { LanguageSelector } from './i18n/LanguageSelector';
 import PocketBase from 'pocketbase';
+import { pocketBaseUrl } from '../pocketbaseConfig';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { CircleHelp, Mail } from 'lucide-react';
@@ -120,6 +121,7 @@ interface WorkloadStatusHistoryEntry {
 }
 
 interface WorkloadStatusResponse {
+  adminViewAuthorized?: boolean;
   reviewTime: number;
   reviewCutoff: string;
   participant?: {
@@ -232,6 +234,7 @@ function shouldMarkDeletedPeriodMissing(date: string, entryMode: EntryMode) {
 }
 
 interface AppContentProps {
+  adminView?: boolean;
   participantId: string | null;
 }
 
@@ -278,8 +281,8 @@ function ContactInfoButton() {
   );
 }
 
-function AppContent({ participantId }: AppContentProps) {
-  const pb = new PocketBase('https://api.methric.ch');
+function AppContent({ participantId, adminView = false }: AppContentProps) {
+  const pb = new PocketBase(pocketBaseUrl);
 
   const { t, language } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -432,7 +435,7 @@ function AppContent({ participantId }: AppContentProps) {
 
     async function loadSubmissionHistory(id: string) {
       const response = await pb.send<WorkloadStatusResponse>('/api/workload-status', {
-        query: { participantId: id },
+        query: { participantId: id, ...(adminView ? { adminView: true } : {}) },
       });
 
       if (!isMounted) {
@@ -445,7 +448,8 @@ function AppContent({ participantId }: AppContentProps) {
       setEntryMode(responseEntryMode);
       setParticipantRole(responseParticipantRole);
       setReviewTime(response.reviewTime);
-      setReviewCutoff(response.reviewCutoff);
+      const authorized = adminView && response.adminViewAuthorized === true;
+      setReviewCutoff(authorized ? '0001-01-01' : response.reviewCutoff);
       setAnalyticsStatus(Number.isInteger(response.reviewTime) && response.reviewTime >= 0 ? 'ready' : 'error');
       setMissingSubmissionDates(
         new Set(
@@ -562,7 +566,7 @@ function AppContent({ participantId }: AppContentProps) {
 
     const response = await pb.send<SaveSubmissionResponse>(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
       method: 'POST',
-      body: { ...payload, inputMode: 'totals', expectedSubmissionId: entries.get(entry.date)?.latestSubmissionId ?? '' },
+      body: { ...payload, adminView, inputMode: 'totals', expectedSubmissionId: entries.get(entry.date)?.latestSubmissionId ?? '' },
     });
 
     // The API preserves omitted modules. Keep their data locally as well so
@@ -609,11 +613,13 @@ function AppContent({ participantId }: AppContentProps) {
       body: entryMode === 'week'
         ? {
           participantId,
+          adminView,
           weekStart: date,
           expectedSubmissionId: entries.get(date)?.latestSubmissionId ?? '',
         }
         : {
           participantId,
+          adminView,
           date,
           expectedSubmissionId: entries.get(date)?.latestSubmissionId ?? '',
         },
@@ -874,7 +880,7 @@ function AppContent({ participantId }: AppContentProps) {
             {participantRole === 'faculty' ? (
               <SubjectAnalyticsPanel
                 entries={entries}
-                policy={{ reviewDays: analyticsStatus === 'ready' ? reviewTime : 0, restricted: true }}
+                policy={{ restricted: !adminView }}
                 status={analyticsStatus}
                 subjects={WEEKLY_CATEGORIES}
                 title={participantSubjectLabel}
@@ -885,7 +891,7 @@ function AppContent({ participantId }: AppContentProps) {
             ) : (
               <SubjectAnalyticsPanel
                 entries={entries}
-                policy={{ reviewDays: analyticsStatus === 'ready' ? reviewTime : 0, restricted: true }}
+                policy={{ restricted: !adminView }}
                 status={analyticsStatus}
                 subjects={sortedSubjects}
                 onAddSubject={handleAddSubject}
@@ -953,13 +959,16 @@ function AppContent({ participantId }: AppContentProps) {
 }
 
 interface AppProps {
+  // Supplied only by AdminApp after server verification of the admin session.
+  // Statistics availability must not depend on the workload API's version.
+  adminView?: boolean;
   participantId: string | null;
 }
 
-export default function App({ participantId }: AppProps) {
+export default function App({ participantId, adminView = false }: AppProps) {
   return (
     <I18nProvider>
-      <AppContent participantId={participantId} />
+      <AppContent participantId={participantId} adminView={adminView} />
     </I18nProvider>
   );
 }

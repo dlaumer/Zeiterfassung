@@ -1,5 +1,7 @@
+import App from '../app/App';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
+import { pocketBaseUrl } from '../pocketbaseConfig';
 import { AdminSettingsDialog } from './AdminSettingsDialog';
 import { matchesEventSearch } from './eventSearch.mjs';
 import {
@@ -48,7 +50,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '../app/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '../app/components/ui/tabs';
 
-const pocketBaseUrl = 'https://api.methric.ch';
 const pb = new PocketBase(`${pocketBaseUrl}/`);
 
 interface AdminParticipant {
@@ -615,6 +616,12 @@ function ParticipantActionMenu({
           <ExternalLink className="h-4 w-4" />
           {t('admin.participant.getLink')}
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <a href={'/admin/' + encodeURIComponent(participant.id) + '/'} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+            <ExternalLink className="h-4 w-4" />
+            {t('admin.participant.openAsAdmin')}
+          </a>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSendInvitation(participant)} className="cursor-pointer">
           <Mail className="h-4 w-4" />
           {t('admin.participant.sendInvitation')}
@@ -692,7 +699,8 @@ function SubjectActionMenu({ subject, onExportData, onEdit, onRemove }: SubjectA
   );
 }
 
-function AdminContent() {
+function AdminContent({ participantId }: { participantId?: string }) {
+  const [sessionChecked, setSessionChecked] = useState(!participantId);
   const [showSettings, setShowSettings] = useState(false);
   const { t, language } = useI18n();
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
@@ -1107,6 +1115,20 @@ function AdminContent() {
   }
 
   useEffect(() => {
+    if (!participantId) return;
+    let active = true;
+    async function verifySession() {
+      try {
+        if (pb.authStore.isValid && pb.authStore.record?.collectionName === 'admins') await pb.collection('admins').authRefresh();
+      } catch { pb.authStore.clear(); }
+      finally { if (active) setSessionChecked(true); }
+    }
+    verifySession();
+    const timer = window.setInterval(() => { if (!pb.authStore.isValid) pb.authStore.clear(); }, 15000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [participantId]);
+
+  useEffect(() => {
     const unsubscribe = pb.authStore.onChange(() => {
       setAuthRecord(pb.authStore.record);
     }, true);
@@ -1117,8 +1139,8 @@ function AdminContent() {
   }, []);
 
   useEffect(() => {
-    loadOverview();
-  }, [isAdminAuthenticated]);
+    if (!participantId) loadOverview();
+  }, [isAdminAuthenticated, participantId]);
 
   useEffect(() => {
     if (!actionMessage) {
@@ -1232,6 +1254,8 @@ function AdminContent() {
     return filteredEvents.filter((event) => event.periodDate === selectedLogDate);
   }, [filteredEvents, selectedLogDate]);
 
+  if (!sessionChecked) return <div role="status">{t('analytics.loading')}</div>;
+
   if (!isAdminAuthenticated) {
     return (
       <div className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4 text-gray-950">
@@ -1292,6 +1316,8 @@ function AdminContent() {
       </div>
     );
   }
+
+  if (participantId) return <App participantId={participantId} adminView />;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-gray-950">
@@ -2236,10 +2262,10 @@ function AdminContent() {
   );
 }
 
-export default function AdminApp() {
+export default function AdminApp({ participantId }: { participantId?: string }) {
   return (
     <I18nProvider>
-      <AdminContent />
+      <AdminContent participantId={participantId} />
     </I18nProvider>
   );
 }

@@ -190,7 +190,7 @@ export function CourseManagement({
       </div>
 
       {headerControls && <div className="shrink-0">{headerControls}</div>}
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="module-list-scroll min-h-0 flex-1 overflow-y-auto pr-1">
       {beforeSubjects}
       {subjects.length === 0 && !showAddSubject ? (
         <div className="text-center py-8">

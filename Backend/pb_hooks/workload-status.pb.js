@@ -482,6 +482,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
     return e.json(200, {
         ...reviewSettings,
+        editableWeeklyStarts: review.editableWeeklyStarts($app, participant.id, submissions),
         adminViewAuthorized,
         participant: {
             id: participant.id,

@@ -1,6 +1,6 @@
-# One-command development data refresh
+# Sync production application records into dev
 
-From Git Bash on the laptop:
+Install/update from Git Bash on the laptop:
 
 ```bash
 cd /c/repos/Zeiterfassung
@@ -8,32 +8,65 @@ scp scripts/refresh-methric-dev root@78.47.244.186:/usr/local/bin/refresh-methri
 ssh root@78.47.244.186 "chmod 700 /usr/local/bin/refresh-methric-dev"
 ```
 
-On the server, run `refresh-methric-dev` as root. The first run requests the
-production PocketBase **superuser** email and password and saves them in
-`/root/.config/methric-dev-refresh.json` with mode 0600. Later runs need only
-the command. This is a sensitive plaintext credential file; it must remain
-root-only and outside the repository. If credentials change, edit that file
-on the server. MFA-enabled logins are not supported by this helper.
+On the Hetzner server:
 
-Each run creates a fresh backup via production's API on localhost:8090,
-validates and extracts it before stopping dev, sanitizes copied settings,
-swaps only dev's `pb_data`, starts its service, and checks localhost:8091.
-Startup failure triggers rollback to the prior dev database. Dev migrations
-run normally on startup. Production is never stopped or restored.
+```bash
+refresh-methric-dev
+```
 
-All dev data is replaced. Existing dev hooks, migrations, and Resend
-configuration are preserved. The helper checks the email redirects used in
-this setup; new mail-sending code still needs review before deployment.
-Production S3 file/backup storage and scheduled dev hooks are rejected until
-explicitly supported. No email is sent by the helper itself.
+This replaces the old full-database restore command. It reads a consistent
+production SQLite snapshot using SQLite's online backup API. Production stays
+running. No PocketBase credentials or dashboard backup are needed; the old
+root credential file is no longer used.
 
-Previous dev snapshots and generated production backups are retained and
-consume disk space. Failed staging/restore directories are also retained
-for diagnosis. Review and remove obsolete snapshots manually. An interrupted
-process or host failure may require manual recovery; use the retained data
-and `journalctl -u pocketbase-dev` to diagnose.
+Default behavior: insert missing records and update matching IDs from production
+in **all non-system base collections** (participants, subjects/modules,
+participant_subjects, submissions, submission_items, workload types, application
+settings such as adminSettings, and any other base collection). Dev-only records
+are retained. No records are deleted, including records deleted in production.
+Production soft-deletion/status fields on matching records are updated normally.
 
-Local verification: `python scripts/test-refresh-methric-dev.py` tests archive
-path rejection, copied settings sanitization with original data preservation,
-successful activation, and rollback after a simulated startup failure.
-The live server flow must be verified after installation.
+System tables, backend settings, migrations history, schema definitions, auth
+collections (including admins), and view collections are excluded. Views derive
+their results from the updated base collections. Dev hooks, mail credentials,
+and email recipient configuration remain in place. No email safety checks are
+required for this operation. Writes go directly into an offline dev copy in one
+transaction, so no PocketBase record hooks or API email handlers run during the
+copy. The existing dev service is restarted normally, including its existing
+startup hooks and any pending dev migrations; this command does not disable
+independent scheduled jobs.
+
+Options:
+
+```bash
+refresh-methric-dev --dry-run
+refresh-methric-dev --add-only
+```
+
+Dry run prepares/validates a copy and reports counts without replacing live dev
+data. It still briefly stops/restarts dev to take its consistent copy. Add-only
+preserves existing dev records even if production differs.
+
+Dev is stopped while its copy is prepared. Every selected collection must have
+matching collection ID, fields and SQL columns. Missing collections, changed
+schemas, missing related records, SQL triggers, and populated file fields on
+records being copied stop the sync before activation. Uploaded-file syncing is
+not implemented; current Methric base collections have no file fields.
+Deploy compatible schema migrations before syncing; schema is never imported.
+
+On successful activation, the old dev directory remains at
+`/opt/pocketbase-dev/pb_data-before-<timestamp>`. Failed startup triggers rollback.
+Review old snapshots periodically because they consume disk space. A server
+crash or forced kill during swapping may require manual recovery from these
+directories. Do not deploy hooks/migrations or run another restore concurrently.
+
+Validation:
+
+```bash
+python -B scripts/test-refresh-methric-dev.py
+```
+
+Tests cover collection upserts, dev-only record retention, excluded settings/auth,
+idempotency, add-only mode, relation/schema errors, transaction rollback, WAL
+snapshot consistency, and failed-start rollback. Live server validation is still
+required after upload.

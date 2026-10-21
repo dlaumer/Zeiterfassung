@@ -34,6 +34,20 @@ function settings(app, now) {
     return { reviewTime: days, reviewCutoff: cutoff.getFullYear() + "-" + pad(cutoff.getMonth() + 1) + "-" + pad(cutoff.getDate()) }
 }
 
+// Corrections share their week's slot; only the two latest recorded weeks
+// with active submissions are editable, regardless of submission age.
+function editableWeeklyStarts(app, participantId, submissions) {
+    const records = module.exports.active(app, submissions || app.findRecordsByFilter(
+        "submissions", 'participant = {:participantId} && periodType = "week" && submissionMode != "deleted"',
+        "", 0, 0, { participantId }
+    ))
+    const starts = {}
+    for (const submission of records) {
+        if (submission.get("periodType") === "week") starts[String(submission.get("periodStart")).slice(0, 10)] = true
+    }
+    return Object.keys(starts).sort().reverse().slice(0, 2)
+}
+
 function assertEditable(app, periodEnd) {
     if (String(periodEnd).slice(0, 10) < settings(app).reviewCutoff) {
         throw new Error("The review period has expired. This entry is read-only.")
@@ -45,7 +59,13 @@ function prepare(app, group, body, periodEnd, adminOverride) {
     if (String(body.expectedSubmissionId || "") !== (latest ? latest.id : "")) {
         throw new Error("This entry has changed. Reload the page before saving.")
     }
-    if (latest && !adminOverride) assertEditable(app, periodEnd)
+    if (latest && !adminOverride) {
+        if (latest.get("periodType") === "week") {
+            if (!editableWeeklyStarts(app, latest.get("participant")).includes(String(latest.get("periodStart")).slice(0, 10))) {
+                throw new Error("Only the last two submitted weeks can be edited. This entry is read-only.")
+            }
+        } else assertEditable(app, periodEnd)
+    }
     if (body.inputMode !== "totals") throw new Error("Please reload the page to use the updated entry form.")
     const selected = effective(group)
     const totals = {}
@@ -69,7 +89,7 @@ function prepare(app, group, body, periodEnd, adminOverride) {
     }
 }
 
-module.exports = { newestFirst, effective, fieldValue, settings, assertEditable, prepare }
+module.exports = { newestFirst, effective, fieldValue, settings, assertEditable, prepare, editableWeeklyStarts }
 
 // PocketBase assigns submittedAt automatically, so it can differ from deletedAt
 // by milliseconds. Use the payload and predecessor as well as the timestamp.

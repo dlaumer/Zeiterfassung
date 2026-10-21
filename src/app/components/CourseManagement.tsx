@@ -33,6 +33,7 @@ const formatSubjectCredits = (credits: number, language: 'en' | 'de') => `${cred
 
 interface CourseManagementProps {
   subjects: Subject[];
+  preserveSubjectOrder?: boolean;
   onAddSubject?: (subject: Subject) => void;
   onRemoveSubject?: (id: string) => void;
   title?: string;
@@ -48,6 +49,7 @@ interface CourseManagementProps {
 
 export function CourseManagement({
   subjects,
+  preserveSubjectOrder = false,
   onAddSubject,
   onRemoveSubject,
   availableSubjects,
@@ -211,7 +213,7 @@ export function CourseManagement({
         </div>
       ) : subjects.length > 0 ? (
         <div className="space-y-2">
-          {[...subjects].sort(compareSubjectsByDisplayName(language)).map(subject => (
+          {(preserveSubjectOrder ? subjects : [...subjects].sort(compareSubjectsByDisplayName(language))).map(subject => (
             <StatisticsCard key={subject.id} statistics={renderSubjectDetails?.(subject)} onOpenStatistics={onOpenStatistics ? () => onOpenStatistics(subject) : undefined} statisticsLabel={`${t('analytics.show')}: ${getSubjectDisplayName(subject, language)}`} actions={<>{renderSubjectActions?.(subject)}{onRemoveSubject && <button
                 type="button"
                 aria-label={`${t('common.remove')}: ${getSubjectDisplayName(subject, language)}`}

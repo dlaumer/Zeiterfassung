@@ -1,173 +1,152 @@
 #!/usr/bin/env python3
-"""Refresh the Hetzner dev database from a new PocketBase production backup.
-
-Run as root. First run requests and saves production superuser credentials in
-/root/.config/methric-dev-refresh.json (0600). No third-party packages required.
-Production is never stopped or restored. Old dev data is retained for rollback.
-"""
-import getpass
+"""Synchronize application records, never production settings, into Methric dev."""
 from contextlib import closing
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import shutil
 import sqlite3
-import stat
 import subprocess
 import sys
 import tempfile
 import time
-import urllib.error
 import urllib.request
 import uuid
-import zipfile
 
-PROD_URL = "http://127.0.0.1:8090"
-DEV_URL = "http://127.0.0.1:8091"
-DEV = Path("/opt/pocketbase-dev")
-PROD = Path("/opt/pocketbase")
-CREDENTIALS = Path("/root/.config/methric-dev-refresh.json")
-SERVICE = "pocketbase-dev"
-RECIPIENTS = ('ksperger@ethz.ch', 'daniel.laumer@gmail.com')
+PROD = Path('/opt/pocketbase')
+DEV = Path('/opt/pocketbase-dev')
+SERVICE = 'pocketbase-dev'
 
 
-def api(path, token="", body=None, base=PROD_URL):
-    request = urllib.request.Request(
-        base + path,
-        data=None if body is None else json.dumps(body).encode(),
-        headers={"Content-Type": "application/json", "Authorization": token},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=45) as response:
-            raw = response.read()
-            return json.loads(raw) if raw else None
-    except urllib.error.HTTPError as error:
-        # Never print response bodies or credentials.
-        raise RuntimeError(f"PocketBase {path}: HTTP {error.code}") from None
+def quote(name):
+    return '"' + name.replace('"', '""') + '"'
 
 
 def service(action):
-    subprocess.run(["systemctl", action, SERVICE], check=True, timeout=120)
+    subprocess.run(['systemctl', action, SERVICE], check=True, timeout=120)
 
 
 def wait_healthy():
     for _ in range(30):
         try:
-            if api('/api/health', base=DEV_URL).get('code') == 200:
-                return
+            with urllib.request.urlopen('http://127.0.0.1:8091/api/health', timeout=3) as response:
+                if json.load(response).get('code') == 200:
+                    return
         except Exception:
             pass
-        time.sleep(2)
-    raise RuntimeError("Dev did not become healthy. Check journalctl -u pocketbase-dev.")
+        time.sleep(1)
+    raise RuntimeError('Dev failed its health check; inspect journalctl -u pocketbase-dev.')
 
 
-def extract_checked(archive, destination):
-    with zipfile.ZipFile(archive) as backup:
-        entries = backup.infolist()
-        names = set()
-        for entry in entries:
-            path = PurePosixPath(entry.filename)
-            mode = entry.external_attr >> 16
-            if (path.is_absolute() or '..' in path.parts or '\\' in entry.filename
-                    or ':' in entry.filename or stat.S_ISLNK(mode)):
-                raise RuntimeError("Unsafe path in backup archive.")
-            if entry.filename in names:
-                raise RuntimeError("Duplicate entry in backup archive.")
-            names.add(entry.filename)
-        if 'data.db' not in names:
-            raise RuntimeError("Backup does not contain data.db at its root.")
-        required = sum(entry.file_size for entry in entries)
-        if shutil.disk_usage(destination.parent).free < required + 100 * 1024**2:
-            raise RuntimeError("Not enough free space to extract the backup.")
-        if backup.testzip() is not None:
-            raise RuntimeError("Backup failed its checksum check.")
-        backup.extractall(destination)
+def snapshot(source, destination):
+    # SQLite online backup includes committed WAL data while production runs.
+    with closing(sqlite3.connect(source.as_uri() + '?mode=ro', uri=True)) as src:
+        with closing(sqlite3.connect(destination)) as dst:
+            deadline = time.monotonic() + 120
+            def progress(status, remaining, total):
+                if time.monotonic() > deadline:
+                    raise RuntimeError('Database snapshot timed out.')
+            src.backup(dst, pages=256, progress=progress)
 
 
-def sanitize_settings(data):
-    # The server has unencrypted settings. Fail closed if that changes.
-    with closing(sqlite3.connect(data / 'data.db')) as db, db:
-        result = db.execute('PRAGMA integrity_check').fetchall()
-        if result != [('ok',)]:
-            raise RuntimeError("Copied database failed its integrity check.")
-        row = db.execute("SELECT value FROM _params WHERE id='settings'").fetchone()
-        if not row:
-            raise RuntimeError("PocketBase settings were not found.")
-        settings = json.loads(row[0])
-        if settings.get('s3', {}).get('enabled'):
-            raise RuntimeError("Production uses S3 files; a separate file-copy setup is required.")
-        settings['meta']['appName'] = 'Methric DEV'
-        settings['meta']['appURL'] = 'https://dev.methric.ch'
-        settings['smtp'].update(enabled=False, username='', password='')
-        settings['backups']['cron'] = ''
-        settings['backups']['s3'].update(enabled=False, accessKey='', secret='')
-        settings['s3'].update(enabled=False, accessKey='', secret='')
-        db.execute("UPDATE _params SET value=? WHERE id='settings'",
-                   (json.dumps(settings).encode(),))
+def collections(db):
+    return {row['name']: dict(row) for row in db.execute('SELECT * FROM _collections')}
 
 
-def check_dev_setup():
-    if DEV.resolve() != DEV or PROD.resolve() != PROD:
-        raise RuntimeError("Backend directories must not be symlinks.")
-    data = DEV / 'pb_data'
-    if not data.is_dir() or data.is_symlink():
-        raise RuntimeError("Expected a real dev pb_data directory.")
-    if os.path.samefile(data, PROD / 'pb_data'):
-        raise RuntimeError("Dev and production data must be separate.")
-    unit = subprocess.check_output(
-        ['systemctl', 'show', SERVICE, '--property=ExecStart', '--value'], text=True)
-    for required in (str(DEV / 'pocketbase'), '--http=127.0.0.1:8091',
-                     '--dir=/opt/pocketbase-dev/pb_data',
-                     '--hooksDir=/opt/pocketbase-dev/pb_hooks'):
+def merge_records(source, destination, update_existing=True):
+    """One transaction; only non-system base collection rows may be written."""
+    with closing(sqlite3.connect(source.as_uri() + '?mode=ro', uri=True)) as src, closing(sqlite3.connect(destination)) as dst:
+        src.row_factory = dst.row_factory = sqlite3.Row
+        prod, dev = collections(src), collections(dst)
+        selected = {name: meta for name, meta in prod.items()
+                    if meta['type'] == 'base' and not meta['system'] and not name.startswith('_')}
+        skipped = sorted(set(prod) - set(selected))
+        plans = {}
+        with dst:
+            dst.execute('BEGIN IMMEDIATE')
+            for name, meta in selected.items():
+                other = dev.get(name)
+                if not other or other['id'] != meta['id'] or other['type'] != 'base':
+                    raise RuntimeError(f'{name}: missing or incompatible dev collection; deploy its migration first.')
+                fields = json.loads(meta['fields'])
+                other_fields = json.loads(other['fields'])
+                # Fail instead of bypassing changed PocketBase field validation.
+                if sorted(fields, key=lambda f: f['name']) != sorted(other_fields, key=lambda f: f['name']):
+                    raise RuntimeError(f'{name}: field definitions differ; align the schemas before syncing.')
+                columns = [tuple(row) for row in src.execute(f'PRAGMA table_info({quote(name)})')]
+                if columns != [tuple(row) for row in dst.execute(f'PRAGMA table_info({quote(name)})')]:
+                    raise RuntimeError(f'{name}: database columns differ.')
+                if dst.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND tbl_name=?", (name,)).fetchone():
+                    raise RuntimeError(f'{name}: SQL triggers require review before direct record sync.')
+                rows = [dict(row) for row in src.execute(f'SELECT * FROM {quote(name)}')]
+                existing = {row['id']: dict(row) for row in dst.execute(f'SELECT * FROM {quote(name)}')}
+                additions = [row for row in rows if row['id'] not in existing]
+                changes = [row for row in rows if row['id'] in existing and row != existing[row['id']]] if update_existing else []
+                plans[name] = (fields, additions, changes, set(existing))
+
+            by_id = {meta['id']: name for name, meta in prod.items()}
+            available = {name: ids | {row['id'] for row in adds}
+                         for name, (_, adds, _, ids) in plans.items()}
+            for name, (fields, adds, changes, _) in plans.items():
+                for field in fields:
+                    kind, key = field['type'], field['name']
+                    if kind == 'file' and any(row.get(key) not in (None, '', '[]') for row in adds + changes):
+                        raise RuntimeError(f'{name}.{key}: uploaded files require a separate file sync; no records copied.')
+                    if kind != 'relation':
+                        continue
+                    target = by_id.get(field['collectionId'])
+                    if not target or target not in dev or dev[target]['id'] != field['collectionId']:
+                        raise RuntimeError(f'{name}.{key}: related collection is missing in dev.')
+                    if target not in available:
+                        available[target] = {row[0] for row in dst.execute(f'SELECT id FROM {quote(target)}')}
+                    for row in adds + changes:
+                        value = row.get(key)
+                        refs = json.loads(value) if isinstance(value, str) and value.startswith('[') else ([value] if value else [])
+                        if not isinstance(refs, list) or any(ref not in available[target] for ref in refs):
+                            raise RuntimeError(f'{name}/{row["id"]}: missing related {target} record; no records copied.')
+
+            report = {}
+            for name, (_, adds, changes, _) in plans.items():
+                for row in adds:
+                    keys = list(row)
+                    dst.execute(f'INSERT INTO {quote(name)} ({",".join(map(quote, keys))}) '
+                                f'VALUES ({",".join("?" for _ in keys)})', [row[k] for k in keys])
+                for row in changes:
+                    keys = [key for key in row if key != 'id']
+                    dst.execute(f'UPDATE {quote(name)} SET ' + ','.join(f'{quote(k)}=?' for k in keys)
+                                + ' WHERE id=?', [row[k] for k in keys] + [row['id']])
+                report[name] = {'added': len(adds), 'updated': len(changes)}
+            if dst.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+                raise RuntimeError('Dev database failed integrity check.')
+        return report, skipped
+
+
+def check_setup():
+    for root in (PROD, DEV):
+        if root.resolve() != root or (root / 'pb_data').resolve() != root / 'pb_data':
+            raise RuntimeError('Backend/data folders must not be symlinks.')
+        if not (root / 'pb_data/data.db').is_file() or (root / 'pb_data/data.db').is_symlink():
+            raise RuntimeError(f'Missing regular database in {root}.')
+    if os.path.samefile(PROD / 'pb_data/data.db', DEV / 'pb_data/data.db'):
+        raise RuntimeError('Production and dev must use different databases.')
+    for path in (DEV / 'pb_data').rglob('*'):
+        if path.is_symlink():
+            raise RuntimeError('Dev data contains symlinks; review before syncing.')
+    unit = subprocess.check_output(['systemctl', 'show', SERVICE, '--property=ExecStart', '--value'], text=True)
+    for required in (str(DEV / 'pocketbase'), '--http=127.0.0.1:8091', '--dir=/opt/pocketbase-dev/pb_data'):
         if required not in unit:
-            raise RuntimeError("Dev service configuration differs from the expected setup.")
-    safety = (DEV / 'pb_hooks/dev-safety.pb.js').read_text()
-    reminder = (DEV / 'pb_hooks/admin-reminders.pb.js').read_text()
-    fixed_to = 'to: ["ksperger@ethz.ch", "daniel.laumer@gmail.com"],'
-    if ('onMailerSend' not in safety or fixed_to not in safety
-            or reminder.count(fixed_to) != 2 or 'to: [participantEmail]' in reminder):
-        raise RuntimeError("Expected dev email redirects are missing. Refresh cancelled.")
-    for hook in (DEV / 'pb_hooks').glob('*.js'):
-        if 'cronAdd(' in hook.read_text():
-            raise RuntimeError("A scheduled dev hook needs review before automatic refresh.")
-    config = json.loads((DEV / 'pb_hooks/resend.local.json').read_text())
-    if config.get('appUrl') != 'https://dev.methric.ch':
-        raise RuntimeError("Dev email links are not configured for dev.methric.ch.")
-
-
-def authenticate():
-    first_run = not CREDENTIALS.exists()
-    if first_run:
-        print("One-time setup: production PocketBase SUPERUSER login.")
-        print(f"Credentials will be saved root-only in {CREDENTIALS}.")
-        credentials = {'identity': input('Email: ').strip(),
-                       'password': getpass.getpass('Password: ')}
-    else:
-        if CREDENTIALS.is_symlink() or CREDENTIALS.stat().st_mode & 0o077:
-            raise RuntimeError("Credential file must be a regular root-only file (chmod 600).")
-        credentials = json.loads(CREDENTIALS.read_text())
-    result = api('/api/collections/_superusers/auth-with-password', body=credentials)
-    token = result.get('token')
-    if not token:
-        raise RuntimeError("Superuser login did not return a token (possibly MFA enabled).")
-    if first_run:
-        CREDENTIALS.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        fd = os.open(CREDENTIALS, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, 'w') as file:
-            json.dump(credentials, file)
-    return token
+            raise RuntimeError('Unexpected dev service configuration.')
+    subprocess.run(['systemctl', 'is-active', '--quiet', SERVICE], check=True)
 
 
 def activate(staged, previous, failed):
     data = DEV / 'pb_data'
-    service('stop')
     try:
         data.rename(previous)
         staged.rename(data)
         service('start')
         wait_healthy()
     except BaseException:
-        print("Refresh failed; restoring the previous dev database.", flush=True)
         service('stop')
         if previous.exists():
             if data.exists():
@@ -175,56 +154,60 @@ def activate(staged, previous, failed):
             previous.rename(data)
         service('start')
         wait_healthy()
-        print("Previous dev database restored.", flush=True)
+        print('Previous dev data restored.', flush=True)
         raise
 
 
 def main():
-    import fcntl  # Linux server only; helpers remain testable on Windows.
+    import fcntl
     if os.geteuid() != 0:
-        raise RuntimeError("Run as root: sudo refresh-methric-dev")
+        raise RuntimeError('Run as root: sudo refresh-methric-dev')
+    if any(arg not in ('--add-only', '--dry-run') for arg in sys.argv[1:]):
+        raise RuntimeError('Usage: refresh-methric-dev [--add-only] [--dry-run]')
     os.umask(0o077)
     lock = open('/run/lock/refresh-methric-dev.lock', 'w')
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        raise RuntimeError("Another refresh is already running.") from None
-    check_dev_setup()
-    token = authenticate()
-    settings = api('/api/settings', token)
-    if settings.get('s3', {}).get('enabled') or settings.get('backups', {}).get('s3', {}).get('enabled'):
-        raise RuntimeError("This command requires local production files and local backups.")
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    check_setup()
     stamp = time.strftime('%Y%m%d_%H%M%S') + '_' + uuid.uuid4().hex[:8]
-    name = 'dev_refresh_' + stamp + '.zip'
-    archive = PROD / 'pb_data/backups' / name
-    print("Creating a fresh production backup...", flush=True)
-    api('/api/backups', token, {'name': name})
-    deadline = time.monotonic() + 600
-    while time.monotonic() < deadline:
-        backups = api('/api/backups', token)
-        if any(item['key'] == name for item in backups) and archive.is_file():
-            break
-        time.sleep(2)
-    else:
-        raise RuntimeError("Backup was not ready within 10 minutes; dev was not changed.")
-    staged = Path(tempfile.mkdtemp(prefix='refresh-staging-', dir=DEV))
-    print("Validating and preparing the backup...", flush=True)
-    extract_checked(archive, staged)
-    sanitize_settings(staged)
-    previous = DEV / ('pb_data-before-' + stamp)
-    failed = DEV / ('pb_data-failed-' + stamp)
-    print("Replacing dev data and applying its migrations...", flush=True)
-    activate(staged, previous, failed)
-    print("Done: dev is healthy. Production remained running.")
-    print(f"Previous dev data retained: {previous}")
-    print(f"Production backup retained: {archive}")
-    print("Hooks, migrations and dev email configuration were preserved.")
-    print("Retained snapshots consume disk space; remove old ones when no longer needed.")
+    work = Path(tempfile.mkdtemp(prefix='record-sync-', dir=DEV))
+    print('Taking a consistent, read-only production snapshot...', flush=True)
+    snapshot(PROD / 'pb_data/data.db', work / 'production.db')
+    required = sum(p.stat().st_size for p in (DEV / 'pb_data').rglob('*') if p.is_file())
+    required += (work / 'production.db').stat().st_size * 2 + 100 * 1024**2
+    if shutil.disk_usage(DEV).free < required:
+        raise RuntimeError('Insufficient disk space for staging and rollback snapshot.')
+    print('Briefly stopping dev to prepare its copy...', flush=True)
+    service('stop')
+    activated = False
+    try:
+        staged = work / 'pb_data'
+        # Preserve dev settings, auth data, auxiliary DB, and local files.
+        shutil.copytree(DEV / 'pb_data', staged, symlinks=True)
+        if (staged / 'data.db').is_symlink():
+            raise RuntimeError('Unexpected database symlink.')
+        report, skipped = merge_records(work / 'production.db', staged / 'data.db', '--add-only' not in sys.argv)
+        for name, counts in report.items():
+            print(f'{name}: {counts["added"]} new, {counts["updated"]} updated')
+        print('Excluded system/auth/view collections: ' + ', '.join(skipped))
+        if '--dry-run' in sys.argv or not any(sum(counts.values()) for counts in report.values()):
+            print('No live dev data changed.')
+            return
+        previous = DEV / ('pb_data-before-' + stamp)
+        activate(staged, previous, DEV / ('pb_data-failed-' + stamp))
+        activated = True
+        print(f'Done. Previous dev snapshot: {previous}')
+        print('Production stayed running. Dev-only records, configuration and hooks were preserved.')
+    finally:
+        if not activated:
+            service('start')
+            wait_healthy()
+        # work is a uniquely created directory inside DEV; never follows symlinks.
+        shutil.rmtree(work)
 
 
 if __name__ == '__main__':
     try:
         main()
     except (Exception, KeyboardInterrupt) as error:
-        print(f"Refresh failed: {error}", file=sys.stderr)
+        print(f'Sync failed: {error}', file=sys.stderr)
         sys.exit(1)

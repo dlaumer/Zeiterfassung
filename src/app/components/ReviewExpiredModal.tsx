@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useI18n } from '../i18n/i18n';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
 
-export function ReviewExpiredModal({ days, onClose, onDelete }: { days: number; onClose: () => void; onDelete: () => Promise<void> }) {
+export function ReviewExpiredModal({ days, weekly = false, onClose, onDelete }: { days: number; weekly?: boolean; onClose: () => void; onDelete: () => Promise<void> }) {
   const { t } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -23,7 +23,7 @@ export function ReviewExpiredModal({ days, onClose, onDelete }: { days: number; 
         </div>
         <DialogTitle>{t('dailyEntry.reviewExpiredTitle')}</DialogTitle>
         <DialogDescription className="text-sm leading-relaxed text-gray-600">
-          {t('dailyEntry.reviewUnavailable', { days })}
+          {t(weekly ? 'dailyEntry.weeklyReviewUnavailable' : 'dailyEntry.reviewUnavailable', { days })}
         </DialogDescription>
         {failed && <p role="alert" className="text-sm text-red-600">{t('dailyEntry.deleteFailed')}</p>}
         <div className="flex flex-col gap-2">

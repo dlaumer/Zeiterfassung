@@ -73,7 +73,7 @@ export function WorkloadChartPanel({ collapsed = false, selected, subjects, entr
   useEffect(() => { setSelectedPeriod(undefined); }, [grouping, valueMode, range.start, range.end]);
   useEffect(() => { setZoom(1); }, [grouping, range.start, range.end]);
   useEffect(() => { if (zoom === 1 && chartRef.current) chartRef.current.scrollLeft = 0; }, [zoom]);
-  const ordered = [...subjects].sort(compareSubjectsByDisplayName(language));
+  const ordered = singleTime ? subjects : [...subjects].sort(compareSubjectsByDisplayName(language));
   const categories: Category[] = singleTime ? ['classTime'] : ['classTime', 'selfStudyTime'];
   const buckets = useMemo(() => bucketWorkload(entries.values(), range, grouping), [entries, range.start, range.end, grouping]);
 

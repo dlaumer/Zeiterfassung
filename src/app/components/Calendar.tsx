@@ -15,6 +15,7 @@ interface CalendarProps {
   subjects: Subject[];
   entryMode?: 'day' | 'week';
   reviewCutoff: string | null;
+  editableWeeklyStarts?: string[];
   collapsed?: boolean;
   headerAction?: ReactNode;
 }
@@ -24,7 +25,7 @@ interface DotColor {
   opacity: number;
 }
 
-export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff, collapsed = false, headerAction }: CalendarProps) {
+export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect, entriesMap, missingSubmissionDates, subjects, entryMode = 'day', reviewCutoff, editableWeeklyStarts = [], collapsed = false, headerAction }: CalendarProps) {
   const swipeStart = useRef<{ x: number; y: number; id: number } | null>(null);
   const suppressClickUntil = useRef(0);
   const { t, language } = useI18n();
@@ -63,7 +64,9 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
   };
 
   const renderLock = (periodEnd: Date, exists: boolean) => (
-    exists && (!reviewCutoff || format(periodEnd, 'yyyy-MM-dd') < reviewCutoff) && (
+    exists && (entryMode === 'week' && reviewCutoff !== '0001-01-01'
+      ? !editableWeeklyStarts.includes(format(startOfWeek(periodEnd, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+      : !reviewCutoff || format(periodEnd, 'yyyy-MM-dd') < reviewCutoff) && (
       <span className="pointer-events-none absolute right-1 top-1 text-gray-400 md:right-1.5 md:top-1.5">
         <LockKeyhole aria-hidden="true" strokeWidth={1.5} className="h-2.5 w-2.5 md:h-3 md:w-3" />
         <span className="sr-only">{t('dailyEntry.reviewExpiredTitle')}</span>

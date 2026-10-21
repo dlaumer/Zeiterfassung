@@ -1,95 +1,114 @@
 import importlib.machinery
-from contextlib import closing
 import importlib.util
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
-import zipfile
 
-loader = importlib.machinery.SourceFileLoader(
-    'refresh', str(Path(__file__).with_name('refresh-methric-dev')))
+loader = importlib.machinery.SourceFileLoader('sync', str(Path(__file__).with_name('refresh-methric-dev')))
 spec = importlib.util.spec_from_loader(loader.name, loader)
-refresh = importlib.util.module_from_spec(spec)
-loader.exec_module(refresh)
+sync = importlib.util.module_from_spec(spec)
+loader.exec_module(sync)
 
 
-class RefreshTests(unittest.TestCase):
-    def test_rejects_archive_traversal_before_extracting(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            archive = root / 'backup.zip'
-            with zipfile.ZipFile(archive, 'w') as backup:
-                backup.writestr('data.db', 'placeholder')
-                backup.writestr('../escaped', 'bad')
+def make_db(path, participant, value):
+    with closing(sqlite3.connect(path)) as db, db:
+        db.execute('CREATE TABLE _collections (id TEXT, name TEXT, type TEXT, system INTEGER, fields TEXT)')
+        for name, kind, system, fields in (
+            ('participants', 'base', 0, []), ('subjects', 'base', 0, []),
+            ('submissions', 'base', 0, [{'name': 'participant', 'type': 'relation', 'collectionId': 'participants'}]),
+            ('adminSettings', 'base', 0, []), ('admins', 'auth', 0, []), ('_params', 'base', 1, []),
+        ):
+            db.execute('INSERT INTO _collections VALUES (?,?,?,?,?)', (name, name, kind, system, json.dumps(fields)))
+            db.execute(f'CREATE TABLE "{name}" (id TEXT PRIMARY KEY, value TEXT' + (', participant TEXT' if name == 'submissions' else '') + ')')
+        db.execute('INSERT INTO participants VALUES (?,?)', (participant, value))
+        db.execute('INSERT INTO subjects VALUES (?,?)', ('module', value))
+        db.execute('INSERT INTO submissions VALUES (?,?,?)', ('submission', value, participant))
+        for name in ('adminSettings', 'admins', '_params'):
+            db.execute(f'INSERT INTO "{name}" VALUES (?,?)', ('setting', value))
+
+
+def rows(path, table):
+    with closing(sqlite3.connect(path)) as db:
+        return db.execute(f'SELECT * FROM "{table}" ORDER BY id').fetchall()
+
+
+class SyncTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.prod, self.dev = self.root / 'prod.db', self.root / 'dev.db'
+        make_db(self.prod, 'new-person', 'production')
+        make_db(self.dev, 'dev-person', 'development')
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_upsert_all_base_collections_and_preserve_system_auth(self):
+        before = self.prod.read_bytes()
+        report, skipped = sync.merge_records(self.prod, self.dev)
+        self.assertEqual(report['participants']['added'], 1)
+        self.assertEqual(report['subjects']['updated'], 1)
+        self.assertEqual(rows(self.dev, 'submissions')[0], ('submission', 'production', 'new-person'))
+        self.assertEqual(len(rows(self.dev, 'participants')), 2)
+        self.assertEqual(rows(self.dev, 'adminSettings')[0][1], 'production')
+        self.assertEqual(rows(self.dev, 'admins')[0][1], 'development')
+        self.assertEqual(rows(self.dev, '_params')[0][1], 'development')
+        self.assertEqual(self.prod.read_bytes(), before)
+        again, _ = sync.merge_records(self.prod, self.dev)
+        self.assertEqual(sum(sum(c.values()) for c in again.values()), 0)
+
+    def test_add_only_preserves_existing_records(self):
+        report, _ = sync.merge_records(self.prod, self.dev, False)
+        self.assertEqual(rows(self.dev, 'subjects')[0][1], 'development')
+        self.assertEqual(report['participants']['added'], 1)
+
+    def test_missing_relation_aborts_every_collection(self):
+        with closing(sqlite3.connect(self.prod)) as db, db:
+            db.execute("UPDATE submissions SET participant='missing'")
+        with self.assertRaisesRegex(RuntimeError, 'missing related'):
+            sync.merge_records(self.prod, self.dev)
+        self.assertEqual(len(rows(self.dev, 'participants')), 1)
+        self.assertEqual(rows(self.dev, 'subjects')[0][1], 'development')
+
+    def test_schema_mismatch_aborts_without_copying(self):
+        with closing(sqlite3.connect(self.dev)) as db, db:
+            db.execute('ALTER TABLE subjects ADD COLUMN extra TEXT')
+        with self.assertRaisesRegex(RuntimeError, 'columns differ'):
+            sync.merge_records(self.prod, self.dev)
+        self.assertEqual(len(rows(self.dev, 'participants')), 1)
+
+    def test_sql_constraint_failure_rolls_back_all_inserts(self):
+        with closing(sqlite3.connect(self.dev)) as db, db:
+            db.execute("INSERT INTO subjects VALUES ('collision', 'production')")
+            db.execute('CREATE UNIQUE INDEX unique_subject_value ON subjects(value)')
+        with self.assertRaises(sqlite3.IntegrityError):
+            sync.merge_records(self.prod, self.dev)
+        self.assertEqual(len(rows(self.dev, 'participants')), 1)
+
+    def test_snapshot_includes_committed_wal(self):
+        with closing(sqlite3.connect(self.prod)) as db:
+            db.execute('PRAGMA journal_mode=WAL')
+            db.execute("INSERT INTO participants VALUES ('wal-person','committed')")
+            db.commit()
+            sync.snapshot(self.prod, self.root / 'snapshot.db')
+            self.assertIn(('wal-person', 'committed'), rows(self.root / 'snapshot.db', 'participants'))
+
+    def test_failed_start_restores_previous_dev_directory(self):
+        data, staged = self.root / 'pb_data', self.root / 'staged'
+        data.mkdir()
+        staged.mkdir()
+        (data / 'old').touch()
+        (staged / 'new').touch()
+        with patch.object(sync, 'DEV', self.root), patch.object(sync, 'service'), \
+                patch.object(sync, 'wait_healthy', side_effect=[RuntimeError('failed'), None]):
             with self.assertRaises(RuntimeError):
-                refresh.extract_checked(archive, root / 'staged')
-            self.assertFalse((root / 'escaped').exists())
-            self.assertFalse((root / 'staged/data.db').exists())
-
-    def test_sanitizes_copy_preserving_records(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            settings = {
-                'meta': {'appName': 'Production', 'appURL': 'https://methric.ch'},
-                'smtp': {'enabled': True, 'username': 'user', 'password': 'secret'},
-                'backups': {'cron': '0 0 * * *', 's3': {'enabled': True, 'secret': 'secret'}},
-                's3': {'enabled': False, 'secret': 'secret'},
-            }
-            with closing(sqlite3.connect(root / 'data.db')) as db, db:
-                db.execute('CREATE TABLE _params (id TEXT PRIMARY KEY, value BLOB)')
-                db.execute('INSERT INTO _params VALUES (?, ?)', ('settings', json.dumps(settings)))
-                db.execute('CREATE TABLE submissions (value TEXT)')
-                db.execute("INSERT INTO submissions VALUES ('keep this')")
-            archive = root / 'backup.zip'
-            with zipfile.ZipFile(archive, 'w') as backup:
-                backup.write(root / 'data.db', 'data.db')
-            staged = root / 'staged'
-            refresh.extract_checked(archive, staged)
-            refresh.sanitize_settings(staged)
-            with closing(sqlite3.connect(staged / 'data.db')) as db, db:
-                copied = json.loads(db.execute('SELECT value FROM _params').fetchone()[0])
-                self.assertEqual(db.execute('SELECT value FROM submissions').fetchone()[0], 'keep this')
-            self.assertEqual(copied['meta']['appURL'], 'https://dev.methric.ch')
-            self.assertFalse(copied['smtp']['enabled'])
-            self.assertEqual(copied['smtp']['password'], '')
-            self.assertEqual(copied['backups']['cron'], '')
-            self.assertFalse(copied['backups']['s3']['enabled'])
-            with closing(sqlite3.connect(root / 'data.db')) as db, db:
-                original = json.loads(db.execute('SELECT value FROM _params').fetchone()[0])
-            self.assertEqual(original, settings)
-
-    def test_failed_start_restores_old_data(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            data, staged = root / 'pb_data', root / 'staged'
-            data.mkdir()
-            staged.mkdir()
-            (data / 'marker').write_text('old')
-            (staged / 'marker').write_text('new')
-            with patch.object(refresh, 'DEV', root), patch.object(refresh, 'service') as service, \
-                    patch.object(refresh, 'wait_healthy', side_effect=[RuntimeError('failed'), None]):
-                with self.assertRaises(RuntimeError):
-                    refresh.activate(staged, root / 'previous', root / 'failed')
-            self.assertEqual((data / 'marker').read_text(), 'old')
-            self.assertEqual((root / 'failed/marker').read_text(), 'new')
-            self.assertEqual([call.args[0] for call in service.call_args_list],
-                             ['stop', 'start', 'stop', 'start'])
-
-    def test_success_retains_previous_snapshot(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            (root / 'pb_data').mkdir()
-            (root / 'staged').mkdir()
-            (root / 'pb_data/old').touch()
-            (root / 'staged/new').touch()
-            with patch.object(refresh, 'DEV', root), patch.object(refresh, 'service'), \
-                    patch.object(refresh, 'wait_healthy'):
-                refresh.activate(root / 'staged', root / 'previous', root / 'failed')
-            self.assertTrue((root / 'previous/old').exists())
-            self.assertTrue((root / 'pb_data/new').exists())
+                sync.activate(staged, self.root / 'previous', self.root / 'failed')
+        self.assertTrue((data / 'old').exists())
+        self.assertTrue((self.root / 'failed/new').exists())
 
 
 if __name__ == '__main__':

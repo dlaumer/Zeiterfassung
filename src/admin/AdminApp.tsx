@@ -1,4 +1,5 @@
 import App from '../app/App';
+import { ProgressiveActivityList } from './ProgressiveActivityList';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
 import { pocketBaseUrl } from '../pocketbaseConfig';
@@ -1713,8 +1714,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
             ) : displayedEvents.length === 0 ? (
               <div className="p-6 text-sm text-gray-500">{t('admin.noMatchingActivity')}</div>
             ) : (
-              <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
-                {displayedEvents.map((event) => (
+              <ProgressiveActivityList items={displayedEvents} renderItem={(event) => (
                   <article key={event.id} className="grid min-w-0 w-full gap-3 overflow-hidden p-4 md:grid-cols-[minmax(0,_1fr)_9rem] md:items-start md:p-4">
                     <div className="min-w-0 overflow-hidden">
                       <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
@@ -1804,8 +1804,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
                       <div className="mt-1 leading-tight">{formatPeriodLabel(event, language, t)}</div>
                     </div>
                   </article>
-                ))}
-              </div>
+                )} />
             )}
           </div>
           </section>

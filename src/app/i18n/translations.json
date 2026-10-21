@@ -1425,6 +1425,10 @@
     "en": "Review period has ended",
     "de": "Überprüfungsfrist abgelaufen"
   },
+  "dailyEntry.weeklyReviewUnavailable": {
+    "en": "Only the two latest submitted weeks can be edited. This older week is locked.",
+    "de": "Nur die beiden neuesten eingereichten Wochen k\u00f6nnen bearbeitet werden. Diese \u00e4ltere Woche ist gesperrt."
+  },
   "dailyEntry.reviewUnavailable": {
     "en": "The {{days}}-day review period has ended, so this entry can no longer be viewed or changed. You can delete it and submit a new entry for the same period.",
     "de": "Die Überprüfungsfrist von {{days}} Tagen ist abgelaufen. Dieser Eintrag kann nicht mehr angesehen oder geändert werden. Du kannst ihn löschen und für denselben Zeitraum einen neuen Eintrag einreichen."

@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+const context = { module: { exports: {} } };
+vm.runInNewContext(readFileSync(new URL('../Backend/pb_hooks/submission-review.js', import.meta.url), 'utf8'), context);
+const review = context.module.exports;
+const record = (id, start, extra = {}) => ({ id, get: key => ({ participant: 'p', periodType: 'week', periodStart: start, submissionMode: 'initial', submittedAt: '2026-01-01', ...extra })[key] });
+let records = [record('old', '2026-08-03'), record('last', '2026-08-10')];
+const app = { findRecordsByFilter: collection => collection === 'submissions' ? records : [], findRecordById: (_, id) => records.find(r => r.id === id), findFirstRecordByFilter: () => ({ get: () => '14' }) };
+const starts = () => Array.from(review.editableWeeklyStarts(app, 'p'));
+const edit = r => review.prepare(app, [r], { expectedSubmissionId: r.id, inputMode: 'totals' }, r.get('periodStart'), false);
+assert.deepEqual(starts(), ['2026-08-10', '2026-08-03']);
+records.forEach(edit); // Both remain editable months later.
+records.push(record('current', '2026-10-05'));
+assert.deepEqual(starts(), ['2026-10-05', '2026-08-10']);
+assert.throws(() => edit(records[0]), /last two submitted weeks/);
+edit(records[1]); edit(records[2]);
+records.push(record('correction', '2026-08-10', { submissionMode: 'correction', replacesSubmission: 'last', submittedAt: '2026-10-09' }));
+assert.deepEqual(starts(), ['2026-10-05', '2026-08-10']);
+records[2] = record('current', '2026-10-05', { submissionMode: 'deleted' });
+assert.deepEqual(starts(), ['2026-08-10', '2026-08-03']);
+edit(records[0]);
+assert.throws(() => review.prepare(app, [record('day', '2026-08-03', { periodType: 'day' })], { expectedSubmissionId: 'day', inputMode: 'totals' }, '2026-08-03', false), /expired/);
+console.log('PASS: latest two weekly periods, old weeks, current week, corrections, deletions and daily cutoff');

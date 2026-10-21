@@ -5,7 +5,7 @@ import { Calendar } from './components/Calendar';
 import { DailyEntryModal } from './components/DailyEntryModal';
 import { ReviewExpiredModal } from './components/ReviewExpiredModal';
 import { Subject, compareSubjectsByDisplayName, getSubjectDisplayName } from './components/CourseManagement';
-import { format, endOfWeek } from 'date-fns';
+import { format, endOfWeek, startOfWeek } from 'date-fns';
 import { I18nProvider, useI18n } from './i18n/i18n';
 import { LanguageSelector } from './i18n/LanguageSelector';
 import PocketBase from 'pocketbase';
@@ -124,6 +124,7 @@ interface WorkloadStatusResponse {
   adminViewAuthorized?: boolean;
   reviewTime: number;
   reviewCutoff: string;
+  editableWeeklyStarts?: string[];
   participant?: {
     id: string;
     entryMode: 'day' | 'week' | string;
@@ -291,6 +292,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [analyticsStatus, setAnalyticsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [reviewTime, setReviewTime] = useState(14);
+  const [editableWeeklyStarts, setEditableWeeklyStarts] = useState<string[]>([]);
   const [reviewCutoff, setReviewCutoff] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
@@ -453,6 +455,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
       setReviewTime(response.reviewTime);
       const authorized = adminView && response.adminViewAuthorized === true;
       setReviewCutoff(authorized ? '0001-01-01' : response.reviewCutoff);
+      setEditableWeeklyStarts(response.editableWeeklyStarts ?? []);
       setAnalyticsStatus(Number.isInteger(response.reviewTime) && response.reviewTime >= 0 ? 'ready' : 'error');
       setMissingSubmissionDates(
         new Set(
@@ -813,7 +816,9 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
   const isSelectedEntryExpired = !!existingEntry && !!selectedDate && (
-    !reviewCutoff || format(entryMode === 'week' ? endOfWeek(selectedDate, { weekStartsOn: 1 }) : selectedDate, 'yyyy-MM-dd') < reviewCutoff
+    entryMode === 'week' && reviewCutoff !== '0001-01-01'
+      ? !editableWeeklyStarts.includes(format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+      : !reviewCutoff || format(selectedDate, 'yyyy-MM-dd') < reviewCutoff
   );
   const sortedSubjects = [...subjects].sort(compareSubjectsByDisplayName(language));
   const calendarSubjects = participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects;
@@ -870,6 +875,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
           policy={{ restricted: !adminView, referenceDate: participantRole === 'student' ? participantReferenceDate : undefined }}
           status={analyticsStatus}
           subjects={participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects}
+          preserveSubjectOrder={participantRole === 'faculty'}
           title={participantRole === 'faculty' ? participantSubjectLabel : undefined}
           availableSubjects={participantRole === 'faculty' ? [] : availableSubjects}
           showCredits={participantRole !== 'faculty'}
@@ -888,6 +894,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
                 entriesMap={entries}
                 missingSubmissionDates={missingSubmissionDates}
                 reviewCutoff={reviewCutoff}
+                editableWeeklyStarts={editableWeeklyStarts}
                 subjects={calendarSubjects}
                 entryMode={entryMode}
               />
@@ -895,7 +902,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
       </div>
 
       {showEntryModal && isSelectedEntryExpired && (
-        <ReviewExpiredModal days={reviewTime} onDelete={() => deleteEntry(existingEntry!.date)} onClose={() => {
+        <ReviewExpiredModal weekly={entryMode === 'week'} days={reviewTime} onDelete={() => deleteEntry(existingEntry!.date)} onClose={() => {
           setShowEntryModal(false);
           setSelectedDate(null);
         }} />

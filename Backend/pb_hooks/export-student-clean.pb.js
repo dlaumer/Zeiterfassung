@@ -505,7 +505,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         }
 
         row.push(
-            latestEffectiveSubmission.get("comment") || "",
+            pickLatestFieldValue(effectiveSubmissions, "comment", ""),
         )
 
         for (const columnName of exportColumns) {

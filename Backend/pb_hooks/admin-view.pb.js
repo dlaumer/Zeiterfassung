@@ -476,11 +476,18 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         })
     }
 
-    const today = new Date()
+    // Count overdue periods only, using the Swiss calendar date rather than UTC.
+    const datePolicy = require(`${__hooks}/submission-date-policy.js`)
+    const today = adminParseDateOnly(datePolicy.todayKey())
     for (const participantId of Object.keys(participantById)) {
         const participant = participantById[participantId]
-        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, today, participant.referenceDate)
-        const submittedPeriodCount = Object.keys(validSubmittedPeriodKeysByParticipant[participantId] || {}).length
+        const currentPeriodStart = participant.entryMode === "week"
+            ? adminStartOfWeekMonday(adminFormatDateOnly(today)) : adminFormatDateOnly(today)
+        const lastCompletedDay = adminParseDateOnly(currentPeriodStart)
+        lastCompletedDay.setUTCDate(lastCompletedDay.getUTCDate() - 1)
+        const expectedCount = adminExpectedSubmissionCount(participant.entryMode, lastCompletedDay, participant.referenceDate)
+        const submittedPeriodCount = Object.keys(validSubmittedPeriodKeysByParticipant[participantId] || {})
+            .filter(key => key.slice(key.indexOf(":") + 1) < currentPeriodStart).length
         participantStatsById[participantId].missingCount = Math.max(0, expectedCount - submittedPeriodCount)
     }
 

@@ -45,6 +45,7 @@ interface CourseManagementProps {
   onOpenStatistics?: (subject: Subject) => void;
   renderSubjectActions?: (subject: Subject) => ReactNode;
   isSubjectHidden?: (subject: Subject) => boolean;
+  subjectListClassName?: string;
 }
 
 export function CourseManagement({
@@ -59,6 +60,7 @@ export function CourseManagement({
   onOpenStatistics,
   renderSubjectActions,
   isSubjectHidden,
+  subjectListClassName,
   title,
   showCredits = true
 }: CourseManagementProps) {
@@ -212,7 +214,7 @@ export function CourseManagement({
           </button>}
         </div>
       ) : subjects.length > 0 ? (
-        <div className="space-y-2">
+        <div className={`space-y-2 ${subjectListClassName ?? ''}`}>
           {(preserveSubjectOrder ? subjects : [...subjects].sort(compareSubjectsByDisplayName(language))).map(subject => (
             <StatisticsCard key={subject.id} statistics={renderSubjectDetails?.(subject)} onOpenStatistics={onOpenStatistics ? () => onOpenStatistics(subject) : undefined} statisticsLabel={`${t('analytics.show')}: ${getSubjectDisplayName(subject, language)}`} actions={<>{renderSubjectActions?.(subject)}{onRemoveSubject && <button
                 type="button"

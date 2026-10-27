@@ -106,7 +106,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             const r = submissions[i]
             if (r.get("periodType") !== "day") continue
 
-            const ps = new Date(r.get("periodStart"))
+            const ps = parseStartDateInput(r.get("periodStart"))
             if (sameDay(ps, dayStart)) return true
         }
         return false
@@ -117,7 +117,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             const r = submissions[i]
             if (r.get("periodType") !== "week") continue
 
-            const ps = new Date(r.get("periodStart"))
+            const ps = parseStartDateInput(r.get("periodStart"))
             if (sameDateTimeStart(ps, weekStart)) return true
         }
         return false
@@ -128,7 +128,7 @@ routerAdd("GET", "/api/workload-status", (e) => {
             const r = submissions[i]
             if (r.get("periodType") !== periodType) continue
 
-            const ps = new Date(r.get("periodStart"))
+            const ps = parseStartDateInput(r.get("periodStart"))
             if (periodType === "day" && sameDay(ps, startDate)) return r
             if (periodType === "week" && sameDateTimeStart(ps, startDate)) return r
         }
@@ -225,7 +225,9 @@ routerAdd("GET", "/api/workload-status", (e) => {
 
     const entryMode = participant.get("entryMode") || "day" // "day" | "week"
     const participantRole = participant.get("type") || (entryMode === "week" ? "faculty" : "student")
-    const now = new Date()
+    // These Date objects represent calendar labels, not instants in server time.
+    const swissToday = require(`${__hooks}/submission-date-policy.js`).todayKey()
+    const now = parseStartDateInput(swissToday)
 
     const todayStart = startOfDay(now)
     const todayEnd = endOfDay(now)

@@ -1,4 +1,6 @@
+import { isFutureSubmission } from './submissionDatePolicy.mjs';
 
+import { latestNonEmptyComment } from './submissionComments.mjs';
 import { SubjectAnalyticsPanel } from './components/analytics/SubjectAnalyticsPanel';
 import { useState, useEffect } from 'react';
 import { Calendar } from './components/Calendar';
@@ -30,6 +32,7 @@ interface Course {
 }
 
 interface DailyEntry {
+  comments?: string[];
   date: string;
   courses: Course[];
   subjectTimes: SubjectTime[];
@@ -122,7 +125,7 @@ interface WorkloadStatusHistoryEntry {
 
 interface WorkloadStatusResponse {
   adminViewAuthorized?: boolean;
-  reviewTime: number;
+  reviewTimeWeeks: number;
   reviewCutoff: string;
   editableWeeklyStarts?: string[];
   participant?: {
@@ -171,7 +174,7 @@ const WEEKLY_CATEGORIES: Subject[] = [
 ];
 
 function getNewestComment(historyEntry: WorkloadStatusHistoryEntry): string {
-  return String(historyEntry.comment ?? "");
+  return latestNonEmptyComment(historyEntry.comment, ...(historyEntry.comments ?? []));
 }
 
 const SUBJECT_COLORS = [
@@ -291,7 +294,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [analyticsStatus, setAnalyticsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [reviewTime, setReviewTime] = useState(14);
+  const [reviewTimeWeeks, setReviewTimeWeeks] = useState(2);
   const [editableWeeklyStarts, setEditableWeeklyStarts] = useState<string[]>([]);
   const [reviewCutoff, setReviewCutoff] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -452,11 +455,11 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
       setEntryMode(responseEntryMode);
       setParticipantRole(responseParticipantRole);
       setParticipantReferenceDate(response.referenceDate ? response.referenceDate.slice(0, 10) : undefined);
-      setReviewTime(response.reviewTime);
+      setReviewTimeWeeks(response.reviewTimeWeeks);
       const authorized = adminView && response.adminViewAuthorized === true;
       setReviewCutoff(authorized ? '0001-01-01' : response.reviewCutoff);
       setEditableWeeklyStarts(response.editableWeeklyStarts ?? []);
-      setAnalyticsStatus(Number.isInteger(response.reviewTime) && response.reviewTime >= 0 ? 'ready' : 'error');
+      setAnalyticsStatus(Number.isInteger(response.reviewTimeWeeks) && response.reviewTimeWeeks >= 0 ? 'ready' : 'error');
       setMissingSubmissionDates(
         new Set(
           (response.missingPeriods ?? [])
@@ -486,6 +489,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
             commuteTime: Number(item.commuteTime ?? 0) / 60,
             structuralChanges: Number(item.structuralChanges ?? 0) / 60,
             comment: getNewestComment(item),
+            comments: item.comments?.length ? item.comments : [getNewestComment(item)].filter(Boolean),
             skipped: false,
             submittedAt: item.submittedAt,
             initialSubmittedAt: item.initialSubmittedAt,
@@ -572,7 +576,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
 
     const response = await pb.send<SaveSubmissionResponse>(entryMode === 'week' ? '/api/submissions/weekly' : '/api/submissions/daily', {
       method: 'POST',
-      body: { ...payload, adminView, inputMode: 'totals', expectedSubmissionId: entries.get(entry.date)?.latestSubmissionId ?? '' },
+      body: { ...payload, skipped: entry.skipped, adminView, inputMode: 'totals', expectedSubmissionId: entries.get(entry.date)?.latestSubmissionId ?? '' },
     });
 
     // The API preserves omitted modules. Keep their data locally as well so
@@ -582,6 +586,8 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
       : [];
     const savedEntry: DailyEntry = {
       ...entry,
+      comment: latestNonEmptyComment(entry.comment, entries.get(entry.date)?.comment),
+      comments: [entry.comment.trim(), ...(entries.get(entry.date)?.comments ?? [entries.get(entry.date)?.comment ?? ''])].filter(Boolean),
       subjectTimes: [...entry.subjectTimes, ...hiddenSubjectTimes],
       skipped: entry.skipped && !hiddenSubjectTimes.some(time => time.classTime > 0 || time.selfStudyTime > 0),
       submittedAt: response.submittedAt,
@@ -725,7 +731,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
     const existingEntry = entries.get(dateKey);
     const earlierMissingDates = getEarlierMissingDates(date);
 
-    if (!existingEntry && earlierMissingDates.length > 0) {
+    if (!isFutureSubmission(dateKey, entryMode) && !existingEntry && earlierMissingDates.length > 0) {
       setSelectedDate(date);
       setMissingReminderDate(date);
       return;
@@ -815,7 +821,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
   };
 
   const existingEntry = selectedDate ? entries.get(format(selectedDate, 'yyyy-MM-dd')) || null : null;
-  const isSelectedEntryExpired = !!existingEntry && !!selectedDate && (
+  const isSelectedEntryExpired = !!existingEntry && !!selectedDate && !isFutureSubmission(format(selectedDate, 'yyyy-MM-dd'), entryMode) && (
     entryMode === 'week' && reviewCutoff !== '0001-01-01'
       ? !editableWeeklyStarts.includes(format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
       : !reviewCutoff || format(selectedDate, 'yyyy-MM-dd') < reviewCutoff
@@ -871,8 +877,9 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
         </div>
 
         <SubjectAnalyticsPanel
+          participantRole={participantRole}
           entries={entries}
-          policy={{ restricted: !adminView, referenceDate: participantRole === 'student' ? participantReferenceDate : undefined }}
+          policy={{ restricted: !adminView, reviewTimeWeeks, referenceDate: participantRole === 'student' ? participantReferenceDate : undefined }}
           status={analyticsStatus}
           subjects={participantRole === 'faculty' ? WEEKLY_CATEGORIES : sortedSubjects}
           preserveSubjectOrder={participantRole === 'faculty'}
@@ -902,7 +909,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
       </div>
 
       {showEntryModal && isSelectedEntryExpired && (
-        <ReviewExpiredModal weekly={entryMode === 'week'} days={reviewTime} onDelete={() => deleteEntry(existingEntry!.date)} onClose={() => {
+        <ReviewExpiredModal weekly={entryMode === 'week'} weeks={reviewTimeWeeks} onDelete={() => deleteEntry(existingEntry!.date)} onClose={() => {
           setShowEntryModal(false);
           setSelectedDate(null);
         }} />
@@ -918,7 +925,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
           onSave={saveEntry}
           onDelete={() => deleteEntry(format(selectedDate, 'yyyy-MM-dd'))}
           readOnly={false}
-          reviewTime={reviewTime}
+          reviewTimeWeeks={reviewTimeWeeks}
           existingEntry={existingEntry}
           availableCourses={availableSubjects.map((subject) => subject.labelEn)}
           subjects={activeSubjects}

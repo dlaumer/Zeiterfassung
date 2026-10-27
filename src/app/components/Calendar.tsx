@@ -158,7 +158,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
           if (dx < 0) handleNextMonth(); else handlePrevMonth();
         }}
         onClickCapture={event => { if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
-        className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 motion-reduce:transition-none ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
       {entryMode !== 'week' && (
         <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
           {weekDays.map(day => (

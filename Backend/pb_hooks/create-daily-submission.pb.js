@@ -121,7 +121,6 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
 
     const participantId = String(body.participantId || "").trim()
     const weekStart = String(body.weekStart || "").trim()
-    const comment = String(body.comment || "").trim()
     const reliability = Number(body.reliability || 0)
     const socialBattery = body.socialBattery == null ? null : Number(body.socialBattery)
     const adminEffortMinutes = Math.max(0, Number(body.adminEffortMinutes || 0))
@@ -140,6 +139,13 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
     const targetDate = new Date(weekStart + "T00:00:00")
     if (isNaN(targetDate.getTime())) {
         return e.json(400, { error: "Invalid weekStart" })
+    }
+
+    let futureSkip = false
+    try {
+        futureSkip = require(`${__hooks}/submission-date-policy.js`).assertAllowed(body, weekStart, "week")
+    } catch (error) {
+        return e.json(400, { message: String(error) })
     }
 
     if (!Number.isInteger(reliability) || reliability < 1 || reliability > 5) {
@@ -196,7 +202,8 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                 }
             ))
 
-            require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "week", periodStart, existingWeekSubmissions)
+            if (futureSkip && existingWeekSubmissions.length) throw new Error("Delete the existing future entry before skipping this period.")
+            if (!futureSkip) require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "week", periodStart, existingWeekSubmissions)
             const changes = review.prepare(txApp, existingWeekSubmissions, body, periodEndStr, adminOverride)
             const submissionMode = existingWeekSubmissions.length > 0 ? "correction" : "initial"
             const replacesSubmissionId = changes.latestId
@@ -214,7 +221,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
             submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("socialBattery", socialBattery == null ? 0 : socialBattery)
-            submissionRecord.set("comment", comment)
+            submissionRecord.set("comment", changes.comment)
             submissionRecord.set("generalAdminTime", changes.field("generalAdminTime", adminEffortMinutes))
             submissionRecord.set("commuteTime", changes.field("commuteTime", participantRole === "student" ? commuteMinutes : 0))
             submissionRecord.set("structuralChanges", changes.field("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0))
@@ -560,7 +567,6 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
 
     const participantId = String(body.participantId || "").trim()
     const date = String(body.date || "").trim()
-    const comment = String(body.comment || "").trim()
     const reliability = Number(body.reliability || 0)
     const socialBattery = body.socialBattery == null ? null : Number(body.socialBattery)
     const adminEffortMinutes = Math.max(0, Number(body.adminEffortMinutes || 0))
@@ -580,6 +586,13 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
     const targetDate = new Date(date + "T00:00:00")
     if (isNaN(targetDate.getTime())) {
         return e.json(400, { error: "Invalid date" })
+    }
+
+    let futureSkip = false
+    try {
+        futureSkip = require(`${__hooks}/submission-date-policy.js`).assertAllowed(body, date, "day")
+    } catch (error) {
+        return e.json(400, { message: String(error) })
     }
 
     if (!Number.isInteger(reliability) || reliability < 1 || reliability > 5) {
@@ -634,7 +647,8 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                 }
             ))
 
-            require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "day", dayStart, existingDaySubmissions)
+            if (futureSkip && existingDaySubmissions.length) throw new Error("Delete the existing future entry before skipping this period.")
+            if (!futureSkip) require(`${__hooks}/submission-order.js`).assertNext(txApp, participant, "day", dayStart, existingDaySubmissions)
             const changes = review.prepare(txApp, existingDaySubmissions, body, dayEndStr, adminOverride)
             const submissionMode = existingDaySubmissions.length > 0 ? "correction" : "initial"
             const replacesSubmissionId = changes.latestId
@@ -675,7 +689,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
             submissionRecord.set("submittedAt", submittedAt)
             submissionRecord.set("dataRating", reliability)
             submissionRecord.set("socialBattery", socialBattery == null ? 0 : socialBattery)
-            submissionRecord.set("comment", comment)
+            submissionRecord.set("comment", changes.comment)
             submissionRecord.set("generalAdminTime", changes.field("generalAdminTime", adminEffortMinutes))
             submissionRecord.set("commuteTime", changes.field("commuteTime", participantRole === "student" ? commuteMinutes : 0))
             submissionRecord.set("structuralChanges", changes.field("structuralChanges", participantRole === "faculty" ? structuralChangesMinutes : 0))

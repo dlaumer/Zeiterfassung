@@ -3,7 +3,7 @@ import { build } from 'esbuild';
 
 // Bundle the actual TypeScript module in memory; no additional test runtime needed.
 const bundle = await build({ entryPoints: ['src/app/analytics/workload.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
-const { resolveDateRange, resolveEntryDateRange, aggregateWorkload, bucketWorkload, workloadBarValue } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+const { resolveDateRange, resolveEntryDateRange, aggregateWorkload, bucketWorkload, workloadBarValue, roundQuarterHour, formatStatisticsHours } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 const policy = { restricted: true };
 const range = resolveDateRange('all', policy, '2026-09-10', '2020-01-01');
 assert.deepEqual(range, { start: '2026-08-28', end: '2026-09-10' });
@@ -59,9 +59,15 @@ const custom = { start: '2026-03-23', end: '2026-04-05' }; // Crosses Zurich DST
 assert.deepEqual(resolveDateRange('custom', open, '2026-09-10', '', custom), custom);
 assert.equal(aggregateWorkload([entry('2026-03-24', 14, 0)], custom).get('math').weeklyAverage.classTime, 7);
 assert.throws(() => aggregateWorkload([], { start: '2026-09-10', end: '2026-09-01' }));
-for (const preset of ['last7', 'last14', 'last30', 'all']) {
+for (const preset of ['last14', 'last30', 'all']) {
   assert.deepEqual(resolveDateRange(preset, policy, '2026-09-10', '2020-01-01'), range);
 }
+assert.deepEqual(resolveDateRange('last7', policy, '2026-09-10', '2020-01-01'), { start: '2026-09-04', end: '2026-09-10' });
+assert.deepEqual(resolveDateRange('custom', policy, '2026-09-10', '', { start: '2026-09-02', end: '2026-09-05' }), { start: '2026-09-02', end: '2026-09-05' });
+assert.deepEqual(resolveDateRange('custom', policy, '2026-09-10', '', { start: '2020-01-01', end: '2020-01-02' }), { start: '2026-08-28', end: '2026-08-28' });
+assert.deepEqual(resolveDateRange('custom', policy, '2026-09-10', '', { start: '2030-01-01', end: '2030-01-02' }), { start: '2026-09-10', end: '2026-09-10' });
+const shortRange = resolveDateRange('custom', policy, '2026-09-10', '', { start: '2026-09-08', end: '2026-09-10' });
+assert.equal(aggregateWorkload([entry('2026-09-09', 6, 0)], shortRange).get('math').weeklyAverage.classTime, 14);
 assert.deepEqual(resolveDateRange('last14', open, '2026-01-05', ''), { start: '2025-12-23', end: '2026-01-05' });
 assert.deepEqual(resolveDateRange('last7', open, '2026-03-30', ''), { start: '2026-03-24', end: '2026-03-30' });
 console.log('Workload analytics tests passed.');
@@ -82,3 +88,24 @@ history.push(entry('2026-10-06', 1, 1));
 assert.equal(resolveEntryDateRange('last14', policy, history, '2026-10-20').end, '2026-10-06');
 assert.deepEqual(resolveEntryDateRange('last7', open, [], '2026-10-08'), { start: '2026-10-02', end: '2026-10-08' });
 console.log('Latest-entry date windows and missing-day averages passed.');
+assert.equal(roundQuarterHour(0.47), 0.5);
+assert.equal(roundQuarterHour(0.375), 0.5);
+assert.equal(formatStatisticsHours(0.47, 'en'), '0.5');
+assert.equal(formatStatisticsHours(0.26, 'de'), '0.25');
+const dailyRaw = [entry('2026-09-29', 0.13, 0.12), entry('2026-09-30', 0.13, 0.12)];
+const rounded = aggregateWorkload(dailyRaw, { start: '2026-09-29', end: '2026-09-30' }, 'day').get('math');
+assert.deepEqual(rounded.total, { classTime: 0.5, selfStudyTime: 0 });
+assert.equal(dailyRaw[0].subjectTimes[0].classTime, 0.13, 'Analytics must not mutate stored raw values');
+const mixedWeek = [entry('2026-09-28', 7, 14)];
+const mixedRange = { start: '2026-09-28', end: '2026-10-04' };
+const split = bucketWorkload(mixedWeek, mixedRange, 'monthly', 'week');
+assert.deepEqual(split.map(bucket => bucket.metrics.get('math').total), [{ classTime: 3, selfStudyTime: 6 }, { classTime: 4, selfStudyTime: 8 }]);
+assert.deepEqual(aggregateWorkload(mixedWeek, mixedRange, 'week').get('math').total, { classTime: 7, selfStudyTime: 14 });
+assert.equal(aggregateWorkload(mixedWeek, { start: '2026-10-01', end: '2026-10-31' }, 'week').get('math').total.classTime, 4);
+assert.equal(bucketWorkload(mixedWeek, mixedRange, 'daily', 'week').reduce((sum, bucket) => sum + bucket.metrics.get('math').total.classTime, 0), 7);
+assert.deepEqual(resolveEntryDateRange('all', open, mixedWeek, '2026-10-22', undefined, 'week'), mixedRange, 'Include the full final recorded week');
+const fractionalWeek = aggregateWorkload([entry('2026-09-28', 1, 0)], { start: '2026-10-01', end: '2026-10-31' }, 'week').get('math');
+assert.equal(fractionalWeek.total.classTime, 4 / 7, 'Do not round proportional allocations before calculating averages');
+const newYear = bucketWorkload([entry('2025-12-29', 7, 0)], { start: '2025-12-29', end: '2026-01-04' }, 'monthly', 'week');
+assert.deepEqual(newYear.map(bucket => bucket.metrics.get('math').total.classTime), [3, 4]);
+console.log('Quarter-hour rounding and proportional weekly allocation passed.');

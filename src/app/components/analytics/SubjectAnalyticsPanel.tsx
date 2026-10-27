@@ -1,13 +1,14 @@
-import { ComponentProps, ReactNode, useEffect, useRef, useState } from 'react';
+import { ComponentProps, ReactNode, useMemo, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ChartNoAxesColumn, Eye, EyeOff } from 'lucide-react';
 import { SubmissionPanels } from '../SubmissionPanels';
-import { aggregateWorkload, bucketWorkload, AnalyticsPolicy, DateRange, PeriodPreset, resolveEntryDateRange, WorkloadEntry, WorkloadGrouping } from '../../analytics/workload';
+import { savedModuleEntries, completedWeekMetrics, AnalyticsPolicy, DateRange, PeriodPreset, resolveEntryDateRange, WorkloadEntry, WorkloadGrouping } from '../../analytics/workload';
 import { CourseManagement, Subject } from '../CourseManagement';
 import { WorkloadChartPanel } from './WorkloadChartPanel';
 import { ChartTimeFilter, ChartValueMode } from './ChartDisplayControls';
 
 import { SubjectStatistics } from './SubjectStatistics';
+import { StatisticsOptions } from './StatisticsOptions';
 import { useI18n } from '../../i18n/i18n';
 
 type Props = ComponentProps<typeof CourseManagement> & {
@@ -16,16 +17,27 @@ type Props = ComponentProps<typeof CourseManagement> & {
   status: 'loading' | 'ready' | 'error';
   singleTime?: boolean;
   daily?: boolean;
+  participantRole?: 'student' | 'faculty';
   calendar: (collapsed: boolean, headerAction: ReactNode) => ReactNode;
 };
 
-export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = false, daily = true, calendar, ...courseProps }: Props) {
+export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = false, daily = true, participantRole = 'student', calendar, ...courseProps }: Props) {
   const { t, language } = useI18n();
   const [chartInitialized, setChartInitialized] = useState(false);
-  const [preset, setPreset] = useState<PeriodPreset>('last14');
+  const [preset, setPreset] = useState<PeriodPreset>('last2Weeks');
   const [custom, setCustom] = useState<DateRange>();
-  const [grouping, setGrouping] = useState<WorkloadGrouping>('weekly');
+  const [grouping, setGrouping] = useState<WorkloadGrouping>(() => daily ? 'daily' : 'weekly');
   const [valueMode, setValueMode] = useState<ChartValueMode>('total');
+  const [showModuleStatistics, setShowModuleStatistics] = useState(true);
+  const [showBarTotals, setShowBarTotals] = useState(true);
+  const [workloadVisible, setWorkloadVisible] = useState(true);
+  const [showDataRating, setShowDataRating] = useState(false);
+  const [showEnergyLevel, setShowEnergyLevel] = useState(false);
+  const noVisibleModules = useMemo(() => new Set<string>(), []);
+  const changeGrouping = (next: WorkloadGrouping) => {
+    setGrouping(next);
+    if ((next === 'daily' && valueMode !== 'total') || (next === 'weekly' && valueMode === 'weeklyAverage')) setValueMode('total');
+  };
   const [chartSubject, setChartSubject] = useState<Subject>();
   const [chartVisible, setChartVisible] = useState(false);
   const [expandRequest, setExpandRequest] = useState(0);
@@ -54,10 +66,12 @@ export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = fa
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, []);
-  const selectedPreset = policy.restricted ? 'last14' : preset;
-  const range = resolveEntryDateRange(selectedPreset, policy, entries.values(), today, custom);
-  const metrics = aggregateWorkload(entries.values(), range);
-  const periodCount = bucketWorkload([], range, grouping).length;
+  const moduleEntries = useMemo(() => savedModuleEntries(entries.values(), new Set(courseProps.subjects.map(subject => subject.id))), [entries, courseProps.subjects]);
+  const selectedPreset = policy.restricted && preset !== 'custom' ? 'last2Weeks' : preset;
+  const entryMode = daily ? 'day' : 'week';
+  const rangeBounds = resolveEntryDateRange(policy.restricted ? 'last2Weeks' : 'all', policy, moduleEntries.values(), today, undefined, entryMode);
+  const range = resolveEntryDateRange(selectedPreset, policy, moduleEntries.values(), today, custom, entryMode, grouping);
+  const metrics = completedWeekMetrics(moduleEntries.values(), range, today, entryMode);
   const changeRange = (next: PeriodPreset, dates?: DateRange) => { setPreset(next); setCustom(dates); };
   const openChart = (subject: Subject) => { setExpandRequest(value => value + 1); triggerRef.current = document.activeElement as HTMLElement; setChartSubject(subject); setChartInitialized(true); setChartVisible(true); setVisible(new Set([subject.id])); setHiddenCategories(new Set()); };
   const openOverview = () => {
@@ -88,22 +102,31 @@ export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = fa
     <div className={`calendar-flip-inner ${chartOpen ? 'calendar-flip-open' : ''}`}>
       <div ref={frontRef} aria-hidden={chartOpen} className="calendar-flip-face">{calendar(collapsed, statisticsButton)}</div>
       <div ref={backRef} aria-hidden={!chartOpen} className="calendar-flip-face calendar-flip-back">
-        {chartInitialized && status === 'ready' && <WorkloadChartPanel collapsed={collapsed} selected={chartSubject} subjects={courseProps.subjects}
-          entries={entries} policy={policy} preset={selectedPreset} range={range} singleTime={singleTime} daily={daily}
-          visible={visible} hiddenCategories={hiddenCategories} grouping={grouping} onGroupingChange={setGrouping} valueMode={valueMode} onValueModeChange={setValueMode}
+        {chartInitialized && status === 'ready' && <WorkloadChartPanel ratingEntries={entries} participantRole={participantRole} showDataRating={showDataRating} showEnergyLevel={showEnergyLevel} showBarTotals={showBarTotals} collapsed={collapsed} selected={chartSubject} subjects={courseProps.subjects}
+          today={today} entries={moduleEntries} policy={policy} preset={selectedPreset} range={range} rangeBounds={rangeBounds} singleTime={singleTime} daily={daily}
+          visible={workloadVisible ? visible : noVisibleModules} hiddenCategories={hiddenCategories} grouping={grouping} onGroupingChange={changeGrouping} valueMode={valueMode} onValueModeChange={setValueMode}
           timeFilter={timeFilter} onTimeFilterChange={changeTimeFilter} onRangeChange={changeRange} onClose={closeChart} />}
       </div>
     </div>
   </div>}><CourseManagement {...courseProps}
+    beforeSubjects={<>
+      {chartOpen && <StatisticsOptions showDataRating={showDataRating} onToggleDataRating={() => setShowDataRating(value => !value)} showEnergyLevel={showEnergyLevel} onToggleEnergyLevel={() => setShowEnergyLevel(value => !value)} showBarTotals={showBarTotals} onToggleBarTotals={() => setShowBarTotals(value => !value)} participantRole={participantRole} workloadVisible={workloadVisible} onWorkloadVisibleChange={setWorkloadVisible} showModuleStatistics={showModuleStatistics} onToggleModuleStatistics={() => setShowModuleStatistics(value => !value)} onShowAll={() => {
+      setWorkloadVisible(true);
+      setVisible(new Set(courseProps.subjects.map(subject => subject.id)));
+      setHiddenCategories(new Set());
+      }} />}
+      {courseProps.beforeSubjects}
+    </>}
     title={chartOpen ? t('analytics.legend') : courseProps.title}
+    subjectListClassName={chartOpen ? 'border-l border-gray-200 pl-3' : courseProps.subjectListClassName}
     onOpenStatistics={!chartOpen && status === 'ready' ? openChart : undefined}
     onRemoveSubject={chartOpen ? undefined : courseProps.onRemoveSubject}
-    isSubjectHidden={chartOpen ? subject => !visible.has(subject.id) : undefined}
-    renderSubjectActions={chartOpen ? subject => eye(visible.has(subject.id), subject[language === 'de' ? 'labelDe' : 'labelEn'], () => toggle(setVisible, subject.id)) : undefined}
-    renderSubjectDetails={chartOpen && status === 'ready' ? subject => <SubjectStatistics metrics={metrics.get(subject.id)} color={subject.color} singleTime={singleTime} grouping={grouping} periodCount={periodCount}
-      categoryHidden={chartOpen ? category => !visible.has(subject.id) || hiddenCategories.has(`${subject.id}:${category}`) : undefined}
-      categoryAction={chartOpen && !singleTime ? category => eye(visible.has(subject.id) && !hiddenCategories.has(`${subject.id}:${category}`), `${subject[language === 'de' ? 'labelDe' : 'labelEn']} · ${t(`analytics.${category}`)}`, () => {
-        if (!visible.has(subject.id)) { setVisible(current => new Set([...current, subject.id])); setHiddenCategories(current => { const next = new Set(current); next.delete(`${subject.id}:${category}`); return next; }); }
+    isSubjectHidden={chartOpen ? subject => !workloadVisible || !visible.has(subject.id) : undefined}
+    renderSubjectActions={chartOpen ? subject => eye(workloadVisible && visible.has(subject.id), subject[language === 'de' ? 'labelDe' : 'labelEn'], () => { if (!workloadVisible) { setWorkloadVisible(true); setVisible(current => new Set([...current, subject.id])); } else toggle(setVisible, subject.id); }) : undefined}
+    renderSubjectDetails={chartOpen && status === 'ready' && showModuleStatistics ? subject => <SubjectStatistics metrics={metrics.get(subject.id)} color={subject.color} singleTime={singleTime} valueMode={valueMode}
+      categoryHidden={chartOpen ? category => !workloadVisible || !visible.has(subject.id) || hiddenCategories.has(`${subject.id}:${category}`) : undefined}
+      categoryAction={chartOpen && !singleTime ? category => eye(workloadVisible && visible.has(subject.id) && !hiddenCategories.has(`${subject.id}:${category}`), `${subject[language === 'de' ? 'labelDe' : 'labelEn']} · ${t(`analytics.${category}`)}`, () => {
+        if (!workloadVisible || !visible.has(subject.id)) { setWorkloadVisible(true); setVisible(current => new Set([...current, subject.id])); setHiddenCategories(current => { const next = new Set(current); next.delete(`${subject.id}:${category}`); return next; }); }
         else toggle(setHiddenCategories, `${subject.id}:${category}`);
       }, true) : undefined} /> : undefined}
   />

@@ -395,10 +395,6 @@ function eventBadgeClasses(kind: string, eventType: string) {
   return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 }
 
-function getAdjustedMissingCount(missingCount: number) {
-  return Math.max(0, missingCount - 1);
-}
-
 function normalizeParticipantName(participant: AdminParticipant) {
   return (participant.name || participant.id).trim();
 }
@@ -451,8 +447,8 @@ function compareParticipants(a: AdminParticipant, b: AdminParticipant, sortBy: A
       compareParticipantsByName(a, b, language);
   }
 
-  const adjustedMissingA = getAdjustedMissingCount(a.missingCount);
-  const adjustedMissingB = getAdjustedMissingCount(b.missingCount);
+  const adjustedMissingA = a.missingCount;
+  const adjustedMissingB = b.missingCount;
 
   if (adjustedMissingB !== adjustedMissingA) {
     return adjustedMissingB - adjustedMissingA;
@@ -768,14 +764,14 @@ function AdminContent({ participantId }: { participantId?: string }) {
     }
   }
 
-  async function loadOverview() {
+  async function loadOverview(silent = false) {
     if (!isAdminAuthenticated) {
       setOverview(emptyOverview);
       setStatus('ready');
       return;
     }
 
-    setStatus('loading');
+    if (!silent) setStatus('loading');
 
     try {
       const result = await pb.send<AdminOverview>('/api/admin/overview');
@@ -783,8 +779,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
       setStatus('ready');
     } catch (error) {
       console.error('Admin overview lookup failed:', error);
-      setOverview(emptyOverview);
-      setStatus('error');
+      if (!silent) { setOverview(emptyOverview); setStatus('error'); }
     }
   }
 
@@ -1144,6 +1139,19 @@ function AdminContent({ participantId }: { participantId?: string }) {
   }, [isAdminAuthenticated, participantId]);
 
   useEffect(() => {
+    if (!isAdminAuthenticated || participantId) return;
+    const refresh = () => { if (document.visibilityState === 'visible') void loadOverview(true); };
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [isAdminAuthenticated, participantId]);
+
+  useEffect(() => {
     if (!actionMessage) {
       return;
     }
@@ -1484,7 +1492,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
               </div>
               <button
                 type="button"
-                onClick={loadOverview}
+                onClick={() => loadOverview()}
                 title={t('admin.refresh')}
                 aria-label={t('admin.refresh')}
                 className="inline-flex h-9 w-9 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 md:h-10 md:w-auto md:px-3"
@@ -1590,7 +1598,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
             ) : (
               <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
                 {filteredParticipants.map((participant) => {
-                  const adjustedMissingCount = getAdjustedMissingCount(participant.missingCount);
+                  const adjustedMissingCount = participant.missingCount;
                   const missingBadgeClasses = participantMissingBadgeClasses(adjustedMissingCount, participant.entryMode);
                   const participantToneClasses = participant.inactive
                     ? 'border-gray-200 bg-gray-50 opacity-70'

@@ -10,6 +10,10 @@ function effective(group) {
 
 function fieldValue(submissions, name, fallback) {
     const sorted = submissions.slice().sort(newestFirst)
+    if (name === "comment") {
+        const latestComment = sorted.find(s => String(s.get("comment") || "").trim())
+        return latestComment ? String(latestComment.get("comment")).trim() : fallback
+    }
     if (["generalAdminTime", "commuteTime", "structuralChanges"].includes(name)) {
         // Legacy appendums stored these fields as totals, unlike their subject items.
         let delta = 0
@@ -23,29 +27,28 @@ function fieldValue(submissions, name, fallback) {
 }
 
 function settings(app, now) {
-    const record = app.findFirstRecordByFilter("adminSettings", 'key = "reviewTime"')
+    const record = app.findFirstRecordByFilter("adminSettings", 'key = "reviewTimeWeeks"')
     const raw = String(record.get("value")).trim()
-    const days = Number(raw)
-    if (!raw || !Number.isInteger(days) || days < 0) throw new Error("Invalid reviewTime setting")
+    const weeks = Number(raw)
+    if (!raw || !Number.isSafeInteger(weeks) || weeks < 0 || weeks > 5200) throw new Error("Invalid reviewTimeWeeks setting")
     const cutoff = new Date(now || new Date())
     cutoff.setHours(0, 0, 0, 0)
-    cutoff.setDate(cutoff.getDate() - days)
+    cutoff.setDate(cutoff.getDate() - (cutoff.getDay() + 6) % 7 - weeks * 7)
     const pad = n => String(n).padStart(2, "0")
-    return { reviewTime: days, reviewCutoff: cutoff.getFullYear() + "-" + pad(cutoff.getMonth() + 1) + "-" + pad(cutoff.getDate()) }
+    return { reviewTimeWeeks: weeks, reviewCutoff: cutoff.getFullYear() + "-" + pad(cutoff.getMonth() + 1) + "-" + pad(cutoff.getDate()) }
 }
 
-// Corrections share their week's slot; only the two latest recorded weeks
-// with active submissions are editable, regardless of submission age.
-function editableWeeklyStarts(app, participantId, submissions) {
-    const records = module.exports.active(app, submissions || app.findRecordsByFilter(
-        "submissions", 'participant = {:participantId} && periodType = "week" && submissionMode != "deleted"',
-        "", 0, 0, { participantId }
-    ))
-    const starts = {}
-    for (const submission of records) {
-        if (submission.get("periodType") === "week") starts[String(submission.get("periodStart")).slice(0, 10)] = true
-    }
-    return Object.keys(starts).sort().reverse().slice(0, 2)
+// Current week plus the configured completed Monday–Sunday weeks.
+function editableWeeklyStarts(app, participantId, submissions, now) {
+    const config = settings(app, now)
+    const cutoff = config.reviewCutoff
+    const start = new Date(cutoff + "T12:00:00")
+    const pad = n => String(n).padStart(2, "0")
+    return Array.from({ length: config.reviewTimeWeeks + 1 }, (_, index) => (config.reviewTimeWeeks - index) * 7).map(days => {
+        const date = new Date(start)
+        date.setDate(date.getDate() + days)
+        return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate())
+    })
 }
 
 function assertEditable(app, periodEnd) {
@@ -62,7 +65,7 @@ function prepare(app, group, body, periodEnd, adminOverride) {
     if (latest && !adminOverride) {
         if (latest.get("periodType") === "week") {
             if (!editableWeeklyStarts(app, latest.get("participant")).includes(String(latest.get("periodStart")).slice(0, 10))) {
-                throw new Error("Only the last two submitted weeks can be edited. This entry is read-only.")
+                throw new Error("The configured review period has expired. This entry is read-only.")
             }
         } else assertEditable(app, periodEnd)
     }
@@ -83,6 +86,8 @@ function prepare(app, group, body, periodEnd, adminOverride) {
     }
     return {
         latestId: latest ? latest.id : "",
+        comment: String(body.comment || "").trim() === String(fieldValue(selected, "comment", "")).trim()
+            ? "" : String(body.comment || "").trim(),
         subjectIds: Object.keys(totals).map(key => key.split("|")[0]),
         item: (subjectId, type, value) => minutes(value) - (totals[subjectId + "|" + type] || 0),
         field: (name, value) => minutes(value) - (latest ? Number(fieldValue(selected, name, 0)) : 0),

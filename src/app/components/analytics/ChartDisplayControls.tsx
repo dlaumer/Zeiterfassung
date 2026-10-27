@@ -2,14 +2,17 @@ import { useRef } from 'react';
 import { useI18n } from '../../i18n/i18n';
 
 import { ChartValueMode } from '../../analytics/workload';
+import { WORKLOAD_OPACITY } from '../../analytics/workloadColors';
 export type { ChartValueMode } from '../../analytics/workload';
 export type ChartTimeFilter = 'all' | 'study' | 'class';
-export const CHART_TOGGLE_TRACK = 'relative isolate grid w-56 shrink-0 justify-self-center rounded-xl border border-gray-200 bg-gray-100/80 p-1';
-export const CHART_TOGGLE_THUMB = 'pointer-events-none absolute bottom-1 left-1 top-1 -z-10 rounded-lg bg-white shadow-sm ring-1 ring-black/5 transition-all duration-200 motion-reduce:transition-none';
+export const CHART_TOGGLE_TRACK = 'chart-toggle-track relative isolate grid w-56 shrink-0 justify-self-center rounded-xl border border-gray-200 bg-gray-100/80 p-1 lg:w-full lg:min-w-0';
+export const CHART_TOGGLE_THUMB = 'pointer-events-none absolute bottom-1 left-1 top-1 -z-10 rounded-lg bg-white shadow-sm ring-1 ring-black/5 transition-all duration-200';
 
-export function ChartDisplayControls({ mode, onModeChange, timeFilter, onTimeFilterChange, singleTime }: {
+export function ChartDisplayControls({ mode, onModeChange, weeklyAverageDisabled = false, dailyAverageDisabled = false, timeFilter, onTimeFilterChange, singleTime }: {
   mode: ChartValueMode;
   onModeChange: (mode: ChartValueMode) => void;
+  weeklyAverageDisabled?: boolean;
+  dailyAverageDisabled?: boolean;
   timeFilter?: ChartTimeFilter;
   onTimeFilterChange: (filter: ChartTimeFilter) => void;
   singleTime: boolean;
@@ -22,13 +25,13 @@ export function ChartDisplayControls({ mode, onModeChange, timeFilter, onTimeFil
     <div role="group" aria-label={t('analytics.values')} className={`${CHART_TOGGLE_TRACK} grid-cols-3`}>
       <span aria-hidden="true" className={CHART_TOGGLE_THUMB}
         style={{ width: 'calc((100% - 0.5rem) / 3)', transform: `translateX(${valuePositions.indexOf(mode) * 100}%)` }} />
-      {valuePositions.map(value => <button key={value} type="button" aria-pressed={mode === value} onClick={() => onModeChange(value)}
-        className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 ${mode === value ? 'text-indigo-800' : 'text-gray-500 hover:text-gray-900'}`}>
+      {valuePositions.map(value => <button key={value} type="button" disabled={(value === 'weeklyAverage' && weeklyAverageDisabled) || (value === 'dailyAverage' && dailyAverageDisabled)} title={t((value === 'weeklyAverage' && weeklyAverageDisabled) || (value === 'dailyAverage' && dailyAverageDisabled) ? 'analytics.averageDisabledHelp' : `analytics.${value}Help`)} aria-pressed={mode === value} onClick={() => onModeChange(value)}
+        className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:text-gray-300 ${mode === value ? 'text-indigo-800' : 'text-gray-500 enabled:hover:text-gray-900'}`}>
         {t(value === 'total' ? 'analytics.totalMode' : value === 'weeklyAverage' ? 'analytics.weeklyCompact' : 'analytics.dailyCompact')}
       </button>)}
     </div>
     {!singleTime && <div role="radiogroup" aria-label={t('analytics.timeCategories')}
-      className={`${CHART_TOGGLE_TRACK} touch-pan-y grid-cols-3`} style={{ width: '18rem' }}
+      className={`${CHART_TOGGLE_TRACK} min-w-88 touch-pan-y grid-cols-3`}
       onPointerDown={event => {
         if (!event.isPrimary || event.button !== 0) return;
         dragging.current = event.pointerId;
@@ -44,7 +47,7 @@ export function ChartDisplayControls({ mode, onModeChange, timeFilter, onTimeFil
       onPointerUp={() => { dragging.current = null; }} onPointerCancel={() => { dragging.current = null; }}>
       <span aria-hidden="true" className={CHART_TOGGLE_THUMB}
         style={{ width: 'calc((100% - 0.5rem) / 3)', opacity: timeFilter ? 1 : 0, transform: `translateX(${Math.max(0, positions.indexOf(timeFilter!)) * 100}%)` }} />
-      {positions.map((value, index) => <button key={value} type="button" role="radio" aria-checked={timeFilter === value} onClick={() => onTimeFilterChange(value)}
+      {positions.map((value, index) => <button key={value} type="button" title={t(`analytics.filter${value}Help`)} role="radio" aria-checked={timeFilter === value} onClick={() => onTimeFilterChange(value)}
         onKeyDown={event => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
           event.preventDefault();
@@ -52,7 +55,8 @@ export function ChartDisplayControls({ mode, onModeChange, timeFilter, onTimeFil
           onTimeFilterChange(positions[next]);
           event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button')[next]?.focus();
         }}
-        className={`cursor-grab whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-indigo-500 ${timeFilter === value ? 'text-indigo-800' : 'text-gray-500 hover:text-gray-900'}`}>
+        className={`flex cursor-grab items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-indigo-500 ${timeFilter === value ? 'text-indigo-800' : 'text-gray-500 hover:text-gray-900'}`}>
+        {value !== 'all' && <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-black" style={{ opacity: WORKLOAD_OPACITY[value === 'class' ? 'classTime' : 'selfStudyTime'] }} />}
         {t(`analytics.filter${value[0].toUpperCase()}${value.slice(1)}`)}
       </button>)}
     </div>}

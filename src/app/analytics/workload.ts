@@ -1,10 +1,14 @@
-import { addDays, addMonths, addYears, startOfMonth, startOfYear, differenceInCalendarDays, format, parseISO, isValid } from 'date-fns';
+import { startOfWeek, endOfWeek, addDays, addMonths, addYears, startOfMonth, startOfYear, differenceInCalendarDays, format, parseISO, isValid } from 'date-fns';
 
 export interface DateRange { start: string; end: string }
-export type PeriodPreset = 'last7' | 'last14' | 'last30' | 'all' | 'custom';
-export interface AnalyticsPolicy { restricted: boolean; referenceDate?: string }
+export type PeriodPreset = 'last2Weeks' | 'last4Weeks' | 'all' | 'custom';
+export interface AnalyticsPolicy { restricted: boolean; reviewTimeWeeks?: number; referenceDate?: string }
 export interface WorkloadEntry {
   date: string;
+  reliability?: number;
+  socialBattery?: number;
+  comment?: string;
+  comments?: string[];
   skipped?: boolean;
   subjectTimes: { subjectId: string; classTime: number; selfStudyTime: number }[];
 }
@@ -15,6 +19,9 @@ export interface WorkloadMetrics {
 
 export type WorkloadGrouping = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export type ChartValueMode = 'total' | 'weeklyAverage' | 'dailyAverage';
+export type AnalyticsEntryMode = 'day' | 'week';
+export const roundQuarterHour = (hours: number) => Math.round((hours + Number.EPSILON) * 4) / 4;
+export const formatStatisticsHours = (hours: number, language: string) => new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en', { maximumFractionDigits: 2 }).format(roundQuarterHour(hours));
 export function workloadBarValue(total: number, range: DateRange, mode: ChartValueMode): number {
   const days = differenceInCalendarDays(parseISO(range.end), parseISO(range.start)) + 1;
   if (!Number.isFinite(days) || days <= 0) throw new Error('Invalid analytics range');
@@ -22,18 +29,48 @@ export function workloadBarValue(total: number, range: DateRange, mode: ChartVal
 }
 export interface WorkloadBucket extends DateRange { metrics: Map<string, WorkloadMetrics> }
 
-/** Weeks are consecutive seven-day intervals anchored to the range end.
- * Months and years follow calendar boundaries. Weekly submissions stay on their recorded date. */
-export function bucketWorkload(entries: Iterable<WorkloadEntry>, range: DateRange, grouping: WorkloadGrouping): WorkloadBucket[] {
+export function collectPeriodComments(entries: Iterable<WorkloadEntry>, range: DateRange, entryMode: AnalyticsEntryMode = 'day') {
+  return Array.from(entries).filter(entry => {
+    const end = entryMode === 'week' ? dateKey(addDays(parseISO(entry.date), 6)) : entry.date;
+    return !entry.skipped && entry.date <= range.end && end >= range.start;
+  }).sort((a, b) => a.date.localeCompare(b.date)).flatMap(entry => {
+    const comments = entry.comments?.length ? entry.comments : [entry.comment ?? ''];
+    return comments.map(comment => comment.trim()).filter(Boolean).map(comment => ({ date: entry.date, comment }));
+  });
+}
+
+/** Ratings are submission averages, weighted by overlapping days for weekly entries. */
+export function averageRatings(entries: Iterable<WorkloadEntry>, range: DateRange, entryMode: AnalyticsEntryMode = 'day') {
+  const sums = { reliability: 0, socialBattery: 0 };
+  const counts = { reliability: 0, socialBattery: 0 };
+  for (const entry of entries) {
+    const end = entryMode === 'week' ? dateKey(addDays(parseISO(entry.date), 6)) : entry.date;
+    if (entry.skipped || end < range.start || entry.date > range.end) continue;
+    const weight = differenceInCalendarDays(parseISO(end < range.end ? end : range.end), parseISO(entry.date > range.start ? entry.date : range.start)) + 1;
+    for (const key of ['reliability', 'socialBattery'] as const) {
+      const value = entry[key];
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 1 || value > 5) continue;
+      sums[key] += value * weight;
+      counts[key] += weight;
+    }
+  }
+  return {
+    reliability: counts.reliability ? sums.reliability / counts.reliability : null,
+    socialBattery: counts.socialBattery ? sums.socialBattery / counts.socialBattery : null,
+  };
+}
+
+/** Weeks follow Monday–Sunday calendar boundaries.
+ * Months and years follow calendar boundaries. Weekly totals are allocated by overlapping days. */
+export function bucketWorkload(entries: Iterable<WorkloadEntry>, range: DateRange, grouping: WorkloadGrouping, entryMode: AnalyticsEntryMode = 'day'): WorkloadBucket[] {
   const days = differenceInCalendarDays(parseISO(range.end), parseISO(range.start)) + 1;
   if (!Number.isFinite(days) || days <= 0) throw new Error('Invalid analytics range');
   const ranges: DateRange[] = [];
   if (grouping === 'weekly') {
-    let end = parseISO(range.end);
-    while (dateKey(end) >= range.start) {
-      const start = dateKey(addDays(end, -6));
-      ranges.unshift({ start: start < range.start ? range.start : start, end: dateKey(end) });
-      end = addDays(end, -7);
+    let cursor = startOfWeek(parseISO(range.start), { weekStartsOn: 1 });
+    while (dateKey(cursor) <= range.end) {
+      ranges.push({ start: dateKey(cursor), end: dateKey(addDays(cursor, 6)) });
+      cursor = addDays(cursor, 7);
     }
   } else {
     let cursor = parseISO(range.start);
@@ -46,43 +83,69 @@ export function bucketWorkload(entries: Iterable<WorkloadEntry>, range: DateRang
     }
   }
   const records = Array.from(entries);
-  return ranges.map(bucket => ({ ...bucket, metrics: aggregateWorkload(records, bucket) }));
+  return ranges.map(bucket => ({ ...bucket, metrics: aggregateWorkload(records, bucket, entryMode) }));
 }
 
 const dateKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
-export const ROLLING_PERIOD_DAYS = { last7: 7, last14: 14, last30: 30 } as const;
+export const calendarWeekStart = (date: string) => dateKey(startOfWeek(parseISO(date), { weekStartsOn: 1 }));
+export const calendarWeekEnd = (date: string) => dateKey(endOfWeek(parseISO(date), { weekStartsOn: 1 }));
 
-/** Rolling calendar days inclusive of the latest recorded entry date. */
-export function resolveDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, latest: string, earliest: string, custom?: DateRange): DateRange {
-  const selected = policy.restricted ? 'last14' : preset;
-  if (selected === 'all') return { start: earliest < latest ? earliest : latest, end: latest };
-  if (selected === 'custom') return custom && custom.start <= custom.end ? custom : { start: latest, end: latest };
-  return { start: dateKey(addDays(parseISO(latest), 1 - ROLLING_PERIOD_DAYS[selected])), end: latest };
+/** Presets include completed calendar weeks plus the entire current week. */
+export function resolveDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, today: string, earliest: string, custom?: DateRange, grouping: WorkloadGrouping = 'weekly'): DateRange {
+  const selected = policy.restricted && preset !== 'custom' ? 'last2Weeks' : preset;
+  const weeks = policy.reviewTimeWeeks ?? 2;
+  const monday = calendarWeekStart(today);
+  const end = calendarWeekEnd(today);
+  const alignStart = (date: string) => grouping === 'daily' ? date : calendarWeekStart(date);
+  const alignEnd = (date: string) => grouping === 'daily' ? date : calendarWeekEnd(date);
+  if (selected === 'all') return { start: alignStart(earliest < today ? earliest : today), end };
+  if (selected === 'custom' && custom && custom.start <= custom.end && [custom.start, custom.end].every(value => /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(parseISO(value)))) {
+    const minimum = dateKey(addDays(parseISO(monday), -weeks * 7));
+    const clamp = (date: string) => date < minimum ? minimum : date > end ? end : date;
+    return {
+      start: alignStart(policy.restricted ? clamp(custom.start) : custom.start),
+      end: alignEnd(policy.restricted ? clamp(custom.end) : custom.end),
+    };
+  }
+  return { start: dateKey(addDays(parseISO(monday), policy.restricted ? -weeks * 7 : selected === 'last4Weeks' ? -28 : -14)), end };
 }
 
-/** Corrections to older entries must not move the window back. Skipped entries
- * still count as submitted dates; only an empty history uses the fallback date. */
-export function resolveEntryDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, entries: Iterable<WorkloadEntry>, fallbackDate: string, custom?: DateRange): DateRange {
-  const reference = policy.referenceDate && /^\d{4}-\d{2}-\d{2}$/.test(policy.referenceDate) && isValid(parseISO(policy.referenceDate)) ? policy.referenceDate : undefined;
-  const dates = Array.from(entries, entry => entry.date).filter(date => !reference || date >= reference).sort();
-  const range = resolveDateRange(preset, policy, dates[dates.length - 1] ?? fallbackDate, reference ?? dates[0] ?? fallbackDate, custom);
-  if (!reference) return range;
-  return { start: range.start < reference ? reference : range.start, end: range.end < reference ? reference : range.end };
+/** Keep history for saved modules, including explicit zero-hour submissions. */
+export function savedModuleEntries(entries: Iterable<WorkloadEntry>, subjectIds: ReadonlySet<string>): Map<string, WorkloadEntry> {
+  return new Map(Array.from(entries).flatMap(entry => {
+    const subjectTimes = entry.subjectTimes.filter(subject => subjectIds.has(subject.subjectId));
+    return !entry.skipped && subjectTimes.length ? [[entry.date, { ...entry, subjectTimes }] as const] : [];
+  }));
 }
 
-/** Input contains effective totals, never raw correction records. Weekly entries
- * belong to their recorded week-start date; we do not invent daily allocations. */
-export function aggregateWorkload(entries: Iterable<WorkloadEntry>, range: DateRange): Map<string, WorkloadMetrics> {
+export function resolveEntryDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, entries: Iterable<WorkloadEntry>, today: string, custom?: DateRange, entryMode: AnalyticsEntryMode = 'day', grouping: WorkloadGrouping = 'weekly'): DateRange {
+  const dates = Array.from(entries, entry => entry.date).sort();
+  return resolveDateRange(preset, policy, today, dates[0] ?? today, custom, grouping);
+}
+
+/** Side summaries exclude the entire current week, including its denominator. */
+export function completedWeekMetrics(entries: Iterable<WorkloadEntry>, range: DateRange, today: string, entryMode: AnalyticsEntryMode = 'day') {
+  const end = dateKey(addDays(parseISO(calendarWeekStart(today)), -1));
+  return range.start > end ? new Map<string, WorkloadMetrics>() : aggregateWorkload(entries, { start: range.start, end: range.end < end ? range.end : end }, entryMode);
+}
+
+/** Daily values are rounded before summation. Weekly totals use their seven-day overlap,
+ * without rounding intermediate allocations or averages. Stored entries stay unchanged. */
+export function aggregateWorkload(entries: Iterable<WorkloadEntry>, range: DateRange, entryMode: AnalyticsEntryMode = 'day'): Map<string, WorkloadMetrics> {
   const days = differenceInCalendarDays(parseISO(range.end), parseISO(range.start)) + 1;
   if (!Number.isFinite(days) || days <= 0) throw new Error('Invalid analytics range');
   const result = new Map<string, WorkloadMetrics>();
   for (const entry of entries) {
-    if (entry.skipped || entry.date < range.start || entry.date > range.end) continue;
+    const entryEnd = entryMode === 'week' ? dateKey(addDays(parseISO(entry.date), 6)) : entry.date;
+    if (entry.skipped || entryEnd < range.start || entry.date > range.end) continue;
+    const overlapStart = entry.date < range.start ? range.start : entry.date;
+    const overlapEnd = entryEnd > range.end ? range.end : entryEnd;
+    const weight = entryMode === 'week' ? (differenceInCalendarDays(parseISO(overlapEnd), parseISO(overlapStart)) + 1) / 7 : 1;
     for (const subject of entry.subjectTimes) {
       const metrics = result.get(subject.subjectId) ?? { total: { classTime: 0, selfStudyTime: 0 }, weeklyAverage: { classTime: 0, selfStudyTime: 0 } };
-      metrics.total.classTime += subject.classTime;
-      metrics.total.selfStudyTime += subject.selfStudyTime;
+      metrics.total.classTime += (entryMode === 'day' ? roundQuarterHour(subject.classTime) : subject.classTime) * weight;
+      metrics.total.selfStudyTime += (entryMode === 'day' ? roundQuarterHour(subject.selfStudyTime) : subject.selfStudyTime) * weight;
       result.set(subject.subjectId, metrics);
     }
   }

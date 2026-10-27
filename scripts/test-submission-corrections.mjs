@@ -72,7 +72,7 @@ try {
     assert.equal(history.submissionHistory[0].subjects[0].selfStudyTime, 0);
     assert.equal(history.submissionHistory[0].generalAdminTime, 30);
     assert.equal(history.submissionHistory[0].commuteTime, 0);
-    assert.equal(history.submissionHistory[0].comment, '');
+    assert.equal(history.submissionHistory[0].comment, 'legacy');
     assert.equal(history.submissionHistory[0].correctionDates.length, 2);
     assert.equal(history.submissionHistory[0].initialSubmittedAt, initial.submittedAt);
     await request('/api/submissions/daily', corrected, 'POST', 400); // stale form

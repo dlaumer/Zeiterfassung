@@ -1,3 +1,4 @@
+import { isFutureSubmission } from '../submissionDatePolicy.mjs';
 import { FieldHelp } from './FieldHelp';
 import { X, Trash2, Star, Bike, TrainFront, FileText, CheckCircle, History } from 'lucide-react';
 import { format, endOfWeek } from 'date-fns';
@@ -47,7 +48,7 @@ interface DailyEntryModalProps {
   onClose: () => void;
   onDelete: () => Promise<void>;
   readOnly: boolean;
-  reviewTime: number;
+  reviewTimeWeeks: number;
   onSave: (entry: DailyEntry) => Promise<void>;
   existingEntry: DailyEntry | null;
   availableCourses: string[];
@@ -133,7 +134,7 @@ function EditablePercentageDisplay({ value, onChange }: EditablePercentageDispla
   );
 }
 
-export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, reviewTime, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student', participantSubjectLabel }: DailyEntryModalProps) {
+export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, reviewTimeWeeks, existingEntry, subjects, defaultCommuteTime = 0, entryMode = 'day', participantRole = 'student', participantSubjectLabel }: DailyEntryModalProps) {
   const { t, language } = useI18n();
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjectTimes, setSubjectTimes] = useState<SubjectTime[]>([]);
@@ -156,6 +157,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   const [confirmedClassTimes, setConfirmedClassTimes] = useState<Record<string, number>>({});
   const [showClassTimeWarnings, setShowClassTimeWarnings] = useState(false);
   const isWeekly = entryMode === 'week';
+  const futurePeriod = isFutureSubmission(format(date, 'yyyy-MM-dd'), entryMode);
   const isFaculty = participantRole === 'faculty';
   const isCorrection = !!existingEntry && !readOnly;
   const categoriesTitle = isFaculty && participantSubjectLabel
@@ -181,7 +183,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
     setStructuralChanges(existingEntry?.structuralChanges ?? 0);
     setAdminEffortSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextAdminEffort));
     setCommuteTimeSliderMax(Math.max(DEFAULT_TIME_SLIDER_MAX, nextCommuteTime));
-    setComment(readOnly ? existingEntry?.comment ?? '' : '');
+    setComment(existingEntry?.comment ?? '');
     setShowReliabilityError(false);
     setShowSocialBatteryError(false);
     setShowRatingConfirmation(false);
@@ -320,9 +322,9 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
     socialBattery !== (existingEntry?.socialBattery ?? 0) ||
     adminEffort !== (existingEntry?.adminEffort ?? 0) ||
     commuteTime !== (isFaculty ? 0 : existingEntry?.commuteTime ?? defaultCommuteTime) ||
-    structuralChanges !== (existingEntry?.structuralChanges ?? 0) || comment !== ''
+    structuralChanges !== (existingEntry?.structuralChanges ?? 0) || comment.trim() !== (existingEntry?.comment ?? '').trim()
   );
-  const shouldShowCloseWarning = !readOnly && hasChanges;
+  const shouldShowCloseWarning = !readOnly && !futurePeriod && hasChanges;
 
   const handleCloseRequest = () => {
     if (shouldShowCloseWarning) {
@@ -334,7 +336,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
   };
 
   const handleSubmit = async (ratingsConfirmed = false) => {
-    if (readOnly || isSaving || (isCorrection && !hasChanges)) return;
+    if (readOnly || futurePeriod || isSaving || (isCorrection && !hasChanges)) return;
     setShowClassTimeWarnings(true);
     setSaveError(null);
     setShowReliabilityError(reliability <= 0);
@@ -351,7 +353,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
 
     const submittedComment = !existingEntry && !hasEnteredCourseLikeWorkload && comment.trim().length === 0
       ? t('dailyEntry.skippedTag')
-      : comment;
+      : existingEntry && comment.trim() === existingEntry.comment.trim() ? '' : comment;
 
     setIsSaving(true);
     const entry: DailyEntry = {
@@ -451,11 +453,12 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
             })}
           </ol>
         </section>}
-        {readOnly && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{t('dailyEntry.reviewExpired', { days: reviewTime })}</p>}
+        {readOnly && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{t('dailyEntry.reviewExpired', { weeks: reviewTimeWeeks })}</p>}
+        {futurePeriod && <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{t(isWeekly ? 'dailyEntry.futureWeek' : 'dailyEntry.futureDay')}</p>}
         <fieldset
-          disabled={readOnly || isSaving}
-          onClickCapture={event => { if (readOnly || isSaving) event.stopPropagation(); }}
-          onPointerDownCapture={event => { if (readOnly || isSaving) event.stopPropagation(); }}
+          disabled={readOnly || futurePeriod || isSaving}
+          onClickCapture={event => { if (readOnly || futurePeriod || isSaving) event.stopPropagation(); }}
+          onPointerDownCapture={event => { if (readOnly || futurePeriod || isSaving) event.stopPropagation(); }}
           className="min-w-0"
         >
         {!readOnly && <div className="bg-blue-50 rounded-lg p-3 mb-6">
@@ -730,7 +733,7 @@ export function DailyEntryModal({ date, onClose, onSave, onDelete, readOnly, rev
             <p className="text-sm text-red-600">{saveError}</p>
           )}
           {existingEntry && !readOnly && <button disabled={isSaving} onClick={() => setShowDeleteWarning(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />{t('dailyEntry.delete')}</button>}
-          {!readOnly && <button
+          {!readOnly && !futurePeriod && <button
             onClick={() => handleSubmit()}
             disabled={isSaving || (isCorrection && !hasChanges)}
             className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"

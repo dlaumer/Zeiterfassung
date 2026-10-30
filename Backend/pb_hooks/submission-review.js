@@ -26,8 +26,21 @@ function fieldValue(submissions, name, fallback) {
     return sorted.length ? sorted[0].get(name) : fallback
 }
 
+function settingsRecord(app) {
+    try { return app.findFirstRecordByFilter("adminSettings", 'key = "reviewTimeWeeks"') } catch (error) {
+        // A production-to-dev data refresh can restore the legacy row after the
+        // calendar-week migration has already been recorded as applied.
+        let legacy
+        try { legacy = app.findFirstRecordByFilter("adminSettings", 'key = "reviewTime"') } catch (_) { throw error }
+        legacy.set("key", "reviewTimeWeeks")
+        legacy.set("value", "2") // Same initial policy as 1793100000_review_time_weeks.js.
+        app.save(legacy)
+        return legacy
+    }
+}
+
 function settings(app, now) {
-    const record = app.findFirstRecordByFilter("adminSettings", 'key = "reviewTimeWeeks"')
+    const record = settingsRecord(app)
     const raw = String(record.get("value")).trim()
     const weeks = Number(raw)
     if (!raw || !Number.isSafeInteger(weeks) || weeks < 0 || weeks > 5200) throw new Error("Invalid reviewTimeWeeks setting")
@@ -94,7 +107,7 @@ function prepare(app, group, body, periodEnd, adminOverride) {
     }
 }
 
-module.exports = { newestFirst, effective, fieldValue, settings, assertEditable, prepare, editableWeeklyStarts }
+module.exports = { newestFirst, effective, fieldValue, settingsRecord, settings, assertEditable, prepare, editableWeeklyStarts }
 
 // PocketBase assigns submittedAt automatically, so it can differ from deletedAt
 // by milliseconds. Use the payload and predecessor as well as the timestamp.

@@ -1,4 +1,6 @@
 import { startOfWeek, endOfWeek, addDays, addMonths, addYears, startOfMonth, startOfYear, differenceInCalendarDays, format, parseISO, isValid } from 'date-fns';
+import { roundQuarterHour } from '../time';
+export { roundQuarterHour } from '../time';
 
 export interface DateRange { start: string; end: string }
 export type PeriodPreset = 'last2Weeks' | 'last4Weeks' | 'all' | 'custom';
@@ -20,12 +22,11 @@ export interface WorkloadMetrics {
 export type WorkloadGrouping = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export type ChartValueMode = 'total' | 'weeklyAverage' | 'dailyAverage';
 export type AnalyticsEntryMode = 'day' | 'week';
-export const roundQuarterHour = (hours: number) => Math.round((hours + Number.EPSILON) * 4) / 4;
 export const formatStatisticsHours = (hours: number, language: string) => new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en', { maximumFractionDigits: 2 }).format(roundQuarterHour(hours));
 export function workloadBarValue(total: number, range: DateRange, mode: ChartValueMode): number {
   const days = differenceInCalendarDays(parseISO(range.end), parseISO(range.start)) + 1;
   if (!Number.isFinite(days) || days <= 0) throw new Error('Invalid analytics range');
-  return mode === 'total' ? total : total / days * (mode === 'weeklyAverage' ? 7 : 1);
+  return roundQuarterHour(mode === 'total' ? total : total / days * (mode === 'weeklyAverage' ? 7 : 1));
 }
 export interface WorkloadBucket extends DateRange { metrics: Map<string, WorkloadMetrics> }
 
@@ -69,7 +70,9 @@ export function bucketWorkload(entries: Iterable<WorkloadEntry>, range: DateRang
   if (grouping === 'weekly') {
     let cursor = startOfWeek(parseISO(range.start), { weekStartsOn: 1 });
     while (dateKey(cursor) <= range.end) {
-      ranges.push({ start: dateKey(cursor), end: dateKey(addDays(cursor, 6)) });
+      const start = dateKey(cursor);
+      const end = dateKey(addDays(cursor, 6));
+      ranges.push({ start: start < range.start ? range.start : start, end: end > range.end ? range.end : end });
       cursor = addDays(cursor, 7);
     }
   } else {
@@ -98,14 +101,13 @@ export function resolveDateRange(preset: PeriodPreset, policy: AnalyticsPolicy, 
   const monday = calendarWeekStart(today);
   const end = calendarWeekEnd(today);
   const alignStart = (date: string) => grouping === 'daily' ? date : calendarWeekStart(date);
-  const alignEnd = (date: string) => grouping === 'daily' ? date : calendarWeekEnd(date);
   if (selected === 'all') return { start: alignStart(earliest < today ? earliest : today), end };
   if (selected === 'custom' && custom && custom.start <= custom.end && [custom.start, custom.end].every(value => /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(parseISO(value)))) {
     const minimum = dateKey(addDays(parseISO(monday), -weeks * 7));
     const clamp = (date: string) => date < minimum ? minimum : date > end ? end : date;
     return {
-      start: alignStart(policy.restricted ? clamp(custom.start) : custom.start),
-      end: alignEnd(policy.restricted ? clamp(custom.end) : custom.end),
+      start: policy.restricted ? clamp(custom.start) : custom.start,
+      end: policy.restricted ? clamp(custom.end) : custom.end,
     };
   }
   return { start: dateKey(addDays(parseISO(monday), policy.restricted ? -weeks * 7 : selected === 'last4Weeks' ? -28 : -14)), end };
@@ -130,7 +132,7 @@ export function completedWeekMetrics(entries: Iterable<WorkloadEntry>, range: Da
   return range.start > end ? new Map<string, WorkloadMetrics>() : aggregateWorkload(entries, { start: range.start, end: range.end < end ? range.end : end }, entryMode);
 }
 
-/** Daily values are rounded before summation. Weekly totals use their seven-day overlap,
+/** Each input is rounded before summation. Weekly totals use their seven-day overlap,
  * without rounding intermediate allocations or averages. Stored entries stay unchanged. */
 export function aggregateWorkload(entries: Iterable<WorkloadEntry>, range: DateRange, entryMode: AnalyticsEntryMode = 'day'): Map<string, WorkloadMetrics> {
   const days = differenceInCalendarDays(parseISO(range.end), parseISO(range.start)) + 1;
@@ -144,8 +146,8 @@ export function aggregateWorkload(entries: Iterable<WorkloadEntry>, range: DateR
     const weight = entryMode === 'week' ? (differenceInCalendarDays(parseISO(overlapEnd), parseISO(overlapStart)) + 1) / 7 : 1;
     for (const subject of entry.subjectTimes) {
       const metrics = result.get(subject.subjectId) ?? { total: { classTime: 0, selfStudyTime: 0 }, weeklyAverage: { classTime: 0, selfStudyTime: 0 } };
-      metrics.total.classTime += (entryMode === 'day' ? roundQuarterHour(subject.classTime) : subject.classTime) * weight;
-      metrics.total.selfStudyTime += (entryMode === 'day' ? roundQuarterHour(subject.selfStudyTime) : subject.selfStudyTime) * weight;
+      metrics.total.classTime += roundQuarterHour(subject.classTime) * weight;
+      metrics.total.selfStudyTime += roundQuarterHour(subject.selfStudyTime) * weight;
       result.set(subject.subjectId, metrics);
     }
   }

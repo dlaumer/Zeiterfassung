@@ -39,10 +39,10 @@ assert.equal(allRange(['current']).start,'2026-04-13','Removing a module removes
 assert.equal(allRange([]).start,'2026-10-26','No saved module history falls back to the current week');
 console.log('PASS: saved-module history, reference-date independence and module additions/removals');
 
-assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2026-10-20',end:'2026-10-22'}),{start:'2026-10-19',end:'2026-10-25'});
+assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2026-10-20',end:'2026-10-22'}),{start:'2026-10-20',end:'2026-10-22'});
 assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2020-01-01',end:'2030-01-01'}),range);
-assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2020-01-01',end:'2020-01-03'}),{start:'2026-10-12',end:'2026-10-18'});
-assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2030-01-01',end:'2030-01-03'}),{start:'2026-10-26',end:'2026-11-01'});
+assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2020-01-01',end:'2020-01-03'}),{start:'2026-10-12',end:'2026-10-12'});
+assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2030-01-01',end:'2030-01-03'}),{start:'2026-11-01',end:'2026-11-01'});
 console.log('PASS: participant custom dates stay within the three-calendar-week window');
 
 assert.deepEqual(w.resolveDateRange('custom',{restricted:true},today,'2020-01-01',{start:'2026-10-20',end:'2026-10-22'},'daily'),{start:'2026-10-20',end:'2026-10-22'});

@@ -1,6 +1,6 @@
 import App from '../app/App';
 import { ProgressiveActivityList } from './ProgressiveActivityList';
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
 import { pocketBaseUrl } from '../pocketbaseConfig';
 import { AdminSettingsDialog } from './AdminSettingsDialog';
@@ -702,6 +702,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
   const { t, language } = useI18n();
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const overviewRequestId = useRef(0);
   const [query, setQuery] = useState('');
   const [authRecord, setAuthRecord] = useState(pb.authStore.record);
   const [email, setEmail] = useState('');
@@ -765,6 +766,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
   }
 
   async function loadOverview(silent = false) {
+    const requestId = ++overviewRequestId.current;
     if (!isAdminAuthenticated) {
       setOverview(emptyOverview);
       setStatus('ready');
@@ -774,12 +776,20 @@ function AdminContent({ participantId }: { participantId?: string }) {
     if (!silent) setStatus('loading');
 
     try {
-      const result = await pb.send<AdminOverview>('/api/admin/overview');
+      // Focus and visibility events can overlap with initial/manual loads.
+      const result = await pb.send<AdminOverview>('/api/admin/overview', { requestKey: null });
+      if (requestId !== overviewRequestId.current) return;
+      // The SDK returns {} when a 200 response body cannot be read or parsed
+      // (for example, when the connection resets after the headers arrive).
+      if (!result || !Array.isArray(result.participants) || !Array.isArray(result.subjects) || !Array.isArray(result.events)) {
+        throw new Error('Admin overview response is incomplete or invalid');
+      }
       setOverview(result);
       setStatus('ready');
     } catch (error) {
+      if (requestId !== overviewRequestId.current) return;
       console.error('Admin overview lookup failed:', error);
-      if (!silent) { setOverview(emptyOverview); setStatus('error'); }
+      setStatus((current) => !silent || current === 'loading' ? 'error' : current);
     }
   }
 

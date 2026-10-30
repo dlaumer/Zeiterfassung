@@ -1,3 +1,4 @@
+import { roundQuarterHour } from './time';
 import { isFutureSubmission } from './submissionDatePolicy.mjs';
 
 import { latestNonEmptyComment } from './submissionComments.mjs';
@@ -478,16 +479,16 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
             courses: [],
             subjectTimes: item.subjects.map((subject) => ({
               subjectId: responseParticipantRole === 'faculty' ? subject.key : subject.id,
-              classTime: Number(subject.classTime || 0),
-              selfStudyTime: Number(subject.selfStudyTime || 0),
+              classTime: roundQuarterHour(Number(subject.classTime || 0)),
+              selfStudyTime: roundQuarterHour(Number(subject.selfStudyTime || 0)),
               hasClassEntry: !!subject.hasClassEntry,
               hasStudyEntry: !!subject.hasStudyEntry,
             })),
             reliability: Number(item.dataRating ?? 0),
             socialBattery: Number(item.socialBattery ?? 0),
-            adminEffort: Number(item.generalAdminTime ?? 0) / 60,
-            commuteTime: Number(item.commuteTime ?? 0) / 60,
-            structuralChanges: Number(item.structuralChanges ?? 0) / 60,
+            adminEffort: roundQuarterHour(Number(item.generalAdminTime ?? 0) / 60),
+            commuteTime: roundQuarterHour(Number(item.commuteTime ?? 0) / 60),
+            structuralChanges: roundQuarterHour(Number(item.structuralChanges ?? 0) / 60),
             comment: getNewestComment(item),
             comments: item.comments?.length ? item.comments : [getNewestComment(item)].filter(Boolean),
             skipped: false,
@@ -524,6 +525,17 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
   }, [participantId, participantStatus]);
 
   const saveEntry = async (entry: DailyEntry) => {
+    entry = {
+      ...entry,
+      adminEffort: roundQuarterHour(entry.adminEffort),
+      commuteTime: roundQuarterHour(entry.commuteTime),
+      structuralChanges: roundQuarterHour(entry.structuralChanges ?? 0),
+      subjectTimes: entry.subjectTimes.map(subject => ({
+        ...subject,
+        classTime: roundQuarterHour(subject.classTime),
+        selfStudyTime: roundQuarterHour(subject.selfStudyTime),
+      })),
+    };
     if (!participantId) {
       throw new Error('Missing participantId');
     }
@@ -858,11 +870,13 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
         <div className="submission-page-header mb-2 shrink-0 md:mb-4">
           <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(18rem,26vw,24rem)]">
             <div className="flex min-w-0 items-center gap-2 md:gap-3">
-              <img
-                src={logoMethric}
-                alt={t('app.title')}
-                className="submission-logo h-9 w-auto max-w-[8.5rem] shrink-0 object-contain sm:max-w-[10rem] md:h-12 md:max-w-[12rem]"
-              />
+              <a href={window.location.pathname} className="shrink-0 rounded focus-visible:outline-2 focus-visible:outline-indigo-500">
+                <img
+                  src={logoMethric}
+                  alt={t('app.title')}
+                  className="submission-logo h-9 w-auto max-w-[8.5rem] shrink-0 object-contain sm:max-w-[10rem] md:h-12 md:max-w-[12rem]"
+                />
+              </a>
               {participantName && (
                 <span className="line-clamp-2 min-w-0 overflow-hidden text-sm font-semibold leading-tight text-gray-600 md:text-base">
                   {participantName}

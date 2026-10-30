@@ -5,10 +5,11 @@ import { SubmissionPanels } from '../SubmissionPanels';
 import { savedModuleEntries, completedWeekMetrics, AnalyticsPolicy, DateRange, PeriodPreset, resolveEntryDateRange, WorkloadEntry, WorkloadGrouping } from '../../analytics/workload';
 import { CourseManagement, Subject } from '../CourseManagement';
 import { WorkloadChartPanel } from './WorkloadChartPanel';
-import { ChartTimeFilter, ChartValueMode } from './ChartDisplayControls';
+import { ChartTimeFilter } from './ChartDisplayControls';
 
 import { SubjectStatistics } from './SubjectStatistics';
 import { StatisticsOptions } from './StatisticsOptions';
+import { useStatisticsUrl } from '../../analytics/statisticsUrl';
 import { useI18n } from '../../i18n/i18n';
 
 type Props = ComponentProps<typeof CourseManagement> & {
@@ -23,27 +24,29 @@ type Props = ComponentProps<typeof CourseManagement> & {
 
 export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = false, daily = true, participantRole = 'student', calendar, ...courseProps }: Props) {
   const { t, language } = useI18n();
-  const [chartInitialized, setChartInitialized] = useState(false);
-  const [preset, setPreset] = useState<PeriodPreset>('last2Weeks');
-  const [custom, setCustom] = useState<DateRange>();
-  const [grouping, setGrouping] = useState<WorkloadGrouping>(() => daily ? 'daily' : 'weekly');
-  const [valueMode, setValueMode] = useState<ChartValueMode>('total');
-  const [showModuleStatistics, setShowModuleStatistics] = useState(true);
-  const [showBarTotals, setShowBarTotals] = useState(true);
-  const [workloadVisible, setWorkloadVisible] = useState(true);
-  const [showDataRating, setShowDataRating] = useState(false);
-  const [showEnergyLevel, setShowEnergyLevel] = useState(false);
+  const setting = useStatisticsUrl(daily);
+  const [chartInitialized, setChartInitialized] = setting('initialized');
+  const [zoom, setZoom] = setting('zoom');
+  const [preset, setPreset] = setting('period');
+  const [custom, setCustom] = setting('dates');
+  const [grouping, setGrouping] = setting('group');
+  const [valueMode, setValueMode] = setting('value');
+  const [showModuleStatistics, setShowModuleStatistics] = setting('summaries');
+  const [showBarTotals, setShowBarTotals] = setting('totals');
+  const [workloadVisible, setWorkloadVisible] = setting('workload');
+  const [showDataRating, setShowDataRating] = setting('rating');
+  const [showEnergyLevel, setShowEnergyLevel] = setting('energy');
   const noVisibleModules = useMemo(() => new Set<string>(), []);
   const changeGrouping = (next: WorkloadGrouping) => {
     setGrouping(next);
     if ((next === 'daily' && valueMode !== 'total') || (next === 'weekly' && valueMode === 'weeklyAverage')) setValueMode('total');
   };
   const [chartSubject, setChartSubject] = useState<Subject>();
-  const [chartVisible, setChartVisible] = useState(false);
+  const [chartVisible, setChartVisible] = setting('open');
   const [expandRequest, setExpandRequest] = useState(0);
 
-  const [visible, setVisible] = useState<Set<string>>(new Set());
-  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
+  const [visible, setVisible] = setting('modules');
+  const [hiddenCategories, setHiddenCategories] = setting('hidden');
   const timeFilter: ChartTimeFilter | undefined = hiddenCategories.size === 0 ? 'all'
     : courseProps.subjects.every(subject => hiddenCategories.has(`${subject.id}:classTime`) && !hiddenCategories.has(`${subject.id}:selfStudyTime`)) ? 'study'
     : courseProps.subjects.every(subject => hiddenCategories.has(`${subject.id}:selfStudyTime`) && !hiddenCategories.has(`${subject.id}:classTime`)) ? 'class' : undefined;
@@ -102,9 +105,9 @@ export function SubjectAnalyticsPanel({ entries, policy, status, singleTime = fa
     <div className={`calendar-flip-inner ${chartOpen ? 'calendar-flip-open' : ''}`}>
       <div ref={frontRef} aria-hidden={chartOpen} className="calendar-flip-face">{calendar(collapsed, statisticsButton)}</div>
       <div ref={backRef} aria-hidden={!chartOpen} className="calendar-flip-face calendar-flip-back">
-        {chartInitialized && status === 'ready' && <WorkloadChartPanel ratingEntries={entries} participantRole={participantRole} showDataRating={showDataRating} showEnergyLevel={showEnergyLevel} showBarTotals={showBarTotals} collapsed={collapsed} selected={chartSubject} subjects={courseProps.subjects}
+        {chartInitialized && status === 'ready' && <WorkloadChartPanel zoom={zoom} onZoomChange={setZoom} ratingEntries={entries} participantRole={participantRole} showDataRating={showDataRating} showEnergyLevel={showEnergyLevel} showBarTotals={showBarTotals} collapsed={collapsed} selected={chartSubject} subjects={courseProps.subjects}
           today={today} entries={moduleEntries} policy={policy} preset={selectedPreset} range={range} rangeBounds={rangeBounds} singleTime={singleTime} daily={daily}
-          visible={workloadVisible ? visible : noVisibleModules} hiddenCategories={hiddenCategories} grouping={grouping} onGroupingChange={changeGrouping} valueMode={valueMode} onValueModeChange={setValueMode}
+          workloadVisible={workloadVisible} visible={workloadVisible ? visible : noVisibleModules} hiddenCategories={hiddenCategories} grouping={grouping} onGroupingChange={changeGrouping} valueMode={valueMode} onValueModeChange={setValueMode}
           timeFilter={timeFilter} onTimeFilterChange={changeTimeFilter} onRangeChange={changeRange} onClose={closeChart} />}
       </div>
     </div>

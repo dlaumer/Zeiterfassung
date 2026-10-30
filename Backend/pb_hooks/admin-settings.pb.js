@@ -9,7 +9,7 @@ routerAdd("PATCH", "/api/admin/settings", (e) => {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 5200) {
         return e.json(400, { message: "Review period must be a whole number of weeks between 0 and 5200." })
     }
-    const setting = $app.findFirstRecordByFilter("adminSettings", 'key = "reviewTimeWeeks"')
+    const setting = require(`${__hooks}/submission-review.js`).settingsRecord($app)
     setting.set("value", String(value))
     $app.save(setting)
     return e.json(200, { reviewTimeWeeks: value })

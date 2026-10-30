@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '../i18n/i18n';
+import { roundQuarterHour } from '../time';
 
 interface EditableTimeDisplayProps {
   value: number;
@@ -82,7 +83,7 @@ function TimeValueEditor({
       const maxMinutes = Math.round(max * 60);
       const enteredMinutes = hours * 60 + minutes;
       const totalMinutes = clampToMax ? Math.min(enteredMinutes, maxMinutes) : enteredMinutes;
-      onChange(totalMinutes / 60);
+      onChange(roundQuarterHour(totalMinutes / 60));
     }
 
     setIsEditing(false);

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, MessageCircle, ZoomIn, X } from 'lucide-react';
-import { Bar, ComposedChart, Line, CartesianGrid, ReferenceArea, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { Bar, ComposedChart, Label, Line, CartesianGrid, ReferenceArea, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { format, getISOWeek, getISOWeekYear, parseISO } from 'date-fns';
 import { collectPeriodComments, averageRatings, calendarWeekStart, calendarWeekEnd, workloadBarValue, formatStatisticsHours, AnalyticsPolicy, bucketWorkload, DateRange, PeriodPreset, WorkloadEntry, WorkloadGrouping } from '../../analytics/workload';
 import { WORKLOAD_OPACITY } from '../../analytics/workloadColors';
@@ -13,11 +13,14 @@ import { CHART_TOGGLE_THUMB, CHART_TOGGLE_TRACK, ChartDisplayControls, ChartTime
 
 type Category = 'classTime' | 'selfStudyTime';
 interface Props {
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
   ratingEntries: Map<string, WorkloadEntry>;
   participantRole: 'student' | 'faculty';
   showDataRating: boolean;
   showEnergyLevel: boolean;
   showBarTotals?: boolean;
+  workloadVisible?: boolean;
   today: string;
   collapsed?: boolean;
   selected?: Subject;
@@ -41,12 +44,11 @@ interface Props {
   onClose: () => void;
 }
 
-export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRating, showEnergyLevel, showBarTotals = true, today, collapsed = false, selected, subjects, entries, policy, preset, range, rangeBounds, singleTime, daily, visible, hiddenCategories, grouping, onGroupingChange, valueMode, onValueModeChange, timeFilter, onTimeFilterChange, onRangeChange, onClose }: Props) {
+export function WorkloadChartPanel({ zoom, onZoomChange: setZoom, ratingEntries, participantRole, showDataRating, showEnergyLevel, showBarTotals = true, workloadVisible = true, today, collapsed = false, selected, subjects, entries, policy, preset, range, rangeBounds, singleTime, daily, visible, hiddenCategories, grouping, onGroupingChange, valueMode, onValueModeChange, timeFilter, onTimeFilterChange, onRangeChange, onClose }: Props) {
   const { t, language } = useI18n();
   const [selectedPeriod, setSelectedPeriod] = useState<string>();
   const [showComments, setShowComments] = useState(false);
   useEffect(() => { setShowComments(false); }, [selectedPeriod]);
-  const [zoom, setZoom] = useState(1);
   const [chartWidth, setChartWidth] = useState(0);
   const chartRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -88,7 +90,6 @@ export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRat
     return () => { observer.disconnect(); chart.removeEventListener('scroll', position); };
   }, [selectedPeriod, visible, hiddenCategories, showDataRating, showEnergyLevel, language, zoom]);
   useEffect(() => { setSelectedPeriod(undefined); }, [grouping, valueMode, range.start, range.end]);
-  useEffect(() => { setZoom(1); }, [grouping, range.start, range.end]);
   useEffect(() => { if (zoom === 1 && chartRef.current) chartRef.current.scrollLeft = 0; }, [zoom]);
   const ordered = singleTime ? subjects : [...subjects].sort(compareSubjectsByDisplayName(language));
   const categories: Category[] = singleTime ? ['classTime'] : ['classTime', 'selfStudyTime'];
@@ -96,6 +97,9 @@ export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRat
     .filter(bucket => grouping !== 'daily' || bucket.start <= today), [entries, range.start, range.end, grouping, daily, today]);
 
   const showRatings = showDataRating || showEnergyLevel;
+  const workloadAxisWidth = workloadVisible ? 64 : 0;
+  const ratingAxisWidth = showRatings ? (showDataRating && showEnergyLevel ? 50 : 36) : 0;
+  const chartRightMargin = 4;
   const ratings = useMemo(() => {
     const submitted = Array.from(ratingEntries.values()).filter(entry => entry.date <= today);
     return buckets.map(bucket => averageRatings(submitted, bucket, daily ? 'day' : 'week'));
@@ -112,7 +116,7 @@ export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRat
   })));
   const isSeriesVisible = ({ subject, category }: typeof allSeries[number]) => visible.has(subject.id) && !hiddenCategories.has(`${subject.id}:${category}`);
   const series = allSeries.filter(isSeriesVisible);
-  const bucketWidth = Math.max(0, chartWidth - (showRatings ? 117 : 81)) / Math.max(1, buckets.length);
+  const bucketWidth = Math.max(0, chartWidth - workloadAxisWidth - ratingAxisWidth - chartRightMargin) / Math.max(1, buckets.length);
   const compactWeekLabels = grouping === 'weekly' && chartWidth > 0 && bucketWidth < 100;
   const crossesWeekYear = new Set(buckets.map(bucket => getISOWeekYear(parseISO(bucket.end)))).size > 1;
   const data = buckets.map(bucket => ({
@@ -128,7 +132,7 @@ export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRat
   const periodComments = selectedBucket ? collectPeriodComments(
     Array.from(ratingEntries.values()).filter(entry => entry.date <= today), selectedBucket, daily ? 'day' : 'week',
   ) : [];
-  const dayWidth = Math.max(0, chartWidth - (showRatings ? 117 : 81)) / Math.max(1, data.length);
+  const dayWidth = Math.max(0, chartWidth - workloadAxisWidth - ratingAxisWidth - chartRightMargin) / Math.max(1, data.length);
   const verticalDayLabels = grouping === 'daily' && dayWidth < 36;
   const dailyLabelInterval = chartWidth > 0 && verticalDayLabels
     ? Math.max(0, Math.ceil(18 / Math.max(1, dayWidth)) - 1) : 0;
@@ -167,13 +171,13 @@ export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRat
               </div>
               <ChartDisplayControls mode={valueMode} onModeChange={onValueModeChange} weeklyAverageDisabled={grouping === 'daily' || grouping === 'weekly'} dailyAverageDisabled={grouping === 'daily'} timeFilter={timeFilter} onTimeFilterChange={onTimeFilterChange} singleTime={singleTime} />
             </div>
-            <div ref={chartRef} className="workload-chart-scroll relative min-h-[180px] flex-1 overflow-x-auto rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+            <div ref={chartRef} className="workload-chart-scroll relative min-h-[180px] flex-1 overflow-x-auto rounded-xl border border-gray-100 bg-gray-50/50 px-2 py-3">
               <div className="workload-chart-canvas h-full min-h-[180px]" style={{ width: `${zoom * 100}%` }}>
                 <ResponsiveContainer width="100%" height="100%" onResize={width => setChartWidth(width)}>
-                  <ComposedChart data={animated.data.map((row, index) => ({ ...row, ...ratings[index] }))} accessibilityLayer margin={{ top: 16, right: 16, bottom: 16, left: 0 }}>
+                  <ComposedChart data={animated.data.map((row, index) => ({ ...row, ...ratings[index] }))} accessibilityLayer margin={{ top: 16, right: chartRightMargin, bottom: 16, left: 0 }}>
                     {data.map((row, index) => buckets[index].end >= calendarWeekStart(today) && buckets[index].start <= calendarWeekEnd(today)
                       ? <ReferenceArea key={row.period} x1={row.label} x2={row.label} fill="#9ca3af" fillOpacity={0.22} ifOverflow="hidden" /> : null)}
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                    <CartesianGrid horizontal={workloadVisible} strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                     <XAxis dataKey="label" height={compactWeekLabels ? (crossesWeekYear ? 82 : 48) : grouping === 'daily' ? (verticalDayLabels ? 72 : 44) : 30}
                       tick={grouping === 'daily' ? ({ x, y, payload }: any) => {
                         const [weekday, day] = String(payload.value).split(' ');
@@ -184,8 +188,19 @@ export function WorkloadChartPanel({ ratingEntries, participantRole, showDataRat
                         </text>;
                       } : compactWeekLabels ? ({ x, y, payload }: any) => <text x={x} y={y + 8} transform={`rotate(-90, ${x}, ${y + 8})`} textAnchor="end" dominantBaseline="central" fontSize={11} fill="#6b7280">{payload.value}</text> : { fontSize: 11, fill: '#6b7280' }}
                       tickLine={false} axisLine={false} minTickGap={grouping === 'daily' ? 2 : 8} interval={grouping === 'daily' ? dailyLabelInterval : compactWeekLabels ? Math.max(0, Math.ceil(18 / Math.max(1, bucketWidth)) - 1) : 'equidistantPreserveStart'} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={value => `${number.format(value)} h`} width={65} ticks={hourTicks} domain={[0, animated.maximum]} interval={0} allowDataOverflow />
-                    {showRatings && <YAxis yAxisId="ratings" orientation="right" domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} padding={{ top: 12, bottom: 6 }} width={36} interval={0} allowDataOverflow tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} />}
+                    <YAxis hide={!workloadVisible} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={value => `${number.format(value)} h`} width={workloadAxisWidth} ticks={hourTicks} domain={[0, animated.maximum]} interval={0} allowDataOverflow>
+                      {workloadVisible && <Label value={`${t('analytics.workload')} (h)`} angle={-90} position="insideLeft" style={{ textAnchor: 'middle', fontSize: 12, fill: '#4b5563' }} />}
+                    </YAxis>
+                    {showRatings && <YAxis yAxisId="ratings" orientation="right" domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} padding={{ top: 12, bottom: 6 }} width={ratingAxisWidth} interval={0} allowDataOverflow tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false}>
+                      <Label content={({ viewBox }: any) => {
+                        const shown = ratingSeries.filter(item => item.shown);
+                        const centerY = viewBox.y + viewBox.height / 2;
+                        return <g>{shown.map((item, index) => {
+                          const x = viewBox.x + 24 + index * 14;
+                          return <text key={item.key} x={x} y={centerY} transform={`rotate(90, ${x}, ${centerY})`} textAnchor="middle" dominantBaseline="central" fontSize={11} fill={item.color}>{item.name} (1–5)</text>;
+                        })}</g>;
+                      }} />
+                    </YAxis>}
                     {allSeries.map(({ subject, category, key, name }) => <Bar key={key} dataKey={key} name={name} stackId="hours" fill={subject.color} fillOpacity={WORKLOAD_OPACITY[category]} maxBarSize={110}
                       isAnimationActive={false}
                       shape={(props: any) => {

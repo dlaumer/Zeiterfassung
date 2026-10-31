@@ -7,7 +7,7 @@ const load = async path => {
 const { readStatistics, writeStatistics } = await load('src/app/analytics/statisticsUrl.ts');
 const w = await load('src/app/analytics/workload.ts');
 const state = readStatistics(new URLSearchParams(), true);
-Object.assign(state, { initialized: true, open: true, group: 'monthly', value: 'dailyAverage', period: 'custom', dates: { start: '2026-10-20', end: '2026-10-22' }, modules: new Set(['a,b & c', 'second']), hidden: new Set(['a,b & c:classTime']), rating: true, workload: false, zoom: 2.3 });
+Object.assign(state, { initialized: true, open: true, group: 'monthly', value: 'dailyAverage', period: 'custom', dates: { start: '2026-10-20', end: '2026-10-22' }, modules: new Set(['a,b & c', 'second']), hidden: new Set(['a,b & c:classTime']), rating: true, workload: true, zoom: 2.3 });
 const params = writeStatistics(new URLSearchParams('lang=de&token=keep#value'), state);
 assert.equal(params.get('lang'), 'de');
 assert.equal(params.get('token'), 'keep#value');
@@ -35,3 +35,20 @@ const buckets = w.bucketWorkload([entry('2026-10-19'), entry('2026-10-20'), entr
 assert.deepEqual({ start: buckets[0].start, end: buckets[0].end }, state.dates);
 assert.equal(buckets[0].metrics.get('s').total.classTime, 1);
 console.log('PASS: statistics URL round trips, validation, stable dates, live presets and exact partial-week totals');
+
+const legacy = readStatistics(new URLSearchParams('stats.v=1&stats.workload=0&stats.rating=1&stats.energy=1'), true);
+assert.equal(legacy.workload, true);
+assert.equal(legacy.rating, true);
+assert.equal(legacy.energy, false);
+
+// Device defaults apply only when a shared URL has no explicit totals preference.
+assert.equal(readStatistics(new URLSearchParams(), true, false).totals, false);
+assert.equal(readStatistics(new URLSearchParams(), true, true).totals, true);
+assert.equal(readStatistics(new URLSearchParams('stats.v=1'), true, false).totals, false);
+assert.equal(readStatistics(new URLSearchParams('stats.v=1&stats.totals=1'), true, false).totals, true);
+assert.equal(readStatistics(new URLSearchParams('stats.v=1&stats.totals=0'), true, true).totals, false);
+const mobileTotals = readStatistics(new URLSearchParams(), true, false);
+mobileTotals.initialized = true;
+mobileTotals.totals = true;
+assert.equal(readStatistics(writeStatistics(new URLSearchParams(), mobileTotals), true, false).totals, true);
+console.log('PASS: mobile and desktop bar-total defaults preserve explicit toggle preferences');

@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
-const context = { module: { exports: {} } };
-vm.runInNewContext(readFileSync(new URL('../Backend/pb_hooks/submission-review.js', import.meta.url), 'utf8'), context);
-const review = context.module.exports;
+import { loadHook } from './lib/load-hook.mjs';
+const review = loadHook('submission-review.js');
 for (const periodType of ['day', 'week']) {
-    const record = (id, mode, comment) => ({ id, get: key => ({ submissionMode: mode, submittedAt: id, comment, periodType })[key] });
+const record = (id, mode, comment) => ({ id, get: key => ({ submissionMode: mode, submittedAt: id, comment, periodType })[key] });
     const original = record('1', 'initial', 'Original comment');
     const app = { findRecordsByFilter: () => [] };
     let group = [original];

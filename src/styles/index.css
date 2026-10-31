@@ -12,6 +12,8 @@
   }
 }
 
+.workload-chart-zoom-mobile { display: none; }
+
 .chart-controls-scroll { scrollbar-width: none; -ms-overflow-style: none; }
 @media (min-width: 1024px) {
   .workload-chart-controls { justify-content: space-evenly; }
@@ -33,9 +35,9 @@
 @supports selector(::-webkit-scrollbar) { .workload-chart-scroll { scrollbar-width: auto; scrollbar-color: auto; } }
 
 @media (max-width: 1023px) and (orientation: portrait) {
-  .workload-chart-scroll { overflow-x: hidden; }
-  .workload-chart-canvas { width: 100% !important; }
   .workload-chart-zoom { display: none; }
+  .workload-chart-zoom-mobile { display: flex; }
+  .workload-chart-zoom-mobile .chart-zoom-slider { height: 2rem; }
 }
 
 @media (max-width: 1023px) and (orientation: landscape) {
@@ -95,11 +97,17 @@
   flex: 1;
   min-height: 0;
   gap: 0.75rem;
-  grid-template-rows: minmax(4.5rem, 1.3fr) minmax(0, 1fr);
+  grid-template-rows: minmax(4.5rem, 1.3fr) minmax(4.5rem, 1fr);
   transition: grid-template-rows 320ms ease-in-out;
 }
 .submission-panels-expanded {
-  grid-template-rows: minmax(4.5rem, 0fr) minmax(0, 1fr);
+  grid-template-rows: minmax(4.5rem, 0fr) minmax(4.5rem, 1fr);
+}
+.submission-panels-collapsed {
+  grid-template-rows: minmax(4.5rem, 1.3fr) minmax(4.5rem, 0fr);
+}
+@media (prefers-reduced-motion: reduce) {
+  .submission-panels { transition: none; }
 }
 @media (min-width: 768px) {
   .submission-panels { gap: 1rem; }
@@ -134,4 +142,14 @@
   .submission-calendar .grid { gap: 0.125rem; }
   .submission-calendar .calendar-subject-dot { width: 0.25rem; height: 0.25rem; }
   .submission-calendar .grid > div { padding-block: 0.125rem; font-size: 0.6875rem; }
+}
+
+/* Keep mobile day cells gently rectangular when the calendar has extra room. */
+@media (max-width: 1023px) and (orientation: portrait) {
+  .calendar-date-area { justify-content: center; }
+  .calendar-day-grid {
+    flex: 0 1 auto;
+    width: 100%;
+    aspect-ratio: 7 / calc(var(--calendar-week-count) * 1.25);
+  }
 }

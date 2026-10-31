@@ -1,3 +1,7 @@
 node_modules
 dist/
 Backend/pb_hooks/resend.local.json
+Backend/pb_data/*-shm
+Backend/pb_data/*-wal
+*-results.log
+dependency-audit.json

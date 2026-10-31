@@ -3,18 +3,9 @@
 routerAdd("GET", "/api/export-student-flat", (e) => {
 
   function toCsvRow(values) {
-    return values.map(csvEscape).join(",")
+    return require(`${__hooks}/csv.js`).row(values)
   }
 
-  function csvEscape(value) {
-    const str = String(value ?? "")
-
-    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-      return `"${str.replace(/"/g, '""')}"`
-    }
-
-    return str
-  }
 
   function minutesToHours(value) {
     return Number(value || 0) / 60
@@ -53,7 +44,7 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
     "subjects",
     "",
     "key",
-    500,
+    0,
     0
   )
 
@@ -61,7 +52,7 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
     "submissions",
     submissionFilterParts.join(" && "),
     "periodStart",
-    2000,
+    0,
     0,
     submissionFilterParams
   )
@@ -71,17 +62,7 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
   let items = []
 
   if (submissionIds.length > 0) {
-    const idFilter = submissionIds
-      .map((id) => `submission = "${id}"`)
-      .join(" || ")
-
-    items = $app.findRecordsByFilter(
-      "submission_items",
-      idFilter,
-      "",
-      10000,
-      0
-    )
+    items = require(`${__hooks}/record-queries.js`).related($app, "submission_items", "submission", submissionIds)
   }
 
   const exportTypes = ["class", "study"]
@@ -115,7 +96,7 @@ routerAdd("GET", "/api/export-student-flat", (e) => {
     const minutes = item.get("durationMinutes") || 0
     const submission = submissionById[item.get("submission")]
 
-    if (!exportTypes.includes(itemType) || minutes <= 0) continue
+    if (!exportTypes.includes(itemType) || minutes === 0) continue
     if (!workloadTypeById[workloadTypeId]) continue
     if (!submission) continue
 

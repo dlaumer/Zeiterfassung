@@ -201,18 +201,9 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
     }
 
     function toCsvRow(values) {
-        return values.map(csvEscape).join(",")
+        return require(`${__hooks}/csv.js`).row(values)
     }
 
-    function csvEscape(value) {
-        const str = String(value ?? "")
-
-        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-            return `"${str.replace(/"/g, '""')}"`
-        }
-
-        return str
-    }
     const participantId = (e.requestInfo().query["participantId"] || "").trim()
     const requestedPeriodType = (e.requestInfo().query["periodType"] || "").trim()
 
@@ -257,7 +248,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         "subjects",
         "",
         "key",
-        500,
+        0,
         0
     )
 
@@ -265,7 +256,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
         "submissions",
         submissionFilterParts.join(" && "),
         "periodStart",
-        5000,
+        0,
         0,
         submissionFilterParams
     ))
@@ -275,17 +266,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
     let items = []
 
     if (submissionIds.length > 0) {
-        const idFilter = submissionIds
-            .map((id) => `submission = "${id}"`)
-            .join(" || ")
-
-        items = $app.findRecordsByFilter(
-            "submission_items",
-            idFilter,
-            "",
-            20000,
-            0
-        )
+        items = require(`${__hooks}/record-queries.js`).related($app, "submission_items", "submission", submissionIds)
     }
 
     const exportTypes = ["class", "study"]
@@ -390,7 +371,7 @@ routerAdd("GET", "/api/export-student-clean", (e) => {
     const rows = [headers]
 
     const periodsByKey = {}
-    const now = new Date()
+    const now = new Date(require(`${__hooks}/submission-date-policy.js`).todayKey() + "T00:00:00")
 
     if (referenceDateStart && exportPeriodType === "day") {
         for (const period of buildExpectedDailyPeriods(referenceDateStart, startOfDay(now))) {

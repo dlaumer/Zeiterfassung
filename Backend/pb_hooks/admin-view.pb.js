@@ -159,22 +159,22 @@ routerAdd("GET", "/api/admin/overview", (e) => {
         app.save(eventRecord)
     }
 
-    const participants = $app.findRecordsByFilter("participants", "", "name", 1000, 0)
-    const subjects = $app.findRecordsByFilter("subjects", 'entryMode = "day"', "key", 1000, 0)
-    const participantSubjects = $app.findRecordsByFilter("participant_subjects", "", "", 5000, 0)
-    const submissions = $app.findRecordsByFilter("submissions", "", "-submittedAt", 5000, 0)
-    const submissionItems = $app.findRecordsByFilter("submission_items", "", "", 10000, 0)
+    const participants = $app.findRecordsByFilter("participants", "", "name", 0, 0)
+    const subjects = $app.findRecordsByFilter("subjects", 'entryMode = "day"', "key", 0, 0)
+    const participantSubjects = $app.findRecordsByFilter("participant_subjects", "", "", 0, 0)
+    const submissions = $app.findRecordsByFilter("submissions", "", "-submittedAt", 0, 0)
+    const submissionItems = $app.findRecordsByFilter("submission_items", "", "", 0, 0)
     let reminderEvents = []
 
     let deletionEvents = []
     try {
-        deletionEvents = $app.findRecordsByFilter("admin_activity_events", 'kind = "deletion"', "-created", 5000, 0)
+        deletionEvents = $app.findRecordsByFilter("admin_activity_events", 'kind = "deletion"', "-created", 0, 0)
     } catch (error) {
         deletionEvents = []
     }
 
     try {
-        reminderEvents = $app.findRecordsByFilter("admin_reminders", "", "-created", 5000, 0)
+        reminderEvents = $app.findRecordsByFilter("admin_reminders", "", "-created", 0, 0)
     } catch (error) {
         reminderEvents = []
     }
@@ -750,7 +750,7 @@ routerAdd("PATCH", "/api/admin/participant", (e) => {
                 "participant_subjects",
                 "participant = {:participantId}",
                 "",
-                5000,
+                0,
                 0,
                 { participantId }
             )

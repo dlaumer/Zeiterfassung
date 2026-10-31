@@ -57,7 +57,7 @@ routerAdd("DELETE", "/api/admin/subject", (e) => {
         "participant_subjects",
         "subject = {:subjectId}",
         "",
-        5000,
+        0,
         0,
         { subjectId }
     )

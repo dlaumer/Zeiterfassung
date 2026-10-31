@@ -41,10 +41,16 @@ try {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
     token = (await request('/api/collections/_superusers/auth-with-password', { identity: 'test@example.test', password })).token;
-    const participant = await create('participants', { name: 'Correction test', email: 'student@example.test', entryMode: 'day', type: 'student', referenceDate: `${daysAgo(20)} 00:00:00.000Z` });
+    const participant = await create('participants', { name: 'Correction test', email: 'student@example.test', entryMode: 'day', type: 'student', referenceDate: `${daysAgo(0)} 00:00:00.000Z` });
     const subject = await create('subjects', { key: 'test', label_en: 'Test module', label_de: 'Testmodul', entryMode: 'day' });
     await create('participant_subjects', { participant: participant.id, subject: subject.id });
     const payload = { inputMode: 'totals', expectedSubmissionId: '', participantId: participant.id, date: daysAgo(0), reliability: 4, socialBattery: 3, adminEffortMinutes: 60, commuteMinutes: 30, comment: 'original', subjectTimes: [{ subjectId: subject.id, classMinutes: 480, studyMinutes: 60 }] };
+    for (const invalid of [
+        {date:'2026-02-30'}, {adminEffortMinutes:-1},
+        {subjectTimes:[...payload.subjectTimes,...payload.subjectTimes]},
+        {categoryTimes:[null]}, {commuteMinutes:'invalid'},
+    ]) await request('/api/submissions/daily', {...payload,...invalid}, 'POST', 400);
+    assert.equal((await request('/api/collections/submissions/records')).totalItems,0,'Invalid requests must leave no partial submissions');
     const initial = await request('/api/submissions/daily', payload);
     assert.equal(initial.submissionMode, 'initial');
     const original = await request(`/api/collections/submissions/records/${initial.submissionId}`);
@@ -52,7 +58,7 @@ try {
     const legacy = await create('submissions', { participant: participant.id, periodType: 'day', periodStart: original.periodStart, periodEnd: original.periodEnd, submissionMode: 'appendum', submittedAt: new Date().toISOString(), generalAdminTime: 90, commuteTime: 45, dataRating: 4, socialBattery: 3, comment: 'legacy', replacesSubmission: initial.submissionId });
     await create('submission_items', { submission: legacy.id, workloadType: subject.id, type: 'class', durationMinutes: 120 });
     let history = await request(`/api/workload-status?participantId=${participant.id}`);
-    assert.equal(history.reviewTime, 14);
+    assert.equal(history.reviewTimeWeeks, 2);
     assert.equal(history.submissionHistory[0].subjects[0].classTime, 10);
     assert.equal(history.submissionHistory[0].generalAdminTime, 90);
     const corrected = { ...payload, expectedSubmissionId: legacy.id, adminEffortMinutes: 30, commuteMinutes: 0, comment: '', subjectTimes: [{ subjectId: subject.id, classMinutes: 300, studyMinutes: 0 }] };
@@ -81,10 +87,12 @@ try {
     assert.equal(history.submissionHistory[0].subjects[0].classTime, 6);
     assert.equal(history.submissionHistory[0].latestSubmissionId, increase.submissionId);
     // Boundary day remains editable; the preceding day remains viewable only.
-    for (const [age, status] of [[14, 200], [15, 400]]) {
+    const cutoff = new Date(history.reviewCutoff + 'T00:00:00');
+    const cutoffAge = Math.round((new Date(daysAgo(0) + 'T00:00:00') - cutoff) / 86400000);
+    for (const [age, status] of [[cutoffAge, 200], [cutoffAge + 1, 400]]) {
         const first = await request('/api/submissions/daily', { ...payload, date: daysAgo(age) });
         await request('/api/submissions/daily', { ...payload, date: daysAgo(age), expectedSubmissionId: first.submissionId, comment: 'review' }, 'POST', status);
-        if (age === 15) {
+        if (status === 400) {
             await request('/api/submissions/daily', { participantId: participant.id, date: daysAgo(age), expectedSubmissionId: first.submissionId }, 'DELETE');
             const replacement = await request('/api/submissions/daily', { ...payload, date: daysAgo(age) });
             assert.equal(replacement.submissionMode, 'initial');
@@ -92,27 +100,27 @@ try {
     }
     // A changed admin setting applies immediately, without restarting the server.
     const settings = await request('/api/collections/adminSettings/records');
-    const setting = settings.items.find(s => s.key === 'reviewTime');
+    const setting = settings.items.find(s => s.key === 'reviewTimeWeeks');
     await request(`/api/collections/adminSettings/records/${setting.id}`, { value: '0' }, 'PATCH');
-    const yesterday = await request('/api/submissions/daily', { ...payload, date: daysAgo(1) });
-    await request('/api/submissions/daily', { ...payload, date: daysAgo(1), expectedSubmissionId: yesterday.submissionId }, 'POST', 400);
-    await request(`/api/collections/adminSettings/records/${setting.id}`, { value: '14' }, 'PATCH');
+    const yesterday = await request('/api/submissions/daily', { ...payload, date: daysAgo(new Date().getDay() === 0 ? 7 : new Date().getDay()) });
+    await request('/api/submissions/daily', { ...payload, date: daysAgo(new Date().getDay() === 0 ? 7 : new Date().getDay()), expectedSubmissionId: yesterday.submissionId }, 'POST', 400);
+    await request(`/api/collections/adminSettings/records/${setting.id}`, { value: '2' }, 'PATCH');
     // Clean export uses calculated totals; flat export still contains the signed deltas.
     await create('admins', { email: 'admin@example.test', password, passwordConfirm: password });
     const superuserToken = token;
     token = (await request('/api/collections/admins/auth-with-password', { identity: 'admin@example.test', password })).token;
-    assert.equal((await request('/api/admin/settings')).reviewTime, 14);
-    await request('/api/admin/settings', { reviewTime: 21 }, 'PATCH');
-    assert.equal((await request('/api/admin/settings')).reviewTime, 21);
-    assert.equal((await request(`/api/workload-status?participantId=${participant.id}`)).reviewTime, 21);
-    for (const reviewTime of [-1, 1.5, '', null, 36501]) {
-        await request('/api/admin/settings', { reviewTime }, 'PATCH', 400);
+    assert.equal((await request('/api/admin/settings')).reviewTimeWeeks, 2);
+    await request('/api/admin/settings', { reviewTimeWeeks: 21 }, 'PATCH');
+    assert.equal((await request('/api/admin/settings')).reviewTimeWeeks, 21);
+    assert.equal((await request(`/api/workload-status?participantId=${participant.id}`)).reviewTimeWeeks, 21);
+    for (const reviewTimeWeeks of [-1, 1.5, '', null, 36501]) {
+        await request('/api/admin/settings', { reviewTimeWeeks }, 'PATCH', 400);
     }
-    await request('/api/admin/settings', { reviewTime: 14 }, 'PATCH');
+    await request('/api/admin/settings', { reviewTimeWeeks: 2 }, 'PATCH');
     const adminToken = token;
     token = '';
     await request('/api/admin/settings', undefined, 'GET', 401);
-    await request('/api/admin/settings', { reviewTime: 30 }, 'PATCH', 401);
+    await request('/api/admin/settings', { reviewTimeWeeks: 30 }, 'PATCH', 401);
     token = adminToken;
     const csv = await request(`/api/export-student-clean?participantId=${participant.id}`);
     const csvLines = csv.trim().split('\n').map(line => line.split(','));
@@ -148,7 +156,8 @@ try {
         assert.deepEqual(afterDelete.items.find(record => record.id === previous.id), previous, 'Deletion leaves correction records entirely untouched');
     }
     const deletedCsv = await request(`/api/export-student-clean?participantId=${participant.id}`);
-    assert.ok(!deletedCsv.split('\n').slice(1).some(line => line.split(',')[headers.indexOf('periodStart')]?.includes(payload.date)), 'Deleted corrections do not leak into exports');
+    const deletedRow = deletedCsv.split('\n').slice(1).map(line => line.split(',')).find(row => row[headers.indexOf('periodStart')]?.includes(payload.date));
+    assert.ok(!deletedRow || deletedRow[headers.indexOf('baseSubmissionId')] === '', 'Deleted periods may remain as blank expected rows, without correction data');
 
     await request('/api/admin/submissions/restore', { submissionId: increase.submissionId });
     history = await request(`/api/workload-status?participantId=${participant.id}`);
@@ -190,7 +199,7 @@ try {
     assert.equal(recreatedHistory.subjects[0].classTime, 8, 'A replacement does not inherit corrections belonging to a deleted initial');
     assert.equal(recreatedHistory.generalAdminTime, 60);
     assert.deepEqual(recreatedHistory.correctionDates, []);
-    const legacyDate = daysAgo(5);
+    const legacyDate = daysAgo(cutoffAge + 3);
     const legacySingle = await request('/api/submissions/daily', { ...payload, date: legacyDate });
     await request('/api/submissions/daily', { participantId: participant.id, date: legacyDate, expectedSubmissionId: legacySingle.submissionId }, 'DELETE');
     const legacyBatch = await request(`/api/collections/submissions/records?filter=${encodeURIComponent(`participant="${participant.id}" && periodStart~"${legacyDate}"`)}`);
@@ -202,7 +211,7 @@ try {
     assert.ok((await request(`/api/workload-status?participantId=${participant.id}`)).submissionHistory.some(entry => entry.periodDate === legacyDate));
     token = superuserToken;
     // Weekly faculty categories use the same delta semantics.
-    const faculty = await create('participants', { name: 'Weekly test', email: 'faculty@example.test', entryMode: 'week', type: 'faculty' });
+    const faculty = await create('participants', { name: 'Weekly test', email: 'faculty@example.test', entryMode: 'week', referenceDate: daysAgo(0), type: 'faculty' });
     const week = new Date(); week.setDate(week.getDate() - ((week.getDay() + 6) % 7));
     const weekly = { inputMode: 'totals', expectedSubmissionId: '', participantId: faculty.id, weekStart: dateKey(week), reliability: 4, socialBattery: 4, adminEffortMinutes: 60, structuralChangesMinutes: 90, categoryTimes: [{ categoryId: 'weekly_preparation', minutes: 600 }] };
     const firstWeek = await request('/api/submissions/weekly', weekly);
@@ -244,10 +253,10 @@ try {
     assert.equal((await request('/api/submissions/weekly', oldWeekly)).submissionMode, 'initial');
     // Skipped days/weeks accept an optional battery; corrections retain it even without hours.
     for (const mode of ['day', 'week']) {
-        const person = await create('participants', { name: `Empty ${mode}`, email: `empty-${mode}@example.test`, entryMode: mode, type: mode === 'day' ? 'student' : 'faculty' });
+        const person = await create('participants', { name: `Empty ${mode}`, email: `empty-${mode}@example.test`, entryMode: mode, referenceDate: daysAgo(0), type: mode === 'day' ? 'student' : 'faculty' });
         const endpoint = `/api/submissions/${mode === 'day' ? 'daily' : 'weekly'}`;
         const empty = { inputMode: 'totals', expectedSubmissionId: '', participantId: person.id, ...(mode === 'day' ? { date: daysAgo(0) } : { weekStart: weekly.weekStart }), reliability: 5, subjectTimes: [], categoryTimes: [], adminEffortMinutes: 0, structuralChangesMinutes: 0, commuteMinutes: 0 };
-        const ratedPerson = await create('participants', { name: `Rated skip ${mode}`, email: `rated-skip-${mode}@example.test`, entryMode: mode, type: mode === 'day' ? 'student' : 'faculty' });
+        const ratedPerson = await create('participants', { name: `Rated skip ${mode}`, email: `rated-skip-${mode}@example.test`, entryMode: mode, referenceDate: daysAgo(0), type: mode === 'day' ? 'student' : 'faculty' });
         const ratedSkip = await request(endpoint, { ...empty, participantId: ratedPerson.id, socialBattery: 2 });
         assert.equal((await request(`/api/collections/submissions/records/${ratedSkip.submissionId}`)).socialBattery, 2);
         assert.equal((await request(`/api/workload-status?participantId=${ratedPerson.id}`)).submissionHistory[0].socialBattery, 2);
@@ -269,7 +278,15 @@ try {
         const emptyHistory = await request(`/api/workload-status?participantId=${person.id}`);
         assert.equal(emptyHistory.submissionHistory[0].socialBattery, 0);
     }
-    console.log('PASS: submission corrections, empty days/weeks without battery, battery clearing and workload validation.');
+    token = adminToken;
+    await request(`/api/admin/participant?participantId=${participant.id}`, undefined, 'DELETE');
+    token = superuserToken;
+    for (const collection of ['submissions','participant_subjects']) {
+        assert.equal((await request(`/api/collections/${collection}/records?filter=${encodeURIComponent(`participant="${participant.id}"`)}`)).totalItems,0);
+    }
+    await request(`/api/collections/participants/records/${participant.id}`,undefined,'GET',404);
+    assert.equal((await request(`/api/collections/submission_items/records?filter=${encodeURIComponent(`submission="${initial.submissionId}"`)}`)).totalItems,0);
+    console.log('PASS: submission corrections, invalid-input rollback, deletion/restoration, participant removal and workload validation.');
 } catch (error) {
     console.error(log.slice(-4000));
     throw error;

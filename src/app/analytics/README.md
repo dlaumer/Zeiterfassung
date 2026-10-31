@@ -18,7 +18,7 @@ Missing submissions do not move either window backward.
 Weekly records allocate totals by overlapping days. Date math uses calendar days
 for daylight-saving safety. The panel refreshes today on focus and every minute.
 Run `node scripts/test-calendar-week-periods.mjs` and `npm run build` for validation.
-Older rolling-window tests describe the replaced behavior.
+Run `npm test` for the complete regression suite; date-window tests follow the current calendar-week policy.
 
 The calendar header's Statistics button initially selects all modules, then
 restores the existing module/category selection and grouping on later visits.

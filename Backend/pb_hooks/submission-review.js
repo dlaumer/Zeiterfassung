@@ -44,7 +44,7 @@ function settings(app, now) {
     const raw = String(record.get("value")).trim()
     const weeks = Number(raw)
     if (!raw || !Number.isSafeInteger(weeks) || weeks < 0 || weeks > 5200) throw new Error("Invalid reviewTimeWeeks setting")
-    const cutoff = new Date(now || new Date())
+    const cutoff = now ? new Date(now) : new Date(require(`${__hooks}/submission-date-policy.js`).todayKey() + "T00:00:00")
     cutoff.setHours(0, 0, 0, 0)
     cutoff.setDate(cutoff.getDate() - (cutoff.getDay() + 6) % 7 - weeks * 7)
     const pad = n => String(n).padStart(2, "0")
@@ -85,8 +85,8 @@ function prepare(app, group, body, periodEnd, adminOverride) {
     if (body.inputMode !== "totals") throw new Error("Please reload the page to use the updated entry form.")
     const selected = effective(group)
     const totals = {}
-    for (const s of selected) {
-        const items = app.findRecordsByFilter("submission_items", "submission = {:id}", "", 0, 0, { id: s.id })
+    if (selected.length) {
+        const items = require(`${__hooks}/record-queries.js`).related(app, "submission_items", "submission", selected.map(s => s.id))
         for (const item of items) {
             const key = item.get("workloadType") + "|" + item.get("type")
             totals[key] = (totals[key] || 0) + Number(item.get("durationMinutes") || 0)
@@ -134,10 +134,27 @@ module.exports.root = function (app, submission) {
     return submission
 }
 module.exports.active = function (app, submissions) {
+    // Resolve each predecessor once, sharing cached records across correction chains.
+    const records = {}
     const roots = {}
+    for (const submission of submissions) records[submission.id] = submission
+    function root(submission) {
+        const path = []
+        const visited = {}
+        while (!roots[submission.id] && submission.get("replacesSubmission")) {
+            if (visited[submission.id]) throw new Error("Cyclic submission history")
+            visited[submission.id] = true
+            path.push(submission.id)
+            const id = String(submission.get("replacesSubmission"))
+            submission = records[id] || (records[id] = app.findRecordById("submissions", id))
+        }
+        const result = roots[submission.id] || submission
+        roots[submission.id] = result
+        for (const id of path) roots[id] = result
+        return result
+    }
     return submissions.filter(s => {
         if (s.get("submissionMode") === "deleted") return false
-        if (!roots[s.id]) roots[s.id] = module.exports.root(app, s)
-        return roots[s.id].get("submissionMode") !== "deleted"
+        return root(s).get("submissionMode") !== "deleted"
     })
 }

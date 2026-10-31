@@ -1,40 +1,35 @@
-import { BatteryMedium, Bike, Eye, Settings, Star, TrainFront } from 'lucide-react';
+import { BatteryMedium, Bike, Eye, EyeOff, Settings, Star, TrainFront } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { useI18n } from '../../i18n/i18n';
 
-export function StatisticsOptions({ showDataRating, onToggleDataRating, showEnergyLevel, onToggleEnergyLevel, participantRole, onShowAll, showModuleStatistics, onToggleModuleStatistics, showBarTotals, onToggleBarTotals, workloadVisible, onWorkloadVisibleChange }: {
+export function StatisticsOptions({ showStructural, onToggleStructural, showCommute, onToggleCommute, showAdmin, onToggleAdmin, showDataRating, onToggleDataRating, showEnergyLevel, onToggleEnergyLevel, participantRole, allModulesVisible, onToggleAllModules, showModuleStatistics, onToggleModuleStatistics, showBarTotals, onToggleBarTotals }: {
+  showStructural: boolean;
+  onToggleStructural: () => void;
+  showCommute: boolean;
+  onToggleCommute: () => void;
+  showAdmin: boolean;
+  onToggleAdmin: () => void;
   showDataRating: boolean;
   onToggleDataRating: () => void;
   showEnergyLevel: boolean;
   onToggleEnergyLevel: () => void;
   participantRole: 'student' | 'faculty';
-  onShowAll: () => void;
+  allModulesVisible: boolean;
+  onToggleAllModules: () => void;
   showModuleStatistics: boolean;
   onToggleModuleStatistics: () => void;
   showBarTotals: boolean;
   onToggleBarTotals: () => void;
-  workloadVisible: boolean;
-  onWorkloadVisibleChange: (visible: boolean) => void;
 }) {
   const { t } = useI18n();
   const ratings = [
-    { label: 'dailyEntry.reliability', checked: showDataRating, toggle: onToggleDataRating, color: '#7c3aed' },
-    { label: `socialBattery.${participantRole}`, checked: showEnergyLevel, toggle: onToggleEnergyLevel, color: '#0891b2' },
+    { label: 'dailyEntry.reliability', checked: showDataRating, toggle: onToggleDataRating, color: 'var(--color-amber-400)' },
+    { label: `socialBattery.${participantRole}`, checked: showEnergyLevel, toggle: onToggleEnergyLevel, color: '#2ca468' },
   ];
-  const hours = ['dailyEntry.adminEffort', participantRole === 'student' ? 'dailyEntry.commute' : 'weeklyEntry.structuralChanges'];
-  const disabledOption = (option: string) => <div key={option} className="flex items-center justify-between gap-3" title={t('analytics.comingSoon')}>
-    <span id={`statistics-option-${option}`} className="flex items-center gap-2 text-xs text-gray-400">
-      {t(option)}
-      {option === 'dailyEntry.commute' && <span aria-hidden="true" className="flex shrink-0 items-center gap-1"><Bike className="h-4 w-4" /><TrainFront className="h-4 w-4" /></span>}
-    </span>
-    <button type="button" role="switch" aria-checked={false} aria-labelledby={`statistics-option-${option}`} disabled className="relative h-5 w-9 shrink-0 cursor-not-allowed rounded-full bg-gray-200 opacity-60">
-      <span aria-hidden="true" className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm" />
-    </button>
-  </div>;
   return <section aria-label={t('analytics.options')} className="mb-4 border-b border-gray-100 pb-4">
     <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-      <button type="button" onClick={onShowAll} title={t('analytics.showAllModules')} aria-label={t('analytics.showAllModules')} className="flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-1.5 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-indigo-500">
-        <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />{t('analytics.allModulesCompact')}
+      <button type="button" onClick={onToggleAllModules} title={t(allModulesVisible ? 'analytics.hideAllModules' : 'analytics.showAllModules')} aria-label={t(allModulesVisible ? 'analytics.hideAllModules' : 'analytics.showAllModules')} className="flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-1.5 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-indigo-500">
+        {allModulesVisible ? <EyeOff aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}{t(allModulesVisible ? 'analytics.hideAllModules' : 'analytics.showAllModules')}
       </button>
       <Popover>
         <PopoverTrigger asChild>
@@ -52,17 +47,20 @@ export function StatisticsOptions({ showDataRating, onToggleDataRating, showEner
                 <span aria-hidden="true" className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${setting.checked ? 'translate-x-4' : ''}`} />
               </button>
             </label>)}
+            {[
+              { label: 'dailyEntry.adminEffort', checked: showAdmin, toggle: onToggleAdmin },
+              participantRole === 'student' ? { label: 'dailyEntry.commute', checked: showCommute, toggle: onToggleCommute } : { label: 'weeklyEntry.structuralChanges', checked: showStructural, toggle: onToggleStructural },
+            ].map(item => <div key={item.label} className="flex items-center justify-between gap-3 text-xs text-gray-700">
+              <span>{t(item.label)}{item.label === 'dailyEntry.commute' && <span aria-hidden="true" className="ml-2 inline-flex gap-1"><Bike className="h-4 w-4" /><TrainFront className="h-4 w-4" /></span>}</span>
+              <button type="button" role="switch" aria-checked={item.checked} aria-label={t(item.label)} onClick={item.toggle} className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 ${item.checked ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+                <span aria-hidden="true" className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${item.checked ? 'translate-x-4' : ''}`} />
+              </button>
+            </div>)}
           </div>
         </PopoverContent>
       </Popover>
     </div>
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <span id="statistics-option-workload" className="text-xs text-gray-700">{t('analytics.workload')}</span>
-        <button type="button" role="switch" aria-checked={workloadVisible} aria-labelledby="statistics-option-workload" onClick={() => onWorkloadVisibleChange(!workloadVisible)} className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 ${workloadVisible ? 'bg-indigo-600' : 'bg-gray-300'}`}>
-          <span aria-hidden="true" className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${workloadVisible ? 'translate-x-4' : ''}`} />
-        </button>
-      </div>
       {ratings.map(setting => <div key={setting.label} className="flex items-center justify-between gap-3">
         <span id={`statistics-option-${setting.label}`} className="flex items-center gap-2 text-xs text-gray-700">
           {t(setting.label)}
@@ -74,7 +72,6 @@ export function StatisticsOptions({ showDataRating, onToggleDataRating, showEner
           <span aria-hidden="true" className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${setting.checked ? 'translate-x-4' : ''}`} />
         </button>
       </div>)}
-      {hours.map(disabledOption)}
     </div>
   </section>;
 }

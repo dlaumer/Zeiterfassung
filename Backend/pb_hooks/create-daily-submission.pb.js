@@ -116,6 +116,8 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
 
     const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
+    try { require(`${__hooks}/submission-validation.js`).totals(body) }
+    catch (error) { return e.json(400, { message: String(error) }) }
     const adminOverride = body.adminView === true && !!e.auth && e.auth.collection().name === "admins"
     if (body.adminView === true && !adminOverride) return e.json(401, { message: "Admin authentication required" })
 
@@ -137,7 +139,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
     }
 
     const targetDate = new Date(weekStart + "T00:00:00")
-    if (isNaN(targetDate.getTime())) {
+    if (!require(`${__hooks}/submission-validation.js`).dateOnly(weekStart)) {
         return e.json(400, { error: "Invalid weekStart" })
     }
 
@@ -255,7 +257,7 @@ routerAdd("POST", "/api/submissions/weekly", (e) => {
                     "participant_subjects",
                     "participant = {:participantId}",
                     "",
-                    1000,
+                    0,
                     0,
                     { participantId }
                 )
@@ -397,7 +399,7 @@ routerAdd("DELETE", "/api/submissions/weekly", (e) => {
     }
 
     const targetDate = new Date(weekStart + "T00:00:00")
-    if (isNaN(targetDate.getTime())) {
+    if (!require(`${__hooks}/submission-validation.js`).dateOnly(weekStart)) {
         return e.json(400, { error: "Invalid weekStart" })
     }
 
@@ -562,6 +564,8 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
 
     const review = require(`${__hooks}/submission-review.js`)
     const body = e.requestInfo().body || {}
+    try { require(`${__hooks}/submission-validation.js`).totals(body) }
+    catch (error) { return e.json(400, { message: String(error) }) }
     const adminOverride = body.adminView === true && !!e.auth && e.auth.collection().name === "admins"
     if (body.adminView === true && !adminOverride) return e.json(401, { message: "Admin authentication required" })
 
@@ -584,7 +588,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
     }
 
     const targetDate = new Date(date + "T00:00:00")
-    if (isNaN(targetDate.getTime())) {
+    if (!require(`${__hooks}/submission-validation.js`).dateOnly(date)) {
         return e.json(400, { error: "Invalid date" })
     }
 
@@ -657,7 +661,7 @@ routerAdd("POST", "/api/submissions/daily", (e) => {
                 "participant_subjects",
                 "participant = {:participantId}",
                 "",
-                1000,
+                0,
                 0,
                 { participantId }
             ) : []
@@ -837,7 +841,7 @@ routerAdd("DELETE", "/api/submissions/daily", (e) => {
     }
 
     const targetDate = new Date(date + "T00:00:00")
-    if (isNaN(targetDate.getTime())) {
+    if (!require(`${__hooks}/submission-validation.js`).dateOnly(date)) {
         return e.json(400, { error: "Invalid date" })
     }
 

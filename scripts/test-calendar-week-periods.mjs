@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { loadHook } from './lib/load-hook.mjs';
 const bundle = await build({entryPoints:['src/app/analytics/workload.ts'],bundle:true,write:false,platform:'node',format:'esm'});
 const w = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 const today = '2026-10-28';
@@ -17,8 +18,7 @@ const entries = ['2026-10-12','2026-10-19','2026-10-28'].map(date=>({date,subjec
 const metrics=w.completedWeekMetrics(entries,range,today).get('s');
 assert.equal(metrics.total.classTime,14);assert.equal(metrics.weeklyAverage.classTime,7);
 assert.equal(w.completedWeekMetrics(entries,{start:'2026-10-26',end:'2026-11-01'},today).size,0);
-const context={module:{exports:{}}};vm.runInNewContext(readFileSync('Backend/pb_hooks/submission-review.js','utf8'),context);
-const review=context.module.exports;
+const review=loadHook('submission-review.js');
 let configuredWeeks = 2;
 const settingsApp = { findFirstRecordByFilter: (_, filter) => { assert.equal(filter, 'key = "reviewTimeWeeks"'); return {get: () => String(configuredWeeks)}; } };
 assert.equal(review.settings(settingsApp,new Date(today+'T12:00:00')).reviewCutoff,'2026-10-12');

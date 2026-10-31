@@ -24,6 +24,14 @@ build time for both the participant frontend and the admin panel.
 Upload only the contents of `dist/dev` to `/var/www/methric-dev`.
 Upload only the contents of `dist/prod` to the production frontend directory.
 Do not upload the entire `dist` directory: older files may remain at its root.
+
+Group actions for active/inactive status and reference dates also require
+`Backend/pb_hooks/admin-participant-status.pb.js` in the API server's `pb_hooks`
+directory. Deploy it to the backend matching the frontend build (dev or prod);
+uploading the frontend alone does not install this endpoint. No migration is
+required. If the endpoint returns 404, check that this hook has been deployed
+and loaded by PocketBase. `node scripts/test-participant-status.mjs` verifies
+these updates against a disposable local database.
 The build determines the backend regardless of hostname, including when previewed
 locally. `npm run dev` always uses the dev API with its default development mode.
 
@@ -47,15 +55,14 @@ disposable-database authorization and correction tests.
 Deploy the frontend together with `Backend/pb_hooks` and apply migration
 `1788912000_submission_corrections.js`. It adds the `correction` submission mode,
 allows signed time values, and creates `adminSettings` with `key: reviewTime`,
-`value: "14"` if that setting does not already exist. An existing value is preserved.
+`value: "14"` (legacy setting) if that setting does not already exist. An existing value is preserved.
 
-The review window is measured in calendar days from the recorded day, or Sunday
-for a weekly entry, using the backend's calendar date. The cutoff day is included.
-Older entries cannot be opened from the calendar: a notice explains that the
-review period has ended and the entry can no longer be viewed or changed.
-Corrections are also rejected by the backend. Locked entries can still be deleted
-from the notice, then submitted again as a new initial entry.
-Initial submissions for missing dates retain the existing behaviour.
+The current review policy is configured in `adminSettings` using
+`reviewTimeWeeks`: N completed Monday-Sunday weeks plus the current week.
+Apply `1793100000_review_time_weeks.js` to initialize legacy installations to two
+completed weeks; existing week settings are preserved. The backend uses the Swiss
+calendar date. Older entries cannot be changed by participants; authenticated
+administrator entry views can correct them. Deleted periods can be re-entered.
 
 The form and POST API send complete current totals (`inputMode: "totals"`), plus
 `expectedSubmissionId` to detect stale forms. Inside a transaction, the backend
@@ -71,10 +78,20 @@ the saved total. Data reliability and battery level start unselected and must be
 chosen again; the optional comment starts blank. Submission history shows the initial submission
 and numbered corrections in chronological order.
 
-Deletion retains the existing soft-deletion behaviour and appends a linked
-`deleted` submission. Deleted periods do not contribute to totals. Re-entering a
-deleted period starts a new initial submission.
+Deletion soft-deletes the initial submission while retaining correction records
+and an administrator restoration event. Deleted periods do not contribute to
+totals. Re-entering a deleted period starts a new initial submission.
 
 Run `node scripts/test-submission-corrections.mjs` for integration tests against a
 disposable local PocketBase database. Set `POCKETBASE_BIN` to use another binary.
 Run `npm run build` to check the frontend build.
+
+## Release verification
+
+Run `npm ci`, then `npm run check` for all regression scripts, both frontend
+builds and the dependency audit. Integration tests use disposable databases.
+Read [the production review](docs/production-review-2026-10-30.md) before deployment.
+For a read-only audit of a current database backup, run
+`python scripts/audit-data.py /path/to/pb_data/data.db` (Python 3 required).
+Deploy the entire `Backend/pb_hooks` directory, including shared `.js` helpers,
+together with the migrations and matching frontend build.

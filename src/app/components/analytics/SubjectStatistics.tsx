@@ -5,9 +5,9 @@ import { ReactNode } from 'react';
 
 export function SubjectStatistics({ metrics, color, singleTime = false, valueMode = 'total', categoryAction, categoryHidden }: { metrics?: WorkloadMetrics; color: string; singleTime?: boolean; valueMode?: ChartValueMode; categoryAction?: (category: 'classTime' | 'selfStudyTime') => ReactNode; categoryHidden?: (category: 'classTime' | 'selfStudyTime') => boolean }) {
   const { t, language } = useI18n();
-  const hours = (value: number) => `${formatStatisticsHours(value, language)} h`;
+  const hours = (value: number, mode: ChartValueMode = 'total') => `${formatStatisticsHours(value, language, mode)} h`;
   return (
-    <dl className={`grid ${categoryAction ? 'grid-cols-[0.625rem_minmax(0,1fr)_minmax(0,1fr)_auto]' : 'grid-cols-[0.625rem_minmax(0,1fr)_minmax(0,1fr)]'} items-center gap-x-2 gap-y-2 pl-2 text-xs leading-4 text-gray-700`}>
+    <dl title={t('analytics.completeWeeksHelp')} className={`grid ${categoryAction ? 'grid-cols-[0.625rem_minmax(0,1fr)_minmax(0,1fr)_auto]' : 'grid-cols-[0.625rem_minmax(0,1fr)_minmax(0,1fr)]'} items-center gap-x-2 gap-y-2 pl-2 text-xs leading-4 text-gray-700`}>
       {(singleTime ? ['classTime'] as const : ['classTime', 'selfStudyTime'] as const).map(category => (
         <div key={category} className="contents"
           title={singleTime ? t('weeklyEntry.hours') : t(`analytics.${category}`)}>
@@ -17,7 +17,7 @@ export function SubjectStatistics({ metrics, color, singleTime = false, valueMod
           </dt>
           <dd className="contents tabular-nums">
             <span className={`whitespace-nowrap ${categoryHidden?.(category) ? 'opacity-40' : ''}`}>{t('analytics.totalCompact')}: <strong className="font-semibold">{hours(metrics?.total[category] ?? 0)}</strong></span>
-            <span className={`whitespace-nowrap ${categoryHidden?.(category) ? 'opacity-40' : ''}`}>{t(valueMode === 'dailyAverage' ? 'analytics.dailyCompact' : 'analytics.weeklyCompact')}: <strong className="font-semibold">{hours((metrics?.weeklyAverage[category] ?? 0) / (valueMode === 'dailyAverage' ? 7 : 1))}</strong></span>
+            <span className={`whitespace-nowrap ${categoryHidden?.(category) ? 'opacity-40' : ''}`}>{t(valueMode === 'dailyAverage' ? 'analytics.dailyCompact' : 'analytics.weeklyCompact')}: <strong className="font-semibold">{hours((metrics?.weeklyAverage[category] ?? 0) / (valueMode === 'dailyAverage' ? 7 : 1), valueMode === 'dailyAverage' ? 'dailyAverage' : 'weeklyAverage')}</strong></span>
           </dd>
           {categoryAction && <dd>{categoryAction(category)}</dd>}
         </div>

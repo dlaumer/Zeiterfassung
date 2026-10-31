@@ -5,6 +5,9 @@ import { isFutureSubmission } from '../src/app/submissionDatePolicy.mjs';
 const context = {module:{exports:{}}};
 vm.runInNewContext(readFileSync('Backend/pb_hooks/submission-date-policy.js','utf8'),context);
 const policy = context.module.exports;
+const validationContext = {module:{exports:{}}};
+vm.runInNewContext(readFileSync('Backend/pb_hooks/submission-validation.js','utf8'),validationContext);
+const validation = validationContext.module.exports;
 const sunday = new Date('2026-10-25T20:00:00Z');
 const monday = new Date('2026-10-25T23:00:00Z');
 assert.equal(policy.todayKey(monday),'2026-10-26');
@@ -39,7 +42,7 @@ let transactions = 0;
 vm.runInNewContext(readFileSync('Backend/pb_hooks/create-daily-submission.pb.js','utf8'),{
  routerAdd:(method,path,handler)=>{routes[method+' '+path]=handler;},
  $app:{runInTransaction:()=>{transactions++;}},
- __hooks:'hooks',require:name=>name.endsWith('submission-date-policy.js') ? {assertAllowed:(body,date,mode)=>policy.assertAllowed(body,date,mode,monday)} : {},
+ __hooks:'hooks',require:name=>name.endsWith('submission-date-policy.js') ? {assertAllowed:(body,date,mode)=>policy.assertAllowed(body,date,mode,monday)} : name.endsWith('submission-validation.js') ? validation : {},
 });
 for(const mode of ['daily','weekly']) {
  const field=mode==='daily'?'date':'weekStart';

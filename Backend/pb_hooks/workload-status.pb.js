@@ -267,20 +267,10 @@ routerAdd("GET", "/api/workload-status", (e) => {
     let submissionItems = []
 
     if (submissionIds.length > 0) {
-        const idFilter = submissionIds
-            .map((id) => `submission = "${id}"`)
-            .join(" || ")
-
-        submissionItems = $app.findRecordsByFilter(
-            "submission_items",
-            idFilter,
-            "",
-            0,
-            0
-        )
+        submissionItems = require(`${__hooks}/record-queries.js`).related($app, "submission_items", "submission", submissionIds)
     }
 
-    const subjects = $app.findRecordsByFilter("subjects", "", "key", 1000, 0)
+    const subjects = $app.findRecordsByFilter("subjects", "", "key", 0, 0)
 
     const subjectById = {}
     for (const subject of subjects) {

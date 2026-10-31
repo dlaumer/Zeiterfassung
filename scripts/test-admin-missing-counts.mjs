@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-const load = file => {const context={module:{exports:{}}};vm.runInNewContext(readFileSync(file,'utf8'),context);return context.module.exports;};
+import { loadHook } from './lib/load-hook.mjs';
+const load = file => loadHook(file.split('/').at(-1));
 const review = load('Backend/pb_hooks/submission-review.js');
 const datePolicy = load('Backend/pb_hooks/submission-date-policy.js');
 const record=(id,values)=>({id,get:key=>values[key]??''});

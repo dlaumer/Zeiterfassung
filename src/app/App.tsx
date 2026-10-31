@@ -899,7 +899,6 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
           preserveSubjectOrder={participantRole === 'faculty'}
           title={participantRole === 'faculty' ? participantSubjectLabel : undefined}
           availableSubjects={participantRole === 'faculty' ? [] : availableSubjects}
-          showCredits={participantRole !== 'faculty'}
           singleTime={participantRole === 'faculty'}
           daily={entryMode === 'day'}
           onAddSubject={participantRole === 'faculty' ? undefined : handleAddSubject}

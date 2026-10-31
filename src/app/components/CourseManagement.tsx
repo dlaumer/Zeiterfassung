@@ -4,6 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useI18n } from '../i18n/i18n';
 
 export interface Subject {
+  supplemental?: boolean;
   id: string;
   participantSubjectId?: string;
   number?: string;
@@ -32,12 +33,12 @@ export const compareSubjectsByDisplayName = (language: 'en' | 'de') => (a: Subje
 const formatSubjectCredits = (credits: number, language: 'en' | 'de') => `${credits} ${language === 'de' ? 'KP' : 'CP'}`;
 
 interface CourseManagementProps {
+  collapsed?: boolean;
   subjects: Subject[];
   preserveSubjectOrder?: boolean;
   onAddSubject?: (subject: Subject) => void;
   onRemoveSubject?: (id: string) => void;
   title?: string;
-  showCredits?: boolean;
   availableSubjects: Subject[];
   beforeSubjects?: ReactNode;
   headerControls?: ReactNode;
@@ -49,6 +50,7 @@ interface CourseManagementProps {
 }
 
 export function CourseManagement({
+  collapsed = false,
   subjects,
   preserveSubjectOrder = false,
   onAddSubject,
@@ -61,8 +63,7 @@ export function CourseManagement({
   renderSubjectActions,
   isSubjectHidden,
   subjectListClassName,
-  title,
-  showCredits = true
+  title
 }: CourseManagementProps) {
   const { t, language } = useI18n();
   const [showAddSubject, setShowAddSubject] = useState(false);
@@ -188,7 +189,7 @@ export function CourseManagement({
     <div className="module-management h-full min-h-0 min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 pt-8 shadow-sm md:p-6 md:pt-8 lg:pt-6 flex flex-col">
       <div className="mb-4 flex min-w-0 items-center justify-between gap-3 shrink-0">
         <h3 className="min-w-0 font-semibold text-gray-900">{title ?? t('courseManagement.title')}</h3>
-        {canAddMore && (
+        {canAddMore && !collapsed && (
           <button
             onClick={() => setShowAddSubject(true)}
             className="flex shrink-0 items-center gap-1 whitespace-nowrap text-sm text-indigo-600 transition-colors hover:text-indigo-700"
@@ -199,8 +200,8 @@ export function CourseManagement({
         )}
       </div>
 
-      {headerControls && <div className="shrink-0">{headerControls}</div>}
-      <div className="module-list-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+      {headerControls && !collapsed && <div className="shrink-0">{headerControls}</div>}
+      <div hidden={collapsed} className="module-list-scroll min-h-0 flex-1 overflow-y-auto pr-1">
       {beforeSubjects}
       {subjects.length === 0 && !showAddSubject ? (
         <div className="text-center py-8">
@@ -232,16 +233,6 @@ export function CourseManagement({
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-gray-700 break-words">
                     {getSubjectDisplayName(subject, language)}
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                    {subject.number && (
-                      <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-gray-200">
-                        {subject.number}
-                      </span>
-                    )}
-                    {showCredits && <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
-                      {formatSubjectCredits(subject.credits, language)}
-                    </span>}
                   </div>
                 </div>
               </div>

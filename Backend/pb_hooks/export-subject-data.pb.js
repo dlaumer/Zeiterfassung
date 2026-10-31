@@ -1,15 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 routerAdd("GET", "/api/export-subject-data", (e) => {
-    function csvEscape(value) {
-        const str = String(value ?? "")
-
-        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-            return `"${str.replace(/"/g, '""')}"`
-        }
-
-        return str
-    }
 
     function csvExcelText(value) {
         const str = String(value ?? "").replace(/"/g, '""')
@@ -17,7 +8,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
     }
 
     function toCsvRow(values) {
-        return values.map(csvEscape).join(",")
+        return require(`${__hooks}/csv.js`).row(values)
     }
 
     function minutesToHours(value) {
@@ -368,7 +359,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         "participant_subjects",
         "subject = {:subjectId}",
         "",
-        50000,
+        0,
         0,
         { subjectId }
     )
@@ -377,7 +368,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         "submission_items",
         "workloadType = {:subjectId}",
         "",
-        50000,
+        0,
         0,
         { subjectId }
     )
@@ -408,7 +399,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         }
     }
 
-    const now = new Date()
+    const now = new Date(require(`${__hooks}/submission-date-policy.js`).todayKey() + "T00:00:00")
     const dailyReferenceDateStart = getEarliestReferenceDate(dailyStudentIdSet, false)
     const weeklyReferenceDateStart = getEarliestReferenceDate(weeklyStudentIdSet, true)
     const dailyPeriods = dailyReferenceDateStart ? buildExpectedDailyPeriods(dailyReferenceDateStart, now) : []
@@ -430,7 +421,7 @@ routerAdd("GET", "/api/export-subject-data", (e) => {
         "submissions",
         submissionFilterParts.join(" && "),
         "periodStart",
-        50000,
+        0,
         0,
         submissionFilterParams
     ))

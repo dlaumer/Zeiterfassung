@@ -1,8 +1,10 @@
 
 import { createRoot } from "react-dom/client";
-import AdminApp from "./admin/AdminApp.tsx";
-import App from "./app/App.tsx";
-import LandingPage from "./app/LandingPage.tsx";
+import { lazy, Suspense } from "react";
+
+const AdminApp = lazy(() => import("./admin/AdminApp.tsx"));
+const App = lazy(() => import("./app/App.tsx"));
+const LandingPage = lazy(() => import("./app/LandingPage.tsx"));
 import logoSmall from "./assets/logoSmall.png";
 import "./styles/index.css";
 
@@ -25,6 +27,8 @@ favicon.href = logoSmall;
 document.head.appendChild(favicon);
 
 createRoot(document.getElementById("root")!).render(
-  isAdminRoute ? <AdminApp participantId={window.location.pathname.split('/').filter(Boolean)[1]} /> : routeSegment ? <App participantId={routeSegment} /> : <LandingPage />,
+  <Suspense fallback={<div role="status" aria-label="Loading" className="min-h-screen bg-slate-50" />}>
+  {isAdminRoute ? <AdminApp participantId={window.location.pathname.split('/').filter(Boolean)[1]} /> : routeSegment ? <App participantId={routeSegment} /> : <LandingPage />}
+  </Suspense>,
 );
   

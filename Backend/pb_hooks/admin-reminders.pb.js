@@ -341,6 +341,8 @@ Please do not reply directly to this email.`
             headers: {
                 "Authorization": "Bearer " + config.apiKey,
                 "Content-Type": "application/json",
+                ...(body.operationId && /^[a-zA-Z0-9-]{1,80}$/.test(String(body.operationId))
+                    ? { "Idempotency-Key": "reminder-" + participantId + "-" + body.operationId } : {}),
             },
             body: JSON.stringify({
                 from: fromValue,
@@ -658,6 +660,8 @@ Please do not reply directly to this email.`
             headers: {
                 "Authorization": "Bearer " + config.apiKey,
                 "Content-Type": "application/json",
+                ...(body.operationId && /^[a-zA-Z0-9-]{1,80}$/.test(String(body.operationId))
+                    ? { "Idempotency-Key": "invitation-" + participantId + "-" + body.operationId } : {}),
             },
             body: JSON.stringify({
                 from: fromValue,

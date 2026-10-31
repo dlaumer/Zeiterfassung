@@ -16,13 +16,18 @@ export interface StatisticsState {
   workload: boolean;
   rating: boolean;
   energy: boolean;
+  commute: boolean;
+  admin: boolean;
+  structural: boolean;
+  adminHidden: boolean;
+  structuralHidden: boolean;
   zoom: number;
 }
 const prefix = 'stats.';
 const dateValid = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(parseISO(value)) && format(parseISO(value), 'yyyy-MM-dd') === value;
 const choice = <T extends string>(value: string | null, values: T[], fallback: T): T => values.includes(value as T) ? value as T : fallback;
 // Repeated parameters avoid ambiguous delimiters in stable module IDs.
-export function readStatistics(params: URLSearchParams, daily: boolean): StatisticsState {
+export function readStatistics(params: URLSearchParams, daily: boolean, defaultTotals = true): StatisticsState {
   const get = (key: string) => params.get(prefix + key);
   const active = get('v') === '1';
   const bool = (key: string, fallback: boolean) => active ? get(key) === '1' ? true : get(key) === '0' ? false : fallback : fallback;
@@ -39,8 +44,11 @@ export function readStatistics(params: URLSearchParams, daily: boolean): Statist
     modules: new Set(active ? params.getAll(prefix + 'module').filter(Boolean) : []),
     hidden: new Set(active ? params.getAll(prefix + 'hide').filter(key => /:(classTime|selfStudyTime)$/.test(key)) : []),
     period, dates: period === 'custom' ? dates : undefined, group, value,
-    summaries: bool('summaries', true), totals: bool('totals', true), workload: bool('workload', true),
-    rating: bool('rating', false), energy: bool('energy', false),
+    summaries: bool('summaries', true), totals: bool('totals', defaultTotals), workload: true,
+    rating: bool('rating', false), energy: !bool('rating', false) && bool('energy', false),
+    commute: bool('commute', false), admin: bool('admin', false),
+    structural: bool('structural', false),
+    adminHidden: bool('adminHidden', false), structuralHidden: bool('structuralHidden', false),
     zoom: active && Number.isFinite(zoom) ? Math.min(8, Math.max(1, zoom)) : 1,
   };
 }
@@ -55,15 +63,16 @@ export function writeStatistics(params: URLSearchParams, state: StatisticsState)
   set('group', state.group); set('period', state.period); set('value', state.value);
   if (state.period === 'custom' && state.dates) { set('from', state.dates.start); set('to', state.dates.end); }
   for (const key of [...state.hidden].sort()) result.append(prefix + 'hide', key);
-  for (const key of ['open', 'summaries', 'totals', 'workload', 'rating', 'energy'] as const) set(key, state[key] ? 1 : 0);
+  for (const key of ['open', 'summaries', 'totals', 'workload', 'rating', 'energy', 'commute', 'admin', 'structural', 'adminHidden', 'structuralHidden'] as const) set(key, state[key] ? 1 : 0);
   set('zoom', state.zoom);
   return result;
 }
 
 export function useStatisticsUrl(daily: boolean) {
-  const [state, setState] = useState(() => readStatistics(new URLSearchParams(window.location.search), daily));
+  const readCurrent = () => readStatistics(new URLSearchParams(window.location.search), daily, !window.matchMedia('(max-width: 1023px)').matches);
+  const [state, setState] = useState(readCurrent);
   useEffect(() => {
-    const restore = () => setState(readStatistics(new URLSearchParams(window.location.search), daily));
+    const restore = () => setState(readCurrent());
     window.addEventListener('popstate', restore);
     return () => window.removeEventListener('popstate', restore);
   }, [daily]);
@@ -74,7 +83,10 @@ export function useStatisticsUrl(daily: boolean) {
     if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url);
   }, [state]);
   const setting = <K extends keyof StatisticsState>(key: K): [StatisticsState[K], Dispatch<SetStateAction<StatisticsState[K]>>] => [state[key], update => {
-    setState(current => ({ ...current, [key]: typeof update === 'function' ? (update as (previous: StatisticsState[K]) => StatisticsState[K])(current[key]) : update }));
+    setState(current => {
+      const next = typeof update === 'function' ? (update as (previous: StatisticsState[K]) => StatisticsState[K])(current[key]) : update;
+      return { ...current, [key]: next, ...(key === 'rating' && next ? { energy: false } : {}), ...(key === 'energy' && next ? { rating: false } : {}), workload: true };
+    });
   }];
   return setting;
 }

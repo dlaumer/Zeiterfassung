@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+const bundle = await build({entryPoints:['src/app/analytics/workload.ts'],bundle:true,write:false,platform:'node',format:'esm'});
+const {completedWeeksRange,completedWeekMetrics}=await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+const today='2026-10-30';
+assert.deepEqual(completedWeeksRange({start:'2026-10-01',end:'2026-10-23'},today),{start:'2026-10-05',end:'2026-10-18'});
+assert.deepEqual(completedWeeksRange({start:'2026-10-05',end:'2026-10-18'},today),{start:'2026-10-05',end:'2026-10-18'});
+assert.equal(completedWeeksRange({start:'2026-10-06',end:'2026-10-11'},today),undefined);
+assert.equal(completedWeeksRange({start:'2026-10-26',end:'2026-11-01'},today),undefined);
+assert.deepEqual(completedWeeksRange({start:'2026-10-01',end:'2026-11-01'},today),{start:'2026-10-05',end:'2026-10-25'});
+assert.deepEqual(completedWeeksRange({start:'2025-12-30',end:'2026-01-18'},today),{start:'2026-01-05',end:'2026-01-18'});
+const entry=(date,hours)=>({date,subjectTimes:[{subjectId:'m',classTime:hours,selfStudyTime:0}]});
+const entries=[entry('2026-10-01',100),entry('2026-10-05',7),entry('2026-10-12',7),entry('2026-10-23',100)];
+const metrics=completedWeekMetrics(entries,{start:'2026-10-01',end:'2026-10-23'},today).get('m');
+assert.equal(metrics.total.classTime,14);
+assert.equal(metrics.weeklyAverage.classTime,7);
+assert.equal(completedWeekMetrics(entries,{start:'2026-10-06',end:'2026-10-11'},today).size,0);
+console.log('Complete-week range, totals, denominators, empty ranges and year boundary checks passed.');

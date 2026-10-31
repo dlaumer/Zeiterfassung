@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
-const context = { module: { exports: {} } };
-vm.runInNewContext(readFileSync('Backend/pb_hooks/submission-review.js', 'utf8'), context);
-const review = context.module.exports;
+import { loadHook } from './lib/load-hook.mjs';
+const review = loadHook('submission-review.js');
 const fields = { key: 'reviewTime', value: '14' };
 const record = { get: key => fields[key], set: (key, value) => { fields[key] = value; } };
 let saves = 0;

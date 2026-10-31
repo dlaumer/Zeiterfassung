@@ -9,9 +9,8 @@ module.exports.assertNext = function (app, participant, periodType, target, exis
         "", 0, 0, { participantId: participant.id, periodType }
     ))
     const key = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-    const submitted = new Set(submissions.map(s => key(new Date(s.get("periodStart")))))
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const submitted = new Set(submissions.map(s => String(s.get("periodStart")).slice(0, 10)))
+    const today = new Date(require(`${__hooks}/submission-date-policy.js`).todayKey() + "T00:00:00")
     const reference = String(participant.get("referenceDate") || "").slice(0, 10)
     let cursor = reference ? new Date(reference + "T00:00:00") : new Date(NaN)
     if (isNaN(cursor.getTime())) {

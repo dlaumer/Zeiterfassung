@@ -42,7 +42,7 @@ try {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
     token = (await request('/api/collections/_superusers/auth-with-password', { identity: 'test@example.test', password })).token;
-    const participant = await create('participants', { name: 'Module visibility', email: 'visibility@example.test', entryMode: 'day' });
+    const participant = await create('participants', { name: 'Module visibility', email: 'visibility@example.test', entryMode: 'day', referenceDate: daysAgo(0) });
     const subject = await create('subjects', { key: 'visibility', label_en: 'Visibility', label_de: 'Visibility', entryMode: 'day' });
     const enrollment = await create('participant_subjects', { participant: participant.id, subject: subject.id, color: '#e6194b' });
     const payload = { participantId: participant.id, date: daysAgo(0), inputMode: 'totals', expectedSubmissionId: '', reliability: 4, socialBattery: 3, subjectTimes: [{ subjectId: subject.id, classMinutes: 120, studyMinutes: 60 }] };

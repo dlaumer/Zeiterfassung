@@ -1,65 +1,22 @@
 /// <reference path="../pb_data/types.d.ts" />
-
 routerAdd("DELETE", "/api/admin/participant", (e) => {
     const participantId = (e.requestInfo().query["participantId"] || "").trim()
-
-    if (!participantId) {
-        return e.json(400, { error: "Missing participantId" })
-    }
-
-    const participant = $app.findRecordById("participants", participantId)
-
-    if (!participant) {
-        return e.json(404, { error: "Participant not found" })
-    }
-
-    const submissions = $app.findRecordsByFilter(
-        "submissions",
-        "participant = {:participantId}",
-        "",
-        5000,
-        0,
-        { participantId }
-    )
-
-    const submissionIds = submissions.map((submission) => submission.id)
-
-    if (submissionIds.length > 0) {
-        const submissionFilter = submissionIds
-            .map((id) => `submission = "${id}"`)
-            .join(" || ")
-
-        const submissionItems = $app.findRecordsByFilter(
-            "submission_items",
-            submissionFilter,
-            "",
-            20000,
-            0
-        )
-
-        for (const item of submissionItems) {
-            $app.delete(item)
+    if (!participantId) return e.json(400, { error: "Missing participantId" })
+    // Roll back the entire removal if any related record fails to delete.
+    $app.runInTransaction(app => {
+        const queries = require(`${__hooks}/record-queries.js`)
+        const participant = app.findRecordById("participants", participantId)
+        const submissions = queries.all(app, "submissions", "participant = {:participantId}", "", { participantId })
+        for (const item of queries.related(app, "submission_items", "submission", submissions.map(s => s.id))) app.delete(item)
+        for (const enrollment of queries.all(app, "participant_subjects", "participant = {:participantId}", "", { participantId })) app.delete(enrollment)
+        for (const submission of submissions) {
+            if (submission.get("replacesSubmission")) {
+                submission.set("replacesSubmission", "")
+                app.save(submission)
+            }
         }
-    }
-
-    const participantSubjects = $app.findRecordsByFilter(
-        "participant_subjects",
-        "participant = {:participantId}",
-        "",
-        5000,
-        0,
-        { participantId }
-    )
-
-    for (const enrollment of participantSubjects) {
-        $app.delete(enrollment)
-    }
-
-    for (const submission of submissions) {
-        $app.delete(submission)
-    }
-
-    $app.delete(participant)
-
+        for (const submission of submissions) app.delete(submission)
+        app.delete(participant)
+    })
     return e.json(200, { success: true })
 }, $apis.requireAuth("admins"))

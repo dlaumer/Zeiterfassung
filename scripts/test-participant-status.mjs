@@ -52,6 +52,29 @@ try {
         const enrollments = await Promise.all(assigned.map(subject => create('participant_subjects', { participant: participant.id, subject: subject.id })));
         const submission = await create('submissions', { participant: participant.id, periodType: 'day', periodStart: `${daysAgo(0)} 00:00:00.000Z`, periodEnd: `${daysAgo(0)} 00:00:00.000Z`, submittedAt: new Date().toISOString(), submissionMode: 'initial', comment: 'Keep history' });
         const item = await create('submission_items', { submission: submission.id, workloadType: subjects[0].id, type: 'class', durationMinutes: 60 });
+        const partialEndpoint = '/api/admin/participant/status';
+        const auth = adminToken;
+        adminToken = '';
+        await request(partialEndpoint, { participantId: participant.id, inactive: true }, 'PATCH', 401);
+        adminToken = auth;
+        await request(partialEndpoint, { participantId: participant.id, referenceDate: '2026-02-30' }, 'PATCH', 400);
+        await request(partialEndpoint, { participantId: participant.id, inactive: 'false' }, 'PATCH', 400);
+        await request(partialEndpoint, { participantId: participant.id }, 'PATCH', 400);
+        for (const inactive of [true, false]) {
+            await request(partialEndpoint, { participantId: participant.id, inactive }, 'PATCH');
+            const saved = await request(`/api/collections/participants/records/${participant.id}`);
+            assert.equal(saved.inactive, inactive);
+            assert.equal(saved.name, profile.name);
+            assert.equal(saved.email, profile.email);
+            assert.equal(saved.comment, participant.comment);
+            const current = await request(`/api/collections/participant_subjects/records?filter=${encodeURIComponent(`participant="${participant.id}"`)}`);
+            assert.deepEqual(current.items.sort((a, b) => a.id.localeCompare(b.id)), [...enrollments].sort((a, b) => a.id.localeCompare(b.id)));
+        }
+        await request(partialEndpoint, { participantId: participant.id, referenceDate: daysAgo(30) }, 'PATCH');
+        const dated = await request(`/api/collections/participants/records/${participant.id}`);
+        assert.equal(dated.referenceDate.slice(0, 10), daysAgo(30));
+        assert.equal(dated.inactive, false);
+        assert.deepEqual(await request(`/api/collections/submissions/records/${submission.id}`), submission);
         for (const inactive of [true, false]) {
             await request(`/api/admin/participant?participantId=${participant.id}`, { ...profile, inactive }, 'PATCH');
             const saved = await request(`/api/collections/participants/records/${participant.id}`);

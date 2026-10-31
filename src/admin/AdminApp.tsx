@@ -1,3 +1,4 @@
+import { parseSubjectImportRows } from './subjectImport';
 import App from '../app/App';
 import { ProgressiveActivityList } from './ProgressiveActivityList';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
@@ -5,9 +6,11 @@ import PocketBase from 'pocketbase';
 import { pocketBaseUrl } from '../pocketbaseConfig';
 import { AdminSettingsDialog } from './AdminSettingsDialog';
 import { matchesEventSearch } from './eventSearch.mjs';
+import { runGroupActions } from './groupActions.mjs';
 import {
   BookOpen,
   CalendarDays,
+  Check,
   ChevronDown,
   Clock3,
   Download,
@@ -15,6 +18,7 @@ import {
   Filter,
   Settings,
   LogOut,
+  Loader2,
   Mail,
   MoreHorizontal,
   Pencil,
@@ -145,18 +149,23 @@ interface AdminOverview {
   events: AdminEvent[];
 }
 
-interface SubjectImportRow {
-  number: string;
-  key: string;
-  label: string;
-  credits: number;
-}
+
 
 type AdminMobileTab = 'log' | 'participants' | 'subjects';
 type AdminEntryModeFilter = 'all' | 'day' | 'week';
 type AdminParticipantEntryModeTab = 'day' | 'week';
 type AdminRoleFilter = 'all' | 'student' | 'faculty';
 type AdminParticipantSort = 'missing' | 'created' | 'firstName' | 'lastName' | 'lastReminder' | 'lastPeriod' | 'lastSubmission';
+type GroupAction = 'invitation' | 'reminder' | 'exportAllZip' | 'exportCleanZip' | 'setReferenceDate' | 'setInactive' | 'setActive';
+const groupActionLabels: Record<GroupAction, string> = {
+  invitation: 'admin.participant.sendInvitation',
+  reminder: 'admin.participant.sendReminder',
+  exportAllZip: 'admin.participants.exportAllZip',
+  exportCleanZip: 'admin.participants.exportCleanZip',
+  setReferenceDate: 'admin.participants.setReferenceDate',
+  setInactive: 'admin.participants.setInactive',
+  setActive: 'admin.participants.setActive',
+};
 
 const facultyRoleOptions = [
   { value: 'professor', translationKey: 'professor' },
@@ -305,51 +314,6 @@ function compareAdminSubjectsByDisplayName(language: Language) {
   );
 }
 
-function normalizeImportCell(value: unknown) {
-  return String(value ?? '').trim();
-}
-
-function getImportCell(row: Record<string, unknown>, names: string[]) {
-  for (const name of names) {
-    const value = normalizeImportCell(row[name]);
-    if (value) {
-      return value;
-    }
-  }
-
-  return '';
-}
-
-async function parseSubjectImportRows(fileData: ArrayBuffer): Promise<SubjectImportRow[]> {
-  const XLSX = await import('xlsx');
-  const workbook = XLSX.read(fileData, { type: 'array' });
-  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: '' });
-  const seenKeys = new Set<string>();
-
-  return rows
-    .map((row) => {
-      const label = getImportCell(row, ['Modulname DE / EN', 'Modulname', 'Module name', 'Label']);
-      const key = getImportCell(row, ['Key', 'Kürzel', 'Kuerzel']) || label;
-      const credits = Number(getImportCell(row, ['Anzahl ECTS', 'ECTS', 'Credits']) || 0);
-
-      return {
-        number: getImportCell(row, ['LE-Nummer', 'LE Nummer', 'Number']),
-        key,
-        label,
-        credits: Number.isFinite(credits) ? Math.max(0, credits) : 0,
-      };
-    })
-    .filter((row) => row.key && row.label)
-    .filter((row) => {
-      const normalizedKey = row.key.toLowerCase();
-      if (seenKeys.has(normalizedKey)) {
-        return false;
-      }
-      seenKeys.add(normalizedKey);
-      return true;
-    });
-}
 
 function getAdminItemLabel(
   item: AdminSubmissionItem,
@@ -568,6 +532,7 @@ async function downloadAdminCsv(endpoint: string, participantId: string, fallbac
 
 interface ParticipantActionMenuProps {
   participant: AdminParticipant;
+  disabled?: boolean;
   onOpenLink: (participantId: string) => void;
   onSendInvitation: (participant: AdminParticipant) => void;
   onSendReminder: (participant: AdminParticipant) => void;
@@ -579,6 +544,7 @@ interface ParticipantActionMenuProps {
 
 function ParticipantActionMenu({
   participant,
+  disabled = false,
   onOpenLink,
   onSendInvitation,
   onSendReminder,
@@ -594,12 +560,14 @@ function ParticipantActionMenu({
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={disabled ? false : undefined}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           title={t('admin.participantActions')}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          aria-label={t('admin.participantActions')}
+          disabled={disabled}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:pointer-events-none disabled:opacity-40"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
@@ -720,6 +688,19 @@ function AdminContent({ participantId }: { participantId?: string }) {
   const [selectedEntryMode, setSelectedEntryMode] = useState<AdminEntryModeFilter>('all');
   const [selectedRole, setSelectedRole] = useState<AdminRoleFilter>('all');
   const [participantSort, setParticipantSort] = useState<AdminParticipantSort>('missing');
+  const [participantSelectionMode, setParticipantSelectionMode] = useState(false);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<Set<string>>(() => new Set());
+  const [groupAction, setGroupAction] = useState<GroupAction | null>(null);
+  const [groupParticipants, setGroupParticipants] = useState<AdminParticipant[]>([]);
+  const [groupDate, setGroupDate] = useState('');
+  const [groupRunning, setGroupRunning] = useState(false);
+  const groupRunningRef = useRef(false);
+  const [groupCompleted, setGroupCompleted] = useState(0);
+  const [groupCurrent, setGroupCurrent] = useState('');
+  const [groupStartedAt, setGroupStartedAt] = useState(0);
+  const [groupElapsed, setGroupElapsed] = useState(0);
+  const [groupResults, setGroupResults] = useState<{ id: string; name: string; ok: boolean; reason?: string }[] | null>(null);
+  const [groupExportError, setGroupExportError] = useState(false);
   const [showParticipantDialog, setShowParticipantDialog] = useState(false);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [participantToEdit, setParticipantToEdit] = useState<AdminParticipant | null>(null);
@@ -893,6 +874,106 @@ function AdminContent({ participantId }: { participantId?: string }) {
       showActionMessage('error', t('admin.participant.reminderFailed'));
     }
   }
+
+  function openGroupAction(action: GroupAction) {
+    if (groupRunningRef.current) return;
+    setGroupParticipants(overview.participants.filter((participant) => selectedParticipantIds.has(participant.id)));
+    setGroupAction(action);
+    setGroupDate('');
+    setGroupCompleted(0);
+    setGroupResults(null);
+    setGroupExportError(false);
+    setGroupElapsed(0);
+  }
+
+  function closeGroupAction() {
+    if (groupRunningRef.current) return;
+    if (groupResults !== null && !groupExportError) {
+      setSelectedParticipantIds(new Set(groupResults.filter((result) => !result.ok).map((result) => result.id)));
+      if (groupResults.every((result) => result.ok)) setParticipantSelectionMode(false);
+    }
+    setGroupAction(null);
+  }
+
+  async function startGroupAction() {
+    if (!groupAction || groupRunningRef.current || groupResults || !groupParticipants.length) return;
+    if (groupAction === 'setReferenceDate' && !/^\d{4}-\d{2}-\d{2}$/.test(groupDate)) return;
+    groupRunningRef.current = true;
+    setGroupRunning(true);
+    setGroupStartedAt(Date.now());
+    const action = groupAction;
+    const isEmail = action === 'invitation' || action === 'reminder';
+    const isExport = action === 'exportAllZip' || action === 'exportCleanZip';
+    const files: Record<string, Uint8Array> = {};
+    try {
+      const results = await runGroupActions(groupParticipants, async (participant: AdminParticipant) => {
+        if (isEmail) {
+          if (!participant.email?.trim()) throw new Error('Missing email');
+          const response = await pb.send(`/api/admin/participant/${action}`, {
+            method: 'POST', requestKey: null,
+            body: { participantId: participant.id, operationId: crypto.randomUUID() },
+          });
+          if (!response?.ok) throw new Error('Incomplete email response');
+        } else if (isExport) {
+          const periodType = participant.entryMode === 'week' ? 'week' : 'day';
+          const url = new URL(action === 'exportAllZip' ? '/api/export-student-flat' : '/api/export-student-clean', pocketBaseUrl);
+          url.searchParams.set('participantId', participant.id);
+          url.searchParams.set('periodType', periodType);
+          const response = await fetch(url, { headers: { Authorization: pb.authStore.token } });
+          if (!response.ok) throw new Error('Export failed');
+          files[`participant_${participant.id}_${periodType}_${action === 'exportAllZip' ? 'all' : 'clean'}.csv`] = new Uint8Array(await response.arrayBuffer());
+        } else {
+          try {
+            const response = await pb.send('/api/admin/participant/status', {
+              method: 'PATCH', requestKey: null,
+              body: { participantId: participant.id, ...(action === 'setReferenceDate' ? { referenceDate: groupDate } : { inactive: action === 'setInactive' }) },
+            });
+            if (!response?.ok) throw new Error('Incomplete update response');
+          } catch (error: any) {
+            const key = error?.status === 404 && !error?.response?.error
+              ? 'admin.group.statusEndpointMissing'
+              : error?.status === 401 || error?.status === 403
+                ? 'admin.group.authorizationFailed' : 'admin.group.updateFailed';
+            throw Object.assign(new Error('Participant update failed'), { groupMessage: t(key) });
+          }
+        }
+      }, (progress: { completed: number; current: AdminParticipant | null }) => {
+        setGroupCompleted(progress.completed);
+        setGroupCurrent(progress.current?.name || progress.current?.id || '');
+      }, isEmail ? () => new Promise((resolve) => window.setTimeout(resolve, 1000)) : undefined);
+      if (isExport && Object.keys(files).length) {
+        setGroupCurrent(t('admin.group.preparingZip'));
+        const { zipSync } = await import('fflate');
+        const archive = zipSync(files, { level: 0 });
+        const url = URL.createObjectURL(new Blob([archive], { type: 'application/zip' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `participants_${action === 'exportAllZip' ? 'all' : 'clean'}_${new Date().toISOString().slice(0, 10)}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+      setGroupResults(results);
+    } catch (error) {
+      console.error('Group action failed:', error);
+      setGroupExportError(true);
+      setGroupResults([]);
+    } finally {
+      groupRunningRef.current = false;
+      setGroupRunning(false);
+      setGroupCurrent('');
+      await loadOverview(true);
+    }
+  }
+
+  useEffect(() => {
+    if (!groupRunning) return;
+    const timer = window.setInterval(() => setGroupElapsed(Math.floor((Date.now() - groupStartedAt) / 1000)), 1000);
+    const preventLeave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', preventLeave);
+    return () => { window.clearInterval(timer); window.removeEventListener('beforeunload', preventLeave); };
+  }, [groupRunning, groupStartedAt]);
 
   async function handleSendParticipantInvitation(participant: AdminParticipant) {
     try {
@@ -1574,6 +1655,68 @@ function AdminContent({ participantId }: { participantId?: string }) {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            {participantSelectionMode && (
+              <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 p-3">
+                <span role="status" className="mr-auto text-sm font-semibold text-gray-700">
+                  {t('admin.participants.selected', { count: selectedParticipantIds.size })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedParticipantIds(new Set());
+                    setParticipantSelectionMode(false);
+                  }}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  {t('admin.participants.cancelSelection')}
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={selectedParticipantIds.size === 0}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-md bg-gray-950 px-3 text-xs font-semibold text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {t('admin.participants.groupActions')}
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-w-64 border-gray-200 bg-white text-gray-900">
+                    <DropdownMenuItem onSelect={() => openGroupAction('invitation')}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      {t('admin.participant.sendInvitation')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openGroupAction('reminder')}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      {t('admin.participant.sendReminder')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-gray-100" />
+                    <DropdownMenuItem onSelect={() => openGroupAction('exportAllZip')}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('admin.participants.exportAllZip')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openGroupAction('exportCleanZip')}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('admin.participants.exportCleanZip')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-gray-100" />
+                    <DropdownMenuItem onSelect={() => openGroupAction('setReferenceDate')}>
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {t('admin.participants.setReferenceDate')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openGroupAction('setInactive')}>
+                      <X className="mr-2 h-4 w-4" />
+                      {t('admin.participants.setInactive')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openGroupAction('setActive')}>
+                      <Check className="mr-2 h-4 w-4" />
+                      {t('admin.participants.setActive')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
             <div className="shrink-0 border-b border-gray-100 p-2">
               <Tabs
                 value={activeParticipantEntryMode}
@@ -1619,9 +1762,27 @@ function AdminContent({ participantId }: { participantId?: string }) {
                     key={participant.id}
                     className={`flex min-w-0 items-start justify-between gap-3 overflow-hidden border-l-4 p-4 transition-colors ${participantToneClasses}`}
                   >
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={selectedParticipantIds.has(participant.id)}
+                      aria-label={t('admin.participants.selectParticipant', { name: participant.name || participant.id })}
+                      onClick={() => {
+                        setParticipantSelectionMode(true);
+                        setSelectedParticipantIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(participant.id)) next.delete(participant.id);
+                          else next.add(participant.id);
+                          return next;
+                        });
+                      }}
+                      className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border bg-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 ${selectedParticipantIds.has(participant.id) ? 'border-gray-950 text-gray-950 ring-1 ring-gray-950' : 'border-gray-300 text-transparent hover:border-gray-600'}`}
+                    >
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
                     <div className="min-w-0 flex-1">
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_13rem] md:items-start">
-                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_9rem] items-stretch gap-3">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-3">
                           <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <div title={participant.name || participant.id} className={`min-w-0 flex-1 break-words text-sm font-bold ${participant.inactive ? 'text-gray-500' : 'text-gray-950'}`}>
@@ -1633,11 +1794,11 @@ function AdminContent({ participantId }: { participantId?: string }) {
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className="w-14 shrink-0 text-xs font-medium text-gray-500">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="text-xs font-medium text-gray-500">
                               {participant.entryMode === 'week' ? t('admin.entryMode.week') : t('admin.entryMode.day')}
                             </span>
-                            <span className="w-20 shrink-0 text-xs font-medium text-gray-500">
+                            <span className="text-xs font-medium text-gray-500">
                               {participant.participantRole === 'faculty' ? t('admin.participantRole.faculty') : t('admin.participantRole.student')}
                             </span>
                           </div>
@@ -1697,6 +1858,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
                     <div className="shrink-0">
                       <ParticipantActionMenu
                         participant={participant}
+                        disabled={participantSelectionMode}
                         onOpenLink={handleOpenParticipantLink}
                         onSendInvitation={handleSendParticipantInvitation}
                         onSendReminder={handleSendParticipantReminder}
@@ -1901,6 +2063,41 @@ function AdminContent({ participantId }: { participantId?: string }) {
       </main>
 
       <AdminSettingsDialog pb={pb} open={showSettings} onOpenChange={setShowSettings} />
+
+      <Dialog open={groupAction !== null} onOpenChange={(open) => { if (!open) closeGroupAction(); }}>
+        <DialogContent className={`max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white sm:max-w-md ${groupRunning ? '[&>button]:hidden' : ''}`} onEscapeKeyDown={(event) => { if (groupRunningRef.current) event.preventDefault(); }} onInteractOutside={(event) => { if (groupRunningRef.current) event.preventDefault(); }}>
+          <DialogHeader>
+            <DialogTitle>{groupAction ? t(groupActionLabels[groupAction]) : ''}</DialogTitle>
+            <DialogDescription>{t('admin.group.confirm', { count: groupParticipants.length })}</DialogDescription>
+          </DialogHeader>
+          {!groupRunning && groupResults === null && (
+            <>
+              <div className="max-h-32 overflow-y-auto text-sm text-gray-600">{groupParticipants.map((participant) => <div key={participant.id}>{participant.name || participant.id}</div>)}</div>
+              {(groupAction === 'invitation' || groupAction === 'reminder') && <p className="text-sm text-gray-600">{t('admin.group.emailWarning')}</p>}
+              {groupAction === 'setReferenceDate' && <label className="grid gap-2 text-sm font-semibold">{t('admin.participant.referenceDate')}<input type="date" required value={groupDate} onChange={(event) => setGroupDate(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2" /></label>}
+              <DialogFooter>
+                <button type="button" onClick={() => setGroupAction(null)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">{t('admin.group.cancel')}</button>
+                <button type="button" disabled={!groupParticipants.length || (groupAction === 'setReferenceDate' && !groupDate)} onClick={() => void startGroupAction()} className="rounded-md bg-gray-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{t('admin.group.start')}</button>
+              </DialogFooter>
+            </>
+          )}
+          {groupRunning && <div role="status" aria-live="polite" className="grid gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold"><Loader2 className="h-4 w-4 animate-spin" />{t('admin.group.progress', { count: groupCompleted, total: groupParticipants.length })}</div>
+            <progress value={groupCompleted} max={groupParticipants.length} className="h-2 w-full" aria-label={t('admin.participants.groupActions')} />
+            <p className="truncate text-sm text-gray-600">{groupCurrent}</p>
+            <p className="text-sm text-gray-600">{t('admin.group.elapsed', { seconds: groupElapsed })} · {groupCompleted > 0 ? t('admin.group.remaining', { seconds: Math.max(0, Math.ceil(groupElapsed / groupCompleted * (groupParticipants.length - groupCompleted))) }) : t('admin.group.estimating')}</p>
+            <p className="text-xs text-gray-500">{t('admin.group.keepOpen')}</p>
+          </div>}
+          {groupResults !== null && <div role="status" className="grid gap-3">
+            <p className="text-sm font-semibold">{groupExportError ? t('admin.group.exportFailed') : t('admin.group.finished', { success: groupResults.filter((result) => result.ok).length, failed: groupResults.filter((result) => !result.ok).length })}</p>
+            {groupResults.some((result) => !result.ok) && <>
+              <p className="text-sm text-gray-600">{t(groupAction === 'invitation' || groupAction === 'reminder' ? 'admin.group.failedHelp' : 'admin.group.updateFailedHelp')}</p>
+              <ul className="max-h-40 space-y-2 overflow-y-auto text-sm text-red-700">{groupResults.filter((result) => !result.ok).map((result) => <li key={result.id}>{result.name}{result.reason && <span className="block text-xs">{result.reason}</span>}</li>)}</ul>
+            </>}
+            <button type="button" onClick={closeGroupAction} className="rounded-md bg-gray-950 px-3 py-2 text-sm font-semibold text-white">{t('admin.group.close')}</button>
+          </div>}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={showParticipantDialog}

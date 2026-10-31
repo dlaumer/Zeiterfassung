@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, LockKeyhole } from 'lucide-react';
-import { ReactNode, useRef } from 'react';
+import { CSSProperties, ReactNode, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
 import { useI18n } from '../i18n/i18n';
 import { getDateLocale } from '../i18n/dateLocale';
@@ -158,7 +158,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
           if (dx < 0) handleNextMonth(); else handlePrevMonth();
         }}
         onClickCapture={event => { if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
-        className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
+        className={`calendar-date-area flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300 ${collapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}>
       {entryMode !== 'week' && (
         <div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-1.5 shrink-0">
           {weekDays.map(day => (
@@ -218,7 +218,7 @@ export function Calendar({ currentDate, onDateChange, selectedDate, onDateSelect
         })}
         </div>
       ) : (
-        <div className="grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr flex-1 min-h-0">
+        <div className="calendar-day-grid grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr flex-1 min-h-0" style={{ '--calendar-week-count': days.length / 7 } as CSSProperties}>
           {days.map(day => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isToday = isSameDay(day, today);

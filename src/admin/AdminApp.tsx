@@ -1,5 +1,6 @@
 import { parseSubjectImportRows } from './subjectImport';
 import App from '../app/App';
+import StatisticsDashboard from './StatisticsDashboard';
 import { ProgressiveActivityList } from './ProgressiveActivityList';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import PocketBase from 'pocketbase';
@@ -664,8 +665,8 @@ function SubjectActionMenu({ subject, onExportData, onEdit, onRemove }: SubjectA
   );
 }
 
-function AdminContent({ participantId }: { participantId?: string }) {
-  const [sessionChecked, setSessionChecked] = useState(!participantId);
+function AdminContent({ participantId, statistics = false }: { participantId?: string; statistics?: boolean }) {
+  const [sessionChecked, setSessionChecked] = useState(!participantId && !statistics);
   const [showSettings, setShowSettings] = useState(false);
   const { t, language } = useI18n();
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
@@ -1202,7 +1203,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
   }
 
   useEffect(() => {
-    if (!participantId) return;
+    if (!participantId && !statistics) return;
     let active = true;
     async function verifySession() {
       try {
@@ -1213,7 +1214,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
     verifySession();
     const timer = window.setInterval(() => { if (!pb.authStore.isValid) pb.authStore.clear(); }, 15000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [participantId]);
+  }, [participantId, statistics]);
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange(() => {
@@ -1226,11 +1227,11 @@ function AdminContent({ participantId }: { participantId?: string }) {
   }, []);
 
   useEffect(() => {
-    if (!participantId) loadOverview();
-  }, [isAdminAuthenticated, participantId]);
+    if (!participantId && !statistics) loadOverview();
+  }, [isAdminAuthenticated, participantId, statistics]);
 
   useEffect(() => {
-    if (!isAdminAuthenticated || participantId) return;
+    if (!isAdminAuthenticated || participantId || statistics) return;
     const refresh = () => { if (document.visibilityState === 'visible') void loadOverview(true); };
     const timer = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
@@ -1240,7 +1241,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [isAdminAuthenticated, participantId]);
+  }, [isAdminAuthenticated, participantId, statistics]);
 
   useEffect(() => {
     if (!actionMessage) {
@@ -1418,6 +1419,7 @@ function AdminContent({ participantId }: { participantId?: string }) {
   }
 
   if (participantId) return <App participantId={participantId} adminView />;
+  if (statistics) return <StatisticsDashboard onLogout={handleLogout} />;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-gray-950">
@@ -2476,10 +2478,10 @@ function AdminContent({ participantId }: { participantId?: string }) {
   );
 }
 
-export default function AdminApp({ participantId }: { participantId?: string }) {
+export default function AdminApp({ participantId, statistics }: { participantId?: string; statistics?: boolean }) {
   return (
     <I18nProvider>
-      <AdminContent participantId={participantId} />
+      <AdminContent participantId={participantId} statistics={statistics} />
     </I18nProvider>
   );
 }

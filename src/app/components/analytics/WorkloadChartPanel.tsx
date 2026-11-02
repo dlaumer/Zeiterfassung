@@ -162,10 +162,13 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
   const displayedTickStep = [0.25, 0.5, 1, 2, 4, 8, 12, 24, 48, 96].find(step => animated.tickMaximum / step <= 8)
     ?? Math.ceil(animated.tickMaximum / 8 / 24) * 24;
   const xAxisHeight = compactWeekLabels ? (crossesWeekYear ? 82 : 48) : grouping === 'daily' ? (verticalDayLabels ? 72 : 44) : 30;
-  const plotHeight = Math.max(0, chartHeight - 32 - xAxisHeight);
-  const ratingHeight = plotHeight * 0.2;
+  const chartTopMargin = 8;
+  const chartBottomMargin = 4;
+  const plotHeight = Math.max(0, chartHeight - chartTopMargin - chartBottomMargin - xAxisHeight);
+  // Five rating ticks need at least 16px each, even on narrow phone screens.
+  const ratingHeight = Math.min(plotHeight * 0.5, Math.max(80, plotHeight * 0.2));
   // Both scales share one plot and category axis, with a small breathing space between the bars.
-  const workloadTopPadding = showRatings ? plotHeight * 0.25 : 0;
+  const workloadTopPadding = showRatings ? ratingHeight + 10 : 0;
   const workloadHeight = plotHeight - workloadTopPadding;
   const crowdedAxis = workloadHeight > 0 && workloadHeight / Math.max(1, animated.tickMaximum / displayedTickStep) < 28;
   // Increase the step rather than rounding fractional ticks into duplicate labels.
@@ -203,10 +206,10 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
               </div>
               <ChartDisplayControls mode={valueMode} onModeChange={onValueModeChange} weeklyAverageDisabled={grouping === 'daily' || grouping === 'weekly'} dailyAverageDisabled={grouping === 'daily'} timeFilter={timeFilter} onTimeFilterChange={onTimeFilterChange} singleTime={singleTime} />
             </div>
-            <div ref={chartRef} title={t('analytics.completeWeeksHelp')} className="workload-chart-scroll relative min-h-[180px] flex-1 overflow-x-auto rounded-xl border border-gray-100 bg-gray-50/50 px-2 py-3">
-              <div className="workload-chart-canvas h-full min-h-[180px]" style={{ width: `${zoom * 100}%` }}>
+            <div ref={chartRef} title={t('analytics.completeWeeksHelp')} className={`workload-chart-scroll relative ${showRatings ? 'min-h-[300px]' : 'min-h-[180px]'} flex-1 overflow-x-auto rounded-xl border border-gray-100 bg-gray-50/50 px-2 py-1`}>
+              <div className={`workload-chart-canvas h-full ${showRatings ? 'min-h-[290px]' : 'min-h-[180px]'}`} style={{ width: `${zoom * 100}%` }}>
                 <ResponsiveContainer width="100%" height="100%" onResize={(width, height) => { setChartWidth(width); setChartHeight(height); }}>
-                  <ComposedChart barSize={Math.min(110, bucketWidth * 0.8)} barGap={-Math.min(110, bucketWidth * 0.8)} data={animated.data.map((row, index) => ({ ...row, ...ratings[index] }))} accessibilityLayer margin={{ top: 16, right: chartRightMargin, bottom: 16, left: 0 }}>
+                  <ComposedChart barSize={Math.min(30, bucketWidth * 0.8)} barGap={-Math.min(30, bucketWidth * 0.8)} data={animated.data.map((row, index) => ({ ...row, ...ratings[index] }))} accessibilityLayer margin={{ top: chartTopMargin, right: chartRightMargin, bottom: chartBottomMargin, left: 0 }}>
                     {data.map((row, index) => (grouping === 'daily'
                       ? !summaryRange || buckets[index].start < summaryRange.start || buckets[index].end > summaryRange.end
                       : buckets[index].end >= calendarWeekStart(today) && buckets[index].start <= calendarWeekEnd(today))
@@ -235,21 +238,23 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
                       </g>} />
                     </YAxis>}
                     <defs>
-                      <linearGradient id={batteryGradient} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={16} y2={16 + ratingHeight}>
+                      <linearGradient id={batteryGradient} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={chartTopMargin} y2={chartTopMargin + ratingHeight}>
                         <stop offset="0%" stopColor="#d94f5c" /><stop offset="25%" stopColor="#e78086" />
                         <stop offset="50%" stopColor="#b7a5a7" /><stop offset="65%" stopColor="#a1b7aa" />
                         <stop offset="80%" stopColor="#6abf8c" /><stop offset="100%" stopColor="#2ca468" />
                       </linearGradient>
                     </defs>
-                    {allSeries.map(({ subject, category, key, name }) => <Bar key={key} dataKey={key} name={name} stackId="hours" fill={subject.color} fillOpacity={WORKLOAD_OPACITY[category]} maxBarSize={110}
+                    {allSeries.map(({ subject, category, key, name }) => <Bar key={key} dataKey={key} name={name} stackId="hours" fill={subject.color} fillOpacity={WORKLOAD_OPACITY[category]} maxBarSize={30}
                       isAnimationActive={false}
                       shape={(props: any) => {
                         const actualRow = data.find(row => row.period === props.payload?.period);
                         const title = `${name}: ${formatStatisticsHours(Number(actualRow?.[key]) || 0, language, valueMode)} h`;
                         const topSeries = [...allSeries].reverse().find(item => Number(props.payload?.[item.key]) > 0);
+                        const radius = topSeries?.key === key ? Math.min(4, props.width / 2, Math.max(0, props.height)) : 0;
+                        const clipId = `${batteryGradient}-column-${allSeries.findIndex(item => item.key === key)}-${props.index}`;
                         const stackTotal = allSeries.reduce((sum, item) => sum + (Number(props.payload?.[item.key]) || 0), 0);
                         const choose = (anchor: SVGRectElement) => choosePeriod(anchor, props.payload.period);
-                        return <g><rect x={props.x} y={props.y} width={props.width} height={props.height} fill={subject.color} fillOpacity={WORKLOAD_OPACITY[category]}
+                        return <g><defs><clipPath id={clipId}><rect x={props.x} y={props.y} width={props.width} height={props.height + radius} rx={radius} /></clipPath></defs><rect clipPath={`url(#${clipId})`} x={props.x} y={props.y} width={props.width} height={props.height} fill={subject.color} fillOpacity={WORKLOAD_OPACITY[category]}
                           data-period={props.payload?.period} data-popup-visible={visible.has(subject.id) && !hiddenCategories.has(`${subject.id}:${category}`)} className="workload-bar-segment" role="button" tabIndex={props.height > 0 ? 0 : -1} aria-label={`${props.payload?.period} · ${title}`} aria-pressed={selectedPeriod === props.payload?.period}
                           onClick={event => { event.stopPropagation(); choose(event.currentTarget); }}
                           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); choose(event.currentTarget); } }}>
@@ -262,18 +267,20 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
                           </text>}
                         </g>;
                       }} />)}
-                    {ratingSeries.filter(item => item.shown).map(item => <Bar key={item.key} yAxisId="ratings" dataKey={item.key} name={item.name} fill={item.color} maxBarSize={110} isAnimationActive={false}
+                    {ratingSeries.filter(item => item.shown).map(item => <Bar key={item.key} yAxisId="ratings" dataKey={item.key} name={item.name} fill={item.color} maxBarSize={30} isAnimationActive={false}
                       shape={(props: any) => {
                         const value = props.payload?.[item.key];
                         if (typeof value !== 'number' || !props.height) return <g />;
-                        return <rect x={props.x} y={Math.min(props.y, props.y + props.height)} width={props.width} height={Math.abs(props.height)}
+                        const radius = Math.min(4, props.width / 2, Math.abs(props.height));
+                        const clipId = `${batteryGradient}-rating-${item.key}-${props.index}`;
+                        return <g><defs><clipPath id={clipId}><rect x={props.x} y={Math.min(props.y, props.y + props.height)} width={props.width} height={Math.abs(props.height) + radius} rx={radius} /></clipPath></defs><rect clipPath={`url(#${clipId})`} x={props.x} y={Math.min(props.y, props.y + props.height)} width={props.width} height={Math.abs(props.height)}
                           fill={item.key === 'socialBattery' ? `url(#${batteryGradient})` : item.color}
                           data-period={props.payload.period} data-popup-visible="true" role="button" tabIndex={0} className="workload-bar-segment cursor-pointer"
                           aria-label={`${props.payload.period} · ${item.name}: ${number.format(value)}/5`} aria-pressed={selectedPeriod === props.payload.period}
                           onClick={event => { event.stopPropagation(); choosePeriod(event.currentTarget, props.payload.period); }}
                           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); choosePeriod(event.currentTarget, props.payload.period); } }}>
                           <title>{`${item.name}: ${number.format(value)}/5`}</title>
-                        </rect>;
+                        </rect></g>;
                       }} />)}
                     {participantRole === 'faculty' && (showFacultyAdmin || showFacultyStructural) && <Customized component={({ xAxisMap, yAxisMap }: any) => {
                       const xAxis = xAxisMap?.[0];
@@ -282,7 +289,7 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
                       return <g>{animated.data.flatMap((row, index) => {
                         const markers = facultyMarkers[index] ?? [];
                         const center = xAxis.scale(row.label) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
-                        const barWidth = Math.min(110, bucketWidth * 0.8);
+                        const barWidth = Math.min(30, bucketWidth * 0.8);
                         const offset = Math.max(6, barWidth * 0.25);
                         return markers.filter(item => item.hasData && markerVisible(item.key)).map(item => <circle key={`${row.period}-${item.key}`}
                           cx={center + item.side * offset} cy={yAxis.scale(workloadBarValue(item.totalWorkload, buckets[index], valueMode) * item.fraction)} r={4.5} fill={item.color} stroke="white" strokeWidth={2}

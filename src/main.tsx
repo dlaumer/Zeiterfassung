@@ -13,8 +13,9 @@ const routeSegment = window.location.pathname
   .filter(Boolean)[0] ?? null;
 
 const isAdminRoute = routeSegment === "admin";
+const isStatisticsRoute = routeSegment === "statistics";
 
-document.title = isAdminRoute
+document.title = isStatisticsRoute ? "Statistics mETHric" : isAdminRoute
   ? "Admin mETHric"
   : routeSegment
     ? "Tracking mETHric"
@@ -28,7 +29,7 @@ document.head.appendChild(favicon);
 
 createRoot(document.getElementById("root")!).render(
   <Suspense fallback={<div role="status" aria-label="Loading" className="min-h-screen bg-slate-50" />}>
-  {isAdminRoute ? <AdminApp participantId={window.location.pathname.split('/').filter(Boolean)[1]} /> : routeSegment ? <App participantId={routeSegment} /> : <LandingPage />}
+  {isStatisticsRoute ? <AdminApp statistics /> : isAdminRoute ? <AdminApp participantId={window.location.pathname.split('/').filter(Boolean)[1]} /> : routeSegment ? <App participantId={routeSegment} /> : <LandingPage />}
   </Suspense>,
 );
   

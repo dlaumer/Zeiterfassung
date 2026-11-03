@@ -1,3 +1,4 @@
+import { PRESENTATION_PRIVACY } from '../presentationPrivacy';
 import { roundQuarterHour } from './time';
 import { isFutureSubmission } from './submissionDatePolicy.mjs';
 
@@ -877,7 +878,7 @@ function AppContent({ participantId, adminView = false }: AppContentProps) {
                   className="submission-logo h-9 w-auto max-w-[8.5rem] shrink-0 object-contain sm:max-w-[10rem] md:h-12 md:max-w-[12rem]"
                 />
               </a>
-              {participantName && (
+              {!PRESENTATION_PRIVACY && participantName && (
                 <span className="line-clamp-2 min-w-0 overflow-hidden text-sm font-semibold leading-tight text-gray-600 md:text-base">
                   {participantName}
                 </span>

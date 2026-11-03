@@ -1,3 +1,4 @@
+import { PRESENTATION_PRIVACY, participantDisplayName } from '../presentationPrivacy';
 import { parseSubjectImportRows } from './subjectImport';
 import App from '../app/App';
 import StatisticsDashboard from './StatisticsDashboard';
@@ -361,7 +362,7 @@ function eventBadgeClasses(kind: string, eventType: string) {
 }
 
 function normalizeParticipantName(participant: AdminParticipant) {
-  return (participant.name || participant.id).trim();
+  return participantDisplayName(participant).trim();
 }
 
 function getParticipantFirstName(participant: AdminParticipant) {
@@ -868,7 +869,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
           participantId: participant.id,
         },
       });
-      showActionMessage('success', t('admin.participant.reminderSent', { email: participant.email || participant.name }));
+      showActionMessage('success', t('admin.participant.reminderSent', { email: PRESENTATION_PRIVACY ? participant.id : participant.email || participant.name }));
       await loadOverview();
     } catch (error) {
       console.error('Participant reminder failed:', error);
@@ -940,7 +941,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
         }
       }, (progress: { completed: number; current: AdminParticipant | null }) => {
         setGroupCompleted(progress.completed);
-        setGroupCurrent(progress.current?.name || progress.current?.id || '');
+        setGroupCurrent(progress.current ? participantDisplayName(progress.current) : '');
       }, isEmail ? () => new Promise((resolve) => window.setTimeout(resolve, 1000)) : undefined);
       if (isExport && Object.keys(files).length) {
         setGroupCurrent(t('admin.group.preparingZip'));
@@ -984,7 +985,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
           participantId: participant.id,
         },
       });
-      showActionMessage('success', t('admin.participant.invitationSent', { email: participant.email || participant.name }));
+      showActionMessage('success', t('admin.participant.invitationSent', { email: PRESENTATION_PRIVACY ? participant.id : participant.email || participant.name }));
       await loadOverview();
     } catch (error) {
       console.error('Participant invitation failed:', error);
@@ -1277,8 +1278,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
         }
 
         return [
-          participant.name,
-          participant.email,
+          ...(!PRESENTATION_PRIVACY ? [participant.name, participant.email] : []),
           participant.id,
           participant.lastReminderAt,
           participant.lastPeriodStart,
@@ -1768,7 +1768,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
                       type="button"
                       role="checkbox"
                       aria-checked={selectedParticipantIds.has(participant.id)}
-                      aria-label={t('admin.participants.selectParticipant', { name: participant.name || participant.id })}
+                      aria-label={t('admin.participants.selectParticipant', { name: participantDisplayName(participant) })}
                       onClick={() => {
                         setParticipantSelectionMode(true);
                         setSelectedParticipantIds((current) => {
@@ -1787,8 +1787,8 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
                         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-3">
                           <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <div title={participant.name || participant.id} className={`min-w-0 flex-1 break-words text-sm font-bold ${participant.inactive ? 'text-gray-500' : 'text-gray-950'}`}>
-                              {participant.name || participant.id}
+                            <div title={participantDisplayName(participant)} className={`min-w-0 flex-1 break-words text-sm font-bold ${participant.inactive ? 'text-gray-500' : 'text-gray-950'}`}>
+                              {participantDisplayName(participant)}
                             </div>
                             {participant.inactive && (
                               <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">
@@ -1804,8 +1804,8 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
                               {participant.participantRole === 'faculty' ? t('admin.participantRole.faculty') : t('admin.participantRole.student')}
                             </span>
                           </div>
-                          <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>
-                          {participant.comment && (
+                          {!PRESENTATION_PRIVACY && <div className="truncate text-xs text-gray-500">{participant.email || participant.id}</div>}
+                          {!PRESENTATION_PRIVACY && participant.comment && (
                             <div className="mt-1 max-w-full rounded-md bg-gray-100 px-2 py-1 text-xs leading-snug text-gray-600">
                               {participant.comment}
                             </div>
@@ -1919,7 +1919,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
                           className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
                         ><RotateCcw aria-hidden="true" className="h-4 w-4" /></button>}
                         <span className="truncate text-sm font-semibold text-gray-950">
-                          {event.participantName || event.participantId || t('admin.unknownParticipant')}
+                          {(PRESENTATION_PRIVACY ? event.participantId : event.participantName || event.participantId) || t('admin.unknownParticipant')}
                         </span>
                         <span className="shrink-0 text-xs text-gray-400">
                           {event.kind === 'reminder' || event.kind === 'invitation' ? t('admin.participant.label') : event.periodType || t('admin.period')}
@@ -2074,7 +2074,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
           </DialogHeader>
           {!groupRunning && groupResults === null && (
             <>
-              <div className="max-h-32 overflow-y-auto text-sm text-gray-600">{groupParticipants.map((participant) => <div key={participant.id}>{participant.name || participant.id}</div>)}</div>
+              <div className="max-h-32 overflow-y-auto text-sm text-gray-600">{groupParticipants.map((participant) => <div key={participant.id}>{participantDisplayName(participant)}</div>)}</div>
               {(groupAction === 'invitation' || groupAction === 'reminder') && <p className="text-sm text-gray-600">{t('admin.group.emailWarning')}</p>}
               {groupAction === 'setReferenceDate' && <label className="grid gap-2 text-sm font-semibold">{t('admin.participant.referenceDate')}<input type="date" required value={groupDate} onChange={(event) => setGroupDate(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2" /></label>}
               <DialogFooter>
@@ -2094,7 +2094,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
             <p className="text-sm font-semibold">{groupExportError ? t('admin.group.exportFailed') : t('admin.group.finished', { success: groupResults.filter((result) => result.ok).length, failed: groupResults.filter((result) => !result.ok).length })}</p>
             {groupResults.some((result) => !result.ok) && <>
               <p className="text-sm text-gray-600">{t(groupAction === 'invitation' || groupAction === 'reminder' ? 'admin.group.failedHelp' : 'admin.group.updateFailedHelp')}</p>
-              <ul className="max-h-40 space-y-2 overflow-y-auto text-sm text-red-700">{groupResults.filter((result) => !result.ok).map((result) => <li key={result.id}>{result.name}{result.reason && <span className="block text-xs">{result.reason}</span>}</li>)}</ul>
+              <ul className="max-h-40 space-y-2 overflow-y-auto text-sm text-red-700">{groupResults.filter((result) => !result.ok).map((result) => <li key={result.id}>{PRESENTATION_PRIVACY ? result.id : result.name}{result.reason && <span className="block text-xs">{result.reason}</span>}</li>)}</ul>
             </>}
             <button type="button" onClick={closeGroupAction} className="rounded-md bg-gray-950 px-3 py-2 text-sm font-semibold text-white">{t('admin.group.close')}</button>
           </div>}
@@ -2124,6 +2124,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
                 {participantFormError}
               </p>
             )}
+            {(!PRESENTATION_PRIVACY || !participantToEdit) && <>
             <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
               {t('admin.participant.name')}
               <input
@@ -2154,6 +2155,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
               />
             </label>
 
+            </>}
             <label className="grid gap-1.5 text-sm font-semibold text-gray-700">
               {t('admin.participant.referenceDate')}
               <input
@@ -2437,7 +2439,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
       <ConfirmDialog
         open={submissionToRestore !== null}
         title={t('admin.restore.title')}
-        description={<>{t('admin.restore.confirm')}<br />{submissionToRestore?.participantName} · {submissionToRestore ? formatPeriodLabel(submissionToRestore, language, t) : ''}</>}
+        description={<>{t('admin.restore.confirm')}<br />{PRESENTATION_PRIVACY ? submissionToRestore?.participantId : submissionToRestore?.participantName} · {submissionToRestore ? formatPeriodLabel(submissionToRestore, language, t) : ''}</>}
         confirmLabel={t(restoringSubmission ? 'admin.restore.pending' : 'admin.restore.title')}
         cancelLabel={t('common.cancel')}
         onCancel={() => { if (!restoringSubmission) setSubmissionToRestore(null); }}
@@ -2448,7 +2450,7 @@ function AdminContent({ participantId, statistics = false }: { participantId?: s
         open={participantToRemove !== null}
         title={t('admin.participant.removeTitle')}
         description={t('admin.participant.removeDescription', {
-          name: participantToRemove?.name || participantToRemove?.id || '',
+          name: participantToRemove ? participantDisplayName(participantToRemove) : '',
         })}
         confirmLabel={t('admin.participant.remove')}
         cancelLabel={t('common.cancel')}

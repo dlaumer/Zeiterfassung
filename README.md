@@ -95,3 +95,17 @@ For a read-only audit of a current database backup, run
 `python scripts/audit-data.py /path/to/pb_data/data.db` (Python 3 required).
 Deploy the entire `Backend/pb_hooks` directory, including shared `.js` helpers,
 together with the migrations and matching frontend build.
+
+## Temporary presentation privacy
+
+Presentation privacy is currently enabled in `src/presentationPrivacy.ts`.
+When enabled, the dashboard shows participant IDs instead of names, hides participant emails
+and participant card comments, masks activity and confirmation names, and hides
+the name at the top of both normal and administrator participant links.
+Existing names and emails are hidden in the edit dialog and preserved on save.
+
+To re-enable masking, set `PRESENTATION_PRIVACY` to `true`. To restore the usual display, set it to `false`. Rebuild with
+`npm run build:all`, and deploy the appropriate frontend output. No data migration
+or deletion is involved. This is presentation masking, not API anonymization:
+authenticated responses, downloads, and free-text submission comments may still
+contain personal information. Review those before presenting or sharing them.

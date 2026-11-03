@@ -19,6 +19,7 @@
 .statistics-summary-content { flex: 1; min-height: 0; }
 .statistics-analysis-toggle, .statistics-analysis-close { display: none; }
 .statistics-data-dialog { width: calc(100vw - 24px); max-width: 720px; max-height: calc(100dvh - 24px); overflow: auto; }
+.statistics-table-dialog { max-width: 1400px; }
 @media (max-width: 1200px) {
   .statistics-filter-fields { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); }
 }
@@ -47,5 +48,5 @@
   .statistics-settings { padding: 10px; }
   .statistics-settings label { gap: 2px; }
   .statistics-settings select { height: 27px; }
-  .statistics-summary-content > div, .statistics-summary-content > p:last-child { display: none; }
+  .statistics-summary-content > p:last-child { display: none; }
 }

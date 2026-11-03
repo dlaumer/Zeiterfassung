@@ -101,9 +101,9 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
   const buckets = useMemo(() => bucketWorkload(Array.from(entries.values()).filter(entry => entry.date <= today), range, grouping, daily ? 'day' : 'week')
     .filter(bucket => grouping !== 'daily' || bucket.start <= today), [entries, range.start, range.end, grouping, daily, today]);
 
-  const showRatings = showDataRating || showEnergyLevel;
+
   const workloadAxisWidth = 48;
-  const ratingAxisWidth = showRatings ? 36 : 0;
+
   const chartRightMargin = 4;
   const ratings = useMemo(() => {
     const submitted = Array.from(ratingEntries.values()).filter(entry => entry.date <= today);
@@ -113,6 +113,13 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
     { key: 'reliability' as const, shown: showDataRating, name: t('dailyEntry.reliability'), color: 'var(--color-amber-400)' },
     { key: 'socialBattery' as const, shown: showEnergyLevel && !showDataRating, name: t(`socialBattery.${participantRole}`), color: '#2ca468' },
   ];
+  const animatedRatings = useAnimatedWorkload(buckets.map((bucket, index) => ({
+    label: bucket.start, period: bucket.start,
+    reliability: showDataRating ? ratings[index]?.reliability ?? 0 : 0,
+    socialBattery: showEnergyLevel && !showDataRating ? ratings[index]?.socialBattery ?? 0 : 0,
+  })), 5, grouping, true);
+  const showRatings = showDataRating || showEnergyLevel || animatedRatings.data.some(row => Number(row.reliability) > 0 || Number(row.socialBattery) > 0);
+  const ratingAxisWidth = showRatings ? 36 : 0;
   const number = new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en', { maximumFractionDigits: 2 });
   const date = (value: string) => format(parseISO(value), 'dd.MM.yyyy');
   const weekdays = language === 'de' ? ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -209,7 +216,7 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
             <div ref={chartRef} title={t('analytics.completeWeeksHelp')} className={`workload-chart-scroll relative ${showRatings ? 'min-h-[300px]' : 'min-h-[180px]'} flex-1 overflow-x-auto rounded-xl border border-gray-100 bg-gray-50/50 px-2 py-1`}>
               <div className={`workload-chart-canvas h-full ${showRatings ? 'min-h-[290px]' : 'min-h-[180px]'}`} style={{ width: `${zoom * 100}%` }}>
                 <ResponsiveContainer width="100%" height="100%" onResize={(width, height) => { setChartWidth(width); setChartHeight(height); }}>
-                  <ComposedChart barSize={Math.min(30, bucketWidth * 0.8)} barGap={-Math.min(30, bucketWidth * 0.8)} data={animated.data.map((row, index) => ({ ...row, ...ratings[index] }))} accessibilityLayer margin={{ top: chartTopMargin, right: chartRightMargin, bottom: chartBottomMargin, left: 0 }}>
+                  <ComposedChart barSize={Math.min(30, bucketWidth * 0.8)} barGap={-Math.min(30, bucketWidth * 0.8)} data={animated.data.map((row, index) => ({ ...row, reliability: animatedRatings.data[index]?.reliability ?? 0, socialBattery: animatedRatings.data[index]?.socialBattery ?? 0 }))} accessibilityLayer margin={{ top: chartTopMargin, right: chartRightMargin, bottom: chartBottomMargin, left: 0 }}>
                     {data.map((row, index) => (grouping === 'daily'
                       ? !summaryRange || buckets[index].start < summaryRange.start || buckets[index].end > summaryRange.end
                       : buckets[index].end >= calendarWeekStart(today) && buckets[index].start <= calendarWeekEnd(today))
@@ -267,7 +274,8 @@ export function WorkloadChartPanel({ showFacultyAdmin = false, showFacultyStruct
                           </text>}
                         </g>;
                       }} />)}
-                    {ratingSeries.filter(item => item.shown).map(item => <Bar key={item.key} yAxisId="ratings" dataKey={item.key} name={item.name} fill={item.color} maxBarSize={30} isAnimationActive={false}
+                    {ratingSeries.map(item => <Bar key={item.key} yAxisId="ratings" dataKey={item.key} name={item.name} fill={item.color} maxBarSize={30}
+                      isAnimationActive={false}
                       shape={(props: any) => {
                         const value = props.payload?.[item.key];
                         if (typeof value !== 'number' || !props.height) return <g />;

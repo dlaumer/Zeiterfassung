@@ -8,9 +8,9 @@ const AXIS_PAUSE = 200;
 const AXIS_DURATION = 300;
 
 /** Change stack heights first, then restore headroom or rescale below 35% occupancy. */
-export function useAnimatedWorkload(data: Row[], maximum: number, grouping: string) {
+export function useAnimatedWorkload(data: Row[], maximum: number, grouping: string, fixedScale = false) {
   const signature = JSON.stringify({ data, maximum });
-  const [frame, setFrame] = useState<Frame>(() => ({ data, maximum, tickMaximum: maximum }));
+  const [frame, setFrame] = useState<Frame>(() => ({ data: fixedScale ? data.map(row => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, typeof value === 'number' ? 0 : value])) as Row) : data, maximum, tickMaximum: maximum }));
   const current = useRef(frame);
   const previousGrouping = useRef(grouping);
   useEffect(() => {
@@ -22,7 +22,7 @@ export function useAnimatedWorkload(data: Row[], maximum: number, grouping: stri
     const commit = (next: Frame) => { current.current = next; setFrame(next); };
     if (groupingChanged) { commit(target); return; }
     const largest = Math.max(0, ...target.data.map(total));
-    const rescale = largest * 1.1 > start.maximum || largest < start.maximum * 0.35;
+    const rescale = !fixedScale && (largest * 1.1 > start.maximum || largest < start.maximum * 0.35);
     if (!rescale) { target.maximum = start.maximum; target.tickMaximum = start.tickMaximum; }
 
     const previousRows = new Map(start.data.map(row => [row.period, row]));
@@ -53,6 +53,6 @@ export function useAnimatedWorkload(data: Row[], maximum: number, grouping: stri
     };
     request = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(request);
-  }, [signature, grouping]);
+  }, [signature, grouping, fixedScale]);
   return frame;
 }
